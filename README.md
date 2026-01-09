@@ -64,6 +64,7 @@ All fixes are documented in [`Included_Fixes/`](Included_Fixes/) with detailed i
 | **Performance** | [PERF-001](Included_Fixes/PERF-001-history-pagination/) | SQL pagination & tag caching | ✅ Applied |
 | **Security** | [SEC-001](Included_Fixes/SEC-001-ssrf-code-injection/) | SSRF & code injection fixes | ✅ Applied |
 | **Security** | [SEC-002](Included_Fixes/SEC-002-urllib3-cve-2026-21441/) | Fix urllib3 decompression-bomb (CVE-2026-21441) | ✅ Applied |
+| **Security** | [SEC-003](Included_Fixes/SEC-003-fix-codeql-security-alerts/) | CodeQL Security Audit (119 alerts) | 🚧 In Progress |
 | **Docker** | [DOCKER-001](Included_Fixes/DOCKER-001-optimize-images/) | Optimized Docker images | ✅ Applied |
 | **Docker** | [DOCKER-002](Included_Fixes/DOCKER-002-upgrade-nodejs-24-lts/) | Upgrade to Node.js 24 LTS | ✅ Applied |
 | **Dependencies** | [DEP-001](Included_Fixes/DEP-001-remove-sqlite3/) | Remove unused sqlite3 | ✅ Applied |

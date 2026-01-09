@@ -7,6 +7,64 @@ const paperlessService = require('./paperlessService');
 class RagService {
   constructor() {
     this.baseUrl = process.env.RAG_SERVICE_URL || 'http://localhost:8000';
+    // SSRF Prevention: Validate RAG service URL on initialization
+    this.validateUrl(this.baseUrl);
+  }
+
+  /**
+   * Validate URL against SSRF attacks
+   * @param {string} url - The URL to validate
+   * @throws {Error} If URL is not safe
+   */
+  validateUrl(url) {
+    // Skip validation if explicitly disabled
+    if (config.security?.enableUrlValidation === false) {
+      return true;
+    }
+
+    try {
+      const parsed = new URL(url);
+      const hostname = parsed.hostname.toLowerCase();
+
+      // For RAG service, allow localhost (it's typically same-host)
+      // but still validate it's not trying to access other internal services
+      if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1') {
+        // Allow localhost for RAG service
+        return true;
+      }
+
+      // Block other private IP ranges
+      const privateIpPatterns = [
+        /^10\./,
+        /^172\.(1[6-9]|2[0-9]|3[0-1])\./,
+        /^192\.168\./,
+        /^169\.254\./,
+        /^fe80:/i,
+        /^fc00:/i,
+      ];
+
+      for (const pattern of privateIpPatterns) {
+        if (pattern.test(hostname)) {
+          throw new Error(`Access to private IP range is forbidden: ${hostname}`);
+        }
+      }
+
+      // Only allow HTTP and HTTPS
+      if (!['http:', 'https:'].includes(parsed.protocol)) {
+        throw new Error(`Only HTTP(S) protocols allowed, got: ${parsed.protocol}`);
+      }
+
+      // Check allowlist (if configured and not localhost)
+      const allowedHosts = config.security?.allowedHosts || [];
+      if (allowedHosts.length > 0 && !allowedHosts.includes(hostname)) {
+        throw new Error(`Host '${hostname}' is not in the allowlist`);
+      }
+
+      return true;
+    } catch (error) {
+      console.error('[SECURITY] RAG service URL validation failed:', error.message);
+      throw error;
+    }
   }
 
   /**

@@ -15,8 +15,77 @@ class PaperlessService {
     this.CACHE_LIFETIME = 3000; // 3 Sekunden
   }
 
+  /**
+   * Validate URL against SSRF attacks
+   * @param {string} url - The URL to validate
+   * @param {Array<string>} allowedHosts - List of allowed hostnames
+   * @throws {Error} If URL is not safe or not in allowlist
+   */
+  validateUrl(url, allowedHosts = config.security?.allowedHosts || []) {
+    // Skip validation if explicitly disabled
+    if (config.security?.enableUrlValidation === false) {
+      return true;
+    }
+
+    try {
+      const parsed = new URL(url);
+      
+      // Block private IP ranges (RFC 1918)
+      const privateIpPatterns = [
+        /^10\./,                              // 10.0.0.0/8
+        /^172\.(1[6-9]|2[0-9]|3[0-1])\./,    // 172.16.0.0/12
+        /^192\.168\./,                        // 192.168.0.0/16
+        /^169\.254\./,                        // Link-local
+        /^127\./,                             // Loopback
+        /^0\.0\.0\.0$/,                       // Special
+        /^::1$/,                              // IPv6 loopback
+        /^fe80:/i,                            // IPv6 link-local
+        /^fc00:/i,                            // IPv6 private
+      ];
+
+      const hostname = parsed.hostname.toLowerCase();
+      
+      // Check for localhost variants
+      if (hostname === 'localhost' || hostname === '0.0.0.0') {
+        throw new Error('Access to localhost is forbidden');
+      }
+
+      // Check private IP patterns
+      for (const pattern of privateIpPatterns) {
+        if (pattern.test(hostname)) {
+          throw new Error(`Access to private IP range is forbidden: ${hostname}`);
+        }
+      }
+
+      // Only allow HTTP and HTTPS protocols
+      if (!['http:', 'https:'].includes(parsed.protocol)) {
+        throw new Error(`Only HTTP(S) protocols are allowed, got: ${parsed.protocol}`);
+      }
+
+      // Allowlist check (if allowlist is configured)
+      if (allowedHosts.length > 0 && !allowedHosts.includes(hostname)) {
+        throw new Error(`Host '${hostname}' is not in the allowlist. Allowed hosts: ${allowedHosts.join(', ')}`);
+      }
+
+      return true;
+    } catch (error) {
+      if (error.message.includes('Invalid URL')) {
+        throw new Error(`Invalid URL format: ${url}`);
+      }
+      throw error;
+    }
+  }
+
   initialize() {
     if (!this.client && config.paperless.apiUrl && config.paperless.apiToken) {
+      // SSRF Prevention: Validate base URL before creating client
+      try {
+        this.validateUrl(config.paperless.apiUrl);
+      } catch (error) {
+        console.error('[SECURITY] Paperless API URL validation failed:', error.message);
+        throw new Error(`Paperless API URL is not safe: ${error.message}`);
+      }
+
       this.client = axios.create({
         baseURL: config.paperless.apiUrl,
         headers: {

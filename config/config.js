@@ -43,9 +43,34 @@ const externalApiConfig = {
   transformationTemplate: process.env.EXTERNAL_API_TRANSFORM || ''
 };
 
+// SSRF Prevention: Extract allowed hostnames from configured URLs
+const extractHostname = (url) => {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url);
+    return parsed.hostname;
+  } catch (error) {
+    console.error(`Invalid URL: ${url}`);
+    return null;
+  }
+};
+
+const allowedHosts = [
+  extractHostname(process.env.PAPERLESS_API_URL),
+  extractHostname(process.env.RAG_SERVICE_URL),
+  extractHostname(process.env.EXTERNAL_API_URL)
+].filter(Boolean); // Remove null values
+
+if (process.env.ALLOWED_HOSTS) {
+  // Allow additional hosts via environment variable (comma-separated)
+  const additionalHosts = process.env.ALLOWED_HOSTS.split(',').map(h => h.trim());
+  allowedHosts.push(...additionalHosts);
+}
+
 console.log('Loaded environment variables:', {
   PAPERLESS_API_URL: process.env.PAPERLESS_API_URL,
   PAPERLESS_API_TOKEN: '******',
+  ALLOWED_HOSTS: allowedHosts,
   LIMIT_FUNCTIONS: limitFunctions,
   AI_RESTRICTIONS: aiRestrictions,
   EXTERNAL_API: externalApiConfig.enabled === 'yes' ? 'enabled' : 'disabled'
@@ -127,4 +152,9 @@ module.exports = {
     "language": "en/de/es/...",
     %CUSTOMFIELDS%
   }`,
+  // SSRF Prevention
+  security: {
+    allowedHosts: allowedHosts,
+    enableUrlValidation: parseEnvBoolean(process.env.ENABLE_URL_VALIDATION, 'yes') === 'yes'
+  }
 };

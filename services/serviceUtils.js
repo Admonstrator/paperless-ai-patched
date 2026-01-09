@@ -470,6 +470,130 @@ function validateFilename(filename, options = {}) {
     return { valid: true };
 }
 
+/**
+ * Redact sensitive information from objects or strings for safe logging.
+ * Prevents API keys, passwords, tokens, and other secrets from being logged.
+ * 
+ * @param {*} data - The data to redact (can be object, string, array, etc.)
+ * @param {Object} options - Redaction options
+ * @param {string[]} options.additionalKeys - Additional key names to redact
+ * @param {string} options.redactedText - Text to replace sensitive data with (default: '***REDACTED***')
+ * @returns {*} The data with sensitive information redacted
+ */
+function redactSensitiveData(data, options = {}) {
+    const {
+        additionalKeys = [],
+        redactedText = '***REDACTED***'
+    } = options;
+
+    // List of sensitive key names (case-insensitive)
+    const sensitiveKeys = [
+        'password', 'passwd', 'pwd',
+        'apikey', 'api_key', 'apitoken', 'api_token',
+        'secret', 'secret_key', 'client_secret',
+        'token', 'access_token', 'refresh_token', 'bearer_token', 'auth_token',
+        'authorization', 'auth',
+        'key', 'privatekey', 'private_key', 'publickey', 'public_key',
+        'jwt', 'session', 'cookie',
+        'credentials', 'credential',
+        ...additionalKeys
+    ];
+
+    // Helper function to check if a key is sensitive
+    const isSensitiveKey = (key) => {
+        const lowerKey = key.toLowerCase();
+        return sensitiveKeys.some(sensitive => {
+            const lowerSensitive = sensitive.toLowerCase();
+            // Only match if the key contains the full sensitive word
+            // This prevents "api" from matching "apiKey" (we want exact containment)
+            return lowerKey === lowerSensitive || 
+                   lowerKey.includes(lowerSensitive) ||
+                   lowerKey.includes('_' + lowerSensitive) ||
+                   lowerKey.includes(lowerSensitive + '_');
+        });
+    };
+
+    // Handle null/undefined
+    if (data === null || data === undefined) {
+        return data;
+    }
+
+    // Handle strings - check if it looks like a token/key
+    if (typeof data === 'string') {
+        // Redact strings that look like tokens (long alphanumeric/base64)
+        if (data.length > 20 && /^[A-Za-z0-9+/=_-]{20,}$/.test(data)) {
+            return redactedText;
+        }
+        return data;
+    }
+
+    // Handle arrays
+    if (Array.isArray(data)) {
+        return data.map(item => redactSensitiveData(item, options));
+    }
+
+    // Handle objects
+    if (typeof data === 'object') {
+        const redacted = {};
+        for (const [key, value] of Object.entries(data)) {
+            if (isSensitiveKey(key)) {
+                // Redact the entire value
+                redacted[key] = redactedText;
+            } else if (typeof value === 'object' && value !== null) {
+                // Recursively redact nested objects
+                redacted[key] = redactSensitiveData(value, options);
+            } else {
+                redacted[key] = value;
+            }
+        }
+        return redacted;
+    }
+
+    // For other types (numbers, booleans, etc.), return as-is
+    return data;
+}
+
+/**
+ * Create a safe logger that automatically redacts sensitive data.
+ * Can wrap a single logging function or create a full logger object.
+ * 
+ * @param {Function|Object} logger - Logger function or object (default: console)
+ * @param {Object} options - Redaction options
+ * @returns {Function|Object} A wrapped logger with redacted methods
+ */
+function createSafeLogger(logger = console, options = {}) {
+    // If passed a function, wrap it directly
+    if (typeof logger === 'function') {
+        return (...args) => {
+            const redactedArgs = args.map(arg => {
+                if (typeof arg === 'object' && arg !== null) {
+                    return redactSensitiveData(arg, options);
+                }
+                return arg;
+            });
+            logger(...redactedArgs);
+        };
+    }
+    
+    // If passed an object (like console), wrap all methods
+    const safeLogger = {};
+    ['log', 'error', 'warn', 'info', 'debug'].forEach(method => {
+        if (typeof logger[method] === 'function') {
+            safeLogger[method] = (...args) => {
+                const redactedArgs = args.map(arg => {
+                    if (typeof arg === 'object' && arg !== null) {
+                        return redactSensitiveData(arg, options);
+                    }
+                    return arg;
+                });
+                logger[method](...redactedArgs);
+            };
+        }
+    });
+    
+    return safeLogger;
+}
+
 module.exports = {
     calculateTokens,
     calculateTotalPromptTokens,
@@ -479,5 +603,7 @@ module.exports = {
     validateApiUrl,
     validateUrlAgainstBase,
     sanitizePath,
-    validateFilename
+    validateFilename,
+    redactSensitiveData,
+    createSafeLogger
 };

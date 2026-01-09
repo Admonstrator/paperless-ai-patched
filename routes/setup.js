@@ -345,7 +345,8 @@ router.post('/login', async (req, res) => {
 
     // Compare passwords
     const isValidPassword = await bcrypt.compare(password, user.password);
-    console.log('Password validation result:', isValidPassword);
+    // Sensitive Data Protection: Don't log password validation result
+    console.log('Password validation completed for user:', username);
 
     if (isValidPassword) {
       const token = jwt.sign(
@@ -356,9 +357,11 @@ router.post('/login', async (req, res) => {
         JWT_SECRET,
         { expiresIn: '24h' }
       );
+      
+      // Sensitive Data Protection: Use secure cookie settings
       res.cookie('jwt', token, {
         httpOnly: true,
-        secure: false,  
+        secure: configFile.security.secureCookies,  // HTTPS in production
         sameSite: 'lax', 
         path: '/',
         maxAge: 24 * 60 * 60 * 1000 
@@ -2089,6 +2092,9 @@ router.post('/api/key-regenerate', async (req, res) => {
     // Generiere ein neues API-Token
     const apiKey = crypto.randomBytes(32).toString('hex');
     envConfig.API_KEY = apiKey;
+    
+    // Sensitive Data Protection: Log without exposing the actual key
+    console.log('API key regenerated successfully');
 
     // Schreibe die aktualisierte .env-Datei
     const envContent = Object.entries(envConfig)

@@ -26,6 +26,12 @@ const aiRestrictions = {
   restrictToExistingDocumentTypes: parseEnvBoolean(process.env.RESTRICT_TO_EXISTING_DOCUMENT_TYPES, 'no')
 };
 
+// Security configuration
+const securityConfig = {
+  enableUrlValidation: parseEnvBoolean(process.env.ENABLE_URL_VALIDATION, 'yes'),
+  secureCookies: parseEnvBoolean(process.env.SECURE_COOKIES, process.env.NODE_ENV === 'production' ? 'yes' : 'no')
+};
+
 console.log('Loaded restriction settings:', {
   RESTRICT_TO_EXISTING_TAGS: aiRestrictions.restrictToExistingTags,
   RESTRICT_TO_EXISTING_CORRESPONDENTS: aiRestrictions.restrictToExistingCorrespondents,
@@ -152,9 +158,10 @@ module.exports = {
     "language": "en/de/es/...",
     %CUSTOMFIELDS%
   }`,
-  // SSRF Prevention
+  // SSRF Prevention & Security Settings
   security: {
     allowedHosts: allowedHosts,
-    enableUrlValidation: parseEnvBoolean(process.env.ENABLE_URL_VALIDATION, 'yes') === 'yes'
+    enableUrlValidation: parseEnvBoolean(process.env.ENABLE_URL_VALIDATION, 'yes') === 'yes',
+    secureCookies: parseEnvBoolean(process.env.SECURE_COOKIES, process.env.NODE_ENV === 'production' ? 'yes' : 'no') === 'yes'
   }
 };

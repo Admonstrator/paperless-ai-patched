@@ -112,12 +112,14 @@ class SetupService {
       return false;
     }
 
+    const { redactSensitiveData } = require('./serviceUtils');
     const config = {
       baseURL: url,
       apiKey: apiKey,
       model: model
     };
-    console.log('Custom AI config:', config);
+    // Sensitive Data Protection: Redact API key before logging
+    console.log('Custom AI config:', redactSensitiveData(config));
     try {
       const openai = new OpenAI({ 
         apiKey: config.apiKey, 

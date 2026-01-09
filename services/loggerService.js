@@ -1,7 +1,7 @@
 const fs = require('fs');
 const util = require('util');
 const path = require('path');
-const { sanitizePath, validateFilename } = require('./serviceUtils');
+const { sanitizePath, validateFilename, redactSensitiveData } = require('./serviceUtils');
 
 class Logger {
     constructor(options = {}) {
@@ -10,6 +10,7 @@ class Logger {
         this.timestamp = options.timestamp !== false;
         this.format = options.format || 'txt';
         this.maxFileSize = options.maxFileSize || 1024 * 1024 * 10; // Standard: 10MB
+        this.redactSensitive = options.redactSensitive !== false; // Enable by default
         
         // Path Injection Prevention: Validate log filename
         const filenameValidation = validateFilename(this.logFile, {
@@ -208,31 +209,52 @@ class Logger {
 
     overrideConsoleMethods() {
         console.log = (...args) => {
-            const logMessage = this.formatLogMessage('info', args);
+            // Sensitive Data Protection: Redact sensitive data before logging
+            const safeArgs = this.redactSensitive ? args.map(arg => 
+                typeof arg === 'object' && arg !== null ? redactSensitiveData(arg) : arg
+            ) : args;
+            
+            const logMessage = this.formatLogMessage('info', safeArgs);
             this.originalConsole.log(...args);
             this.writeToFile(logMessage);
         };
 
         console.error = (...args) => {
-            const logMessage = this.formatLogMessage('error', args);
+            const safeArgs = this.redactSensitive ? args.map(arg => 
+                typeof arg === 'object' && arg !== null ? redactSensitiveData(arg) : arg
+            ) : args;
+            
+            const logMessage = this.formatLogMessage('error', safeArgs);
             this.originalConsole.error(...args);
             this.writeToFile(logMessage);
         };
 
         console.warn = (...args) => {
-            const logMessage = this.formatLogMessage('warn', args);
+            const safeArgs = this.redactSensitive ? args.map(arg => 
+                typeof arg === 'object' && arg !== null ? redactSensitiveData(arg) : arg
+            ) : args;
+            
+            const logMessage = this.formatLogMessage('warn', safeArgs);
             this.originalConsole.warn(...args);
             this.writeToFile(logMessage);
         };
 
         console.info = (...args) => {
-            const logMessage = this.formatLogMessage('info', args);
+            const safeArgs = this.redactSensitive ? args.map(arg => 
+                typeof arg === 'object' && arg !== null ? redactSensitiveData(arg) : arg
+            ) : args;
+            
+            const logMessage = this.formatLogMessage('info', safeArgs);
             this.originalConsole.info(...args);
             this.writeToFile(logMessage);
         };
 
         console.debug = (...args) => {
-            const logMessage = this.formatLogMessage('debug', args);
+            const safeArgs = this.redactSensitive ? args.map(arg => 
+                typeof arg === 'object' && arg !== null ? redactSensitiveData(arg) : arg
+            ) : args;
+            
+            const logMessage = this.formatLogMessage('debug', safeArgs);
             this.originalConsole.debug(...args);
             this.writeToFile(logMessage);
         };

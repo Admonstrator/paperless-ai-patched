@@ -614,7 +614,24 @@ router.get('/playground', protectApiRoute, async (req, res) => {
  *               $ref: '#/components/schemas/Error'
  */
 router.get('/thumb/:documentId', async (req, res) => {
-  const cachePath = path.join('./public/images', `${req.params.documentId}.png`);
+  // Path Injection Prevention: Validate document ID before file operations
+  const { sanitizePath } = require('../services/serviceUtils');
+  const baseDir = path.resolve('./public/images');
+  const filename = `${req.params.documentId}.png`;
+  
+  const pathValidation = sanitizePath(filename, baseDir, {
+    allowedExtensions: ['.png']
+  });
+  
+  if (!pathValidation.valid) {
+    console.error(`[SECURITY] Invalid thumbnail path: ${pathValidation.error}`);
+    return res.status(400).json({ 
+      success: false, 
+      error: 'Invalid document ID' 
+    });
+  }
+  
+  const cachePath = pathValidation.sanitizedPath;
 
   try {
     // Prüfe ob das Bild bereits im Cache existiert
@@ -624,7 +641,7 @@ router.get('/thumb/:documentId', async (req, res) => {
       
       // Wenn ja, sende direkt das gecachte Bild
       res.setHeader('Content-Type', 'image/png');
-      return res.sendFile(path.resolve(cachePath));
+      return res.sendFile(cachePath);
       
     } catch (err) {
       // File existiert nicht im Cache, hole es von Paperless

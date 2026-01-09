@@ -337,6 +337,138 @@ function validateUrlAgainstBase(urlToValidate, expectedBaseUrl) {
         relativePath: relativePath + parsedUrl.search 
     };
 }
+/**
+ * Sanitize and validate a file path to prevent path traversal attacks.
+ * Ensures the resolved path stays within the specified base directory.
+ * 
+ * @param {string} userInput - The user-provided path component (filename, relative path, etc.)
+ * @param {string} baseDir - The base directory that the path must stay within
+ * @param {Object} options - Additional validation options
+ * @param {boolean} options.allowAbsolute - Allow absolute paths (default: false)
+ * @param {string[]} options.allowedExtensions - List of allowed file extensions (default: null = all allowed)
+ * @returns {{ valid: boolean, sanitizedPath?: string, error?: string }} Validation result
+ */
+function sanitizePath(userInput, baseDir, options = {}) {
+    const {
+        allowAbsolute = false,
+        allowedExtensions = null
+    } = options;
+
+    // Validate inputs
+    if (!userInput || typeof userInput !== 'string') {
+        return { valid: false, error: 'Path must be a non-empty string' };
+    }
+    if (!baseDir || typeof baseDir !== 'string') {
+        return { valid: false, error: 'Base directory must be a non-empty string' };
+    }
+
+    // Check for null byte injection
+    if (userInput.includes('\0')) {
+        return { valid: false, error: 'Null byte injection detected' };
+    }
+
+    // Remove any leading/trailing whitespace
+    const cleanInput = userInput.trim();
+
+    // Block absolute paths unless explicitly allowed
+    if (!allowAbsolute && path.isAbsolute(cleanInput)) {
+        return { valid: false, error: 'Absolute paths are not allowed' };
+    }
+    
+    // Additional check for Windows drive letters (C:, D:, etc.)
+    if (!allowAbsolute && /^[a-zA-Z]:/.test(cleanInput)) {
+        return { valid: false, error: 'Windows drive letters are not allowed' };
+    }
+
+    try {
+        // Resolve the full path
+        const resolvedBase = path.resolve(baseDir);
+        const resolvedPath = path.resolve(resolvedBase, cleanInput);
+
+        // Ensure the resolved path is within the base directory
+        if (!resolvedPath.startsWith(resolvedBase + path.sep) && resolvedPath !== resolvedBase) {
+            return { valid: false, error: 'Path traversal attempt detected' };
+        }
+
+        // Check file extension if restrictions are specified
+        if (allowedExtensions && allowedExtensions.length > 0) {
+            const ext = path.extname(resolvedPath).toLowerCase();
+            if (!allowedExtensions.includes(ext)) {
+                return { 
+                    valid: false, 
+                    error: `File extension '${ext}' not allowed. Allowed: ${allowedExtensions.join(', ')}` 
+                };
+            }
+        }
+
+        return { valid: true, sanitizedPath: resolvedPath };
+
+    } catch (error) {
+        return { valid: false, error: `Path resolution failed: ${error.message}` };
+    }
+}
+
+/**
+ * Validate a filename (no path separators allowed).
+ * Useful for ensuring user input is just a filename, not a path.
+ * 
+ * @param {string} filename - The filename to validate
+ * @param {Object} options - Validation options
+ * @param {string[]} options.allowedExtensions - Allowed file extensions
+ * @param {number} options.maxLength - Maximum filename length (default: 255)
+ * @returns {{ valid: boolean, error?: string }} Validation result
+ */
+function validateFilename(filename, options = {}) {
+    const {
+        allowedExtensions = null,
+        maxLength = 255
+    } = options;
+
+    if (!filename || typeof filename !== 'string') {
+        return { valid: false, error: 'Filename must be a non-empty string' };
+    }
+
+    // Check for path separators (both Unix and Windows)
+    if (filename.includes('/') || filename.includes('\\')) {
+        return { valid: false, error: 'Filename must not contain path separators' };
+    }
+
+    // Check for null bytes
+    if (filename.includes('\0')) {
+        return { valid: false, error: 'Null byte injection detected' };
+    }
+
+    // Check length
+    if (filename.length > maxLength) {
+        return { valid: false, error: `Filename exceeds maximum length of ${maxLength} characters` };
+    }
+
+    // Check for dangerous filenames
+    const dangerousPatterns = [
+        /^\./,           // Hidden files (starts with .)
+        /^~$/,           // Home directory
+        /^\.\./,         // Parent directory reference
+    ];
+
+    for (const pattern of dangerousPatterns) {
+        if (pattern.test(filename)) {
+            return { valid: false, error: 'Potentially dangerous filename pattern detected' };
+        }
+    }
+
+    // Check extension if restrictions are specified
+    if (allowedExtensions && allowedExtensions.length > 0) {
+        const ext = path.extname(filename).toLowerCase();
+        if (!allowedExtensions.includes(ext)) {
+            return { 
+                valid: false, 
+                error: `File extension '${ext}' not allowed. Allowed: ${allowedExtensions.join(', ')}` 
+            };
+        }
+    }
+
+    return { valid: true };
+}
 
 module.exports = {
     calculateTokens,
@@ -345,5 +477,7 @@ module.exports = {
     writePromptToFile,
     validateUrl,
     validateApiUrl,
-    validateUrlAgainstBase
+    validateUrlAgainstBase,
+    sanitizePath,
+    validateFilename
 };

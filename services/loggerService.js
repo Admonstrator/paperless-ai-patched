@@ -1,6 +1,7 @@
 const fs = require('fs');
 const util = require('util');
 const path = require('path');
+const { sanitizePath, validateFilename } = require('./serviceUtils');
 
 class Logger {
     constructor(options = {}) {
@@ -9,6 +10,25 @@ class Logger {
         this.timestamp = options.timestamp !== false;
         this.format = options.format || 'txt';
         this.maxFileSize = options.maxFileSize || 1024 * 1024 * 10; // Standard: 10MB
+        
+        // Path Injection Prevention: Validate log filename
+        const filenameValidation = validateFilename(this.logFile, {
+            allowedExtensions: ['.log', '.txt', '.html']
+        });
+        
+        if (!filenameValidation.valid) {
+            throw new Error(`Invalid log filename: ${filenameValidation.error}`);
+        }
+        
+        // Ensure logDir is absolute and sanitized
+        const baseDir = path.resolve(process.cwd());
+        const logDirValidation = sanitizePath(this.logDir, baseDir);
+        
+        if (!logDirValidation.valid) {
+            throw new Error(`Invalid log directory: ${logDirValidation.error}`);
+        }
+        
+        this.logDir = logDirValidation.sanitizedPath;
         
         if (!fs.existsSync(this.logDir)) {
             fs.mkdirSync(this.logDir, { recursive: true });

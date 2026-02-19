@@ -29,6 +29,7 @@ Each subdirectory represents an integrated fix with:
 | ID | Title | Status | Integration Date |
 |----|-------|--------|------------------|
 | [DEP-001](DEP-001-remove-sqlite3/) | Remove unused sqlite3 dependency | ✅ Applied | 2025-12-03 |
+| [DEP-002](DEP-002-safe-requirements-locking/) | Safe dependency updates + Python lockfiles per runtime | ✅ Applied | 2026-02-19 |
 | [DOCKER-001](DOCKER-001-optimize-images/) | Docker image optimization | ✅ Applied | 2025-12-03 |
 | [DOCKER-002](DOCKER-002-upgrade-nodejs-24-lts/) | Upgrade Node.js to 24 LTS | ✅ Applied | 2025-12-18 |
 | [UI-001](UI-001-hide-rag-menu-lite/) | Hide RAG menu in Lite image | ✅ Applied | 2025-12-04 |
@@ -48,7 +49,7 @@ Each fix directory contains:
 ## 📝 Adding New Fixes
 
 When integrating a new fix:
-1. Create a new directory: `PR-XXX-short-name/` or `PATCH-XXX-short-name/`
+1. Create a new directory: `PR-XXX-short-name/`, `DEP-XXX-short-name/`, `SEC-XXX-short-name/`, etc.
 2. Add `README.md` with fix details
 3. Optionally add `.patch` file: `git format-patch -1 <commit-hash>`
 4. Update this table

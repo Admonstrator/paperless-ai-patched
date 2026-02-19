@@ -414,7 +414,8 @@ pm2 start ecosystem.config.js
 
 ```bash
 # Linting
-npm run lint  # ESLint + Prettier
+npx eslint .
+npx prettier --check .
 
 # Manual Testing
 # Use /playground route for prompt testing

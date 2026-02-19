@@ -22,8 +22,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     find /opt/venv -type d -name "tests" -exec rm -rf {} + 2>/dev/null || true && \
     find /opt/venv -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true && \
     find /opt/venv -name "*.pyc" -delete && \
-    find /opt/venv -name "*.pyo" -delete && \
-    find /opt/venv -name "*.dist-info" -type d -exec rm -rf {} + 2>/dev/null || true
+    find /opt/venv -name "*.pyo" -delete
 
 # Stage 2: Build stage for Node.js dependencies
 FROM node:24-slim AS node-builder
@@ -56,6 +55,9 @@ RUN apt-get update && \
     ca-certificates && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# Ensure venv python symlinks resolve on node base image
+RUN ln -s /usr/bin/python3 /usr/local/bin/python3
 
 # Install PM2 globally
 RUN npm install pm2 -g && npm cache clean --force

@@ -91,7 +91,7 @@ export RAG_SERVICE_ENABLED=true
 2. Start the Paperless-AI application in development mode:
 
 ```bash
-npm run dev
+npm run test
 ```
 
 ## Accessing the RAG Interface

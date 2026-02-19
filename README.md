@@ -72,6 +72,7 @@ All fixes are documented in [`Included_Fixes/`](Included_Fixes/) with detailed i
 | **Docker** | [DOCKER-001](Included_Fixes/DOCKER-001-optimize-images/) | Optimized Docker images | ✅ Applied |
 | **Docker** | [DOCKER-002](Included_Fixes/DOCKER-002-upgrade-nodejs-24-lts/) | Upgrade to Node.js 24 LTS | ✅ Applied |
 | **Dependencies** | [DEP-001](Included_Fixes/DEP-001-remove-sqlite3/) | Remove unused sqlite3 | ✅ Applied |
+| **Dependencies** | [DEP-002](Included_Fixes/DEP-002-safe-requirements-locking/) | Safe dependency updates + Python runtime lockfiles | ✅ Applied |
 | **CI/CD** | [CI-001](Included_Fixes/CI-001-auto-version-tagging/) | Automatic version tagging | ✅ Applied |
 
 Full details: [`Included_Fixes/README.md`](Included_Fixes/README.md)

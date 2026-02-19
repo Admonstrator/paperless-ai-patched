@@ -102,23 +102,23 @@ services:
       - "3000:3000"
     environment:
       # Paperless-ngx connection
-      - PAPERLESS_URL=http://paperless-ngx:8000
+      - PAPERLESS_API_URL=http://paperless-ngx:8000
       - PAPERLESS_API_TOKEN=your_paperless_api_token
       
       # AI Provider (choose one)
       - AI_PROVIDER=openai
       - OPENAI_API_KEY=your_openai_key
       # - AI_PROVIDER=ollama
-      # - OLLAMA_BASE_URL=http://ollama:11434
+      # - OLLAMA_API_URL=http://ollama:11434
       
       # Optional: RAG settings (Full image only)
       - RAG_SERVICE_ENABLED=false  # set to true for Full image
       
       # Optional: Processing settings
-      - CRON_SCHEDULE=*/5 * * * *  # Check every 5 minutes
-      - AUTO_TAG=true
-      - AUTO_CORRESPONDENT=true
-      - AUTO_DOCUMENT_TYPE=true
+      - SCAN_INTERVAL=*/5 * * * *  # Check every 5 minutes
+      - ACTIVATE_TAGGING=yes
+      - ACTIVATE_CORRESPONDENTS=yes
+      - ACTIVATE_DOCUMENT_TYPE=yes
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
@@ -137,7 +137,7 @@ services:
 docker run -d \
   --name paperless-ai-patched \
   -p 3000:3000 \
-  -e PAPERLESS_URL=http://your-paperless:8000 \
+  -e PAPERLESS_API_URL=http://your-paperless:8000 \
   -e PAPERLESS_API_TOKEN=your_token \
   -e AI_PROVIDER=openai \
   -e OPENAI_API_KEY=your_key \
@@ -152,7 +152,7 @@ docker run -d \
 docker run -d \
   --name paperless-ai-patched \
   -p 3000:3000 \
-  -e PAPERLESS_URL=http://your-paperless:8000 \
+  -e PAPERLESS_API_URL=http://your-paperless:8000 \
   -e PAPERLESS_API_TOKEN=your_token \
   -e AI_PROVIDER=openai \
   -e OPENAI_API_KEY=your_key \
@@ -171,16 +171,16 @@ docker run -d \
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `PAPERLESS_URL` | ✅ | - | URL to your Paperless-ngx instance |
+| `PAPERLESS_API_URL` | ✅ | - | URL to your Paperless-ngx instance |
 | `PAPERLESS_API_TOKEN` | ✅ | - | API token from Paperless-ngx |
 | `AI_PROVIDER` | ✅ | `openai` | AI provider (openai, ollama, azure, custom, etc.) |
 | `OPENAI_API_KEY` | ⚠️ | - | Required if using OpenAI |
-| `OLLAMA_BASE_URL` | ⚠️ | - | Required if using Ollama |
+| `OLLAMA_API_URL` | ⚠️ | - | Required if using Ollama |
 | `RAG_SERVICE_ENABLED` | ❌ | `false` | Enable RAG chat (Full image only) |
-| `CRON_SCHEDULE` | ❌ | `*/5 * * * *` | Document processing schedule |
-| `AUTO_TAG` | ❌ | `true` | Auto-apply AI-suggested tags |
-| `AUTO_CORRESPONDENT` | ❌ | `true` | Auto-apply AI-suggested correspondent |
-| `AUTO_DOCUMENT_TYPE` | ❌ | `true` | Auto-apply AI-suggested document type |
+| `SCAN_INTERVAL` | ❌ | `*/30 * * * *` | Document processing schedule |
+| `ACTIVATE_TAGGING` | ❌ | `yes` | Enable automatic tag assignment |
+| `ACTIVATE_CORRESPONDENTS` | ❌ | `yes` | Enable automatic correspondent assignment |
+| `ACTIVATE_DOCUMENT_TYPE` | ❌ | `yes` | Enable automatic document type assignment |
 
 ### First-Time Setup
 1. Start the container

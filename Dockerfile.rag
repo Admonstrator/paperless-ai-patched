@@ -7,11 +7,11 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements file
-COPY requirements.txt /app/
+# Copy Python 3.10 lockfile
+COPY requirements-py310.txt /app/
 
 # Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements-py310.txt
 
 # Copy Python code
 COPY main.py /app/

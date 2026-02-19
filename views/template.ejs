@@ -1,14 +1,16 @@
 <!DOCTYPE html>
 <html lang="en" class="h-full" data-theme="light">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Paperless-AI Dashboard</title>
-    <script src="https://cdn.tailwindcss.com/3.4.16"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="/vendor/js/tailwindcss.js"></script>
+    <link rel="stylesheet" href="/vendor/css/fontawesome.min.css">
     <link rel="stylesheet" href="css/dashboard.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+    <script src="/vendor/js/chart.min.js"></script>
 </head>
+
 <body class="h-full">
     <button id="themeToggle" class="theme-toggle">
         <i class="fas fa-moon dark:fas fa-sun"></i>
@@ -21,7 +23,9 @@
                 <div class="brand-icon">
                     <i class="fas fa-file-alt"></i>
                 </div>
-                <h1 class="brand-title">Paperless-AI<small style="display: block;"><%= version %></small></h1>
+                <h1 class="brand-title">Paperless-AI<small style="display: block;">
+                        <%= version %>
+                    </small></h1>
             </div>
 
             <nav class="sidebar-nav">
@@ -67,4 +71,5 @@
     </div>
     <script src="js/dashboard.js"></script>
 </body>
+
 </html>

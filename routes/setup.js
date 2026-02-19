@@ -345,7 +345,8 @@ router.post('/login', async (req, res) => {
 
     // Compare passwords
     const isValidPassword = await bcrypt.compare(password, user.password);
-    console.log('Password validation result:', isValidPassword);
+    // Sensitive Data Protection: Don't log password validation result
+    console.log('Password validation completed for user:', username);
 
     if (isValidPassword) {
       const token = jwt.sign(
@@ -356,9 +357,11 @@ router.post('/login', async (req, res) => {
         JWT_SECRET,
         { expiresIn: '24h' }
       );
+      
+      // Sensitive Data Protection: Use secure cookie settings
       res.cookie('jwt', token, {
         httpOnly: true,
-        secure: false,  
+        secure: configFile.security.secureCookies,  // HTTPS in production
         sameSite: 'lax', 
         path: '/',
         maxAge: 24 * 60 * 60 * 1000 
@@ -614,7 +617,24 @@ router.get('/playground', protectApiRoute, async (req, res) => {
  *               $ref: '#/components/schemas/Error'
  */
 router.get('/thumb/:documentId', async (req, res) => {
-  const cachePath = path.join('./public/images', `${req.params.documentId}.png`);
+  // Path Injection Prevention: Validate document ID before file operations
+  const { sanitizePath } = require('../services/serviceUtils');
+  const baseDir = path.resolve('./public/images');
+  const filename = `${req.params.documentId}.png`;
+  
+  const pathValidation = sanitizePath(filename, baseDir, {
+    allowedExtensions: ['.png']
+  });
+  
+  if (!pathValidation.valid) {
+    console.error(`[SECURITY] Invalid thumbnail path: ${pathValidation.error}`);
+    return res.status(400).json({ 
+      success: false, 
+      error: 'Invalid document ID' 
+    });
+  }
+  
+  const cachePath = pathValidation.sanitizedPath;
 
   try {
     // Prüfe ob das Bild bereits im Cache existiert
@@ -624,7 +644,7 @@ router.get('/thumb/:documentId', async (req, res) => {
       
       // Wenn ja, sende direkt das gecachte Bild
       res.setHeader('Content-Type', 'image/png');
-      return res.sendFile(path.resolve(cachePath));
+      return res.sendFile(cachePath);
       
     } catch (err) {
       // File existiert nicht im Cache, hole es von Paperless
@@ -2072,6 +2092,9 @@ router.post('/api/key-regenerate', async (req, res) => {
     // Generiere ein neues API-Token
     const apiKey = crypto.randomBytes(32).toString('hex');
     envConfig.API_KEY = apiKey;
+    
+    // Sensitive Data Protection: Log without exposing the actual key
+    console.log('API key regenerated successfully');
 
     // Schreibe die aktualisierte .env-Datei
     const envContent = Object.entries(envConfig)

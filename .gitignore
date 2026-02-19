@@ -8,6 +8,7 @@ openai_debug.log
 prompt.bak
 data bak/
 data_bak/
+SEC003-TODO.md
 data_*/
 .env*
 docker-compose-dev.yml

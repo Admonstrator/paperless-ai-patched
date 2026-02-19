@@ -515,7 +515,22 @@ class OllamaService {
     async _handleThumbnailCaching(id) {
         if (!id) return;
 
-        const cachePath = path.join('./public/images', `${id}.png`);
+        // Path Injection Prevention: Validate document ID
+        const { sanitizePath } = require('./serviceUtils');
+        const baseDir = path.resolve('./public/images');
+        const filename = `${id}.png`;
+        
+        const pathValidation = sanitizePath(filename, baseDir, {
+            allowedExtensions: ['.png']
+        });
+        
+        if (!pathValidation.valid) {
+            console.error(`[SECURITY] Invalid thumbnail path for ID ${id}: ${pathValidation.error}`);
+            return;
+        }
+        
+        const cachePath = pathValidation.sanitizedPath;
+        
         try {
             await fs.access(cachePath);
             console.log('[DEBUG] Thumbnail already cached');

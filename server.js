@@ -47,7 +47,7 @@ const corsOptions = {
   origin: true,
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: [
-    'Content-Type', 
+    'Content-Type',
     'x-api-key',
     'Access-Control-Allow-Private-Network'
   ],
@@ -61,7 +61,7 @@ app.use((req, res, next) => {
   res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type, x-api-key, Access-Control-Allow-Private-Network');
   res.header('Access-Control-Allow-Private-Network', 'true');
-  
+
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
@@ -71,7 +71,61 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
+const cookieParser = require('cookie-parser');
+const csrf = require('csurf');
+const rateLimit = require('express-rate-limit');
+
+// Global rate limiter
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per window
+  message: 'Too many requests from this IP, please try again later',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Strict limiter for authentication endpoints
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  skipSuccessfulRequests: true
+});
+
+// Configure CSRF protection
+const csrfProtection = csrf({ cookie: true });
+
 app.use(cookieParser());
+
+// Apply rate limiting
+app.use('/api/', globalLimiter);
+app.use('/login', authLimiter);
+
+// Add safeJSON helper to locals
+app.use((req, res, next) => {
+  res.locals.safeJSON = (data) => JSON.stringify(data).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
+  next();
+});
+app.use('/api/auth/login', authLimiter);
+
+// Apply CSRF protection
+// Skip CSRF for API key authenticated requests or if explicitly disabled
+app.use((req, res, next) => {
+  if (req.headers['x-api-key'] || process.env.ENABLE_CSRF_PROTECTION === 'false') {
+    return next();
+  }
+  // Skip CSRF for HEAD/OPTIONS/GET requests (handled by csurf, but being explicit doesn't hurt)
+  csrfProtection(req, res, next);
+});
+
+// Add CSRF token to all views
+app.use((req, res, next) => {
+  if (req.csrfToken) {
+    res.locals.csrfToken = req.csrfToken();
+  } else {
+    res.locals.csrfToken = '';
+  }
+  next();
+});
 
 // Swagger documentation route
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
@@ -117,7 +171,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
 app.get('/api-docs/openapi.json', (req, res) => {
   const openApiPath = path.join(process.cwd(), 'OPENAPI', 'openapi.json');
   res.setHeader('Content-Type', 'application/json');
-  
+
   // Try to serve the static file first
   fs.readFile(openApiPath)
     .then(data => {
@@ -175,7 +229,7 @@ async function saveOpenApiSpec() {
       console.log('Creating OPENAPI directory...');
       await fs.mkdir(openApiDir, { recursive: true });
     }
-    
+
     // Write the specification to file
     await fs.writeFile(openApiPath, JSON.stringify(swaggerSpec, null, 2));
     console.log(`OpenAPI specification saved to ${openApiPath}`);
@@ -198,7 +252,7 @@ async function processDocument(doc, existingTags, existingCorrespondentList, exi
     console.log(`[DEBUG] Document belongs to: ${documentEditable}, skipping analysis`);
     console.log(`[DEBUG] Document ${doc.id} Not Editable by Paper-Ai User, skipping analysis`);
     return null;
-  }else {
+  } else {
     console.log(`[DEBUG] Document ${doc.id} rights for AI User - processed`);
   }
 
@@ -283,7 +337,7 @@ async function buildUpdateData(analysis, doc) {
       console.error(`[ERROR] Error processing document type:`, error);
     }
   }
-  
+
   // Only process custom fields if custom fields detection is activated
   if (config.limitFunctions?.activateCustomFields !== 'no' && analysis.document.custom_fields) {
     const customFields = analysis.document.custom_fields;
@@ -299,7 +353,7 @@ async function buildUpdateData(analysis, doc) {
     // First, add any new/updated fields
     for (const key in customFields) {
       const customField = customFields[key];
-      
+
       if (!customField.field_name || !customField.value?.trim()) {
         console.log(`[DEBUG] Skipping empty/invalid custom field`);
         continue;
@@ -349,13 +403,13 @@ async function buildUpdateData(analysis, doc) {
 
 async function saveDocumentChanges(docId, updateData, analysis, originalData) {
   const { tags: originalTags, correspondent: originalCorrespondent, title: originalTitle } = originalData;
-  
+
   await Promise.all([
     documentModel.saveOriginalData(docId, originalTags, originalCorrespondent, originalTitle),
     paperlessService.updateDocument(docId, updateData),
     documentModel.addProcessedDocument(docId, updateData.title),
     documentModel.addOpenAIMetrics(
-      docId, 
+      docId,
       analysis.metrics.promptTokens,
       analysis.metrics.completionTokens,
       analysis.metrics.totalTokens
@@ -383,7 +437,7 @@ async function scanInitial() {
     //get existing correspondent list
     existingCorrespondentList = existingCorrespondentList.map(correspondent => correspondent.name);
     let existingDocumentTypesList = existingDocumentTypes.map(docType => docType.name);
-    
+
     // Extract tag names from tag objects
     const existingTagNames = existingTags.map(tag => tag.name);
 
@@ -422,10 +476,10 @@ async function scanDocuments() {
 
     //get existing correspondent list
     existingCorrespondentList = existingCorrespondentList.map(correspondent => correspondent.name);
-    
+
     //get existing document types list
     let existingDocumentTypesList = existingDocumentTypes.map(docType => docType.name);
-    
+
     // Extract tag names from tag objects
     const existingTagNames = existingTags.map(tag => tag.name);
 
@@ -457,11 +511,11 @@ const ragRoutes = require('./routes/rag');
 // Mount RAG routes if enabled
 if (process.env.RAG_SERVICE_ENABLED === 'true') {
   app.use('/api/rag', ragRoutes);
-  
+
   // RAG UI route
   app.get('/rag', async (req, res) => {
     try {
-      res.render('rag', { 
+      res.render('rag', {
         title: 'Dokumenten-Fragen'
       });
     } catch (error) {
@@ -550,7 +604,7 @@ app.get('/health', async (req, res) => {
   try {
     const isConfigured = await setupService.isConfigured();
     if (!isConfigured) {
-      return res.status(503).json({ 
+      return res.status(503).json({
         status: 'not_configured',
         message: 'Application setup not completed'
       });
@@ -560,17 +614,24 @@ app.get('/health', async (req, res) => {
     res.json({ status: 'healthy' });
   } catch (error) {
     console.error('Health check failed:', error);
-    res.status(503).json({ 
-      status: 'error', 
-      message: error.message 
+    res.status(503).json({
+      status: 'error',
+      message: error.message
     });
   }
 });
 
 // Error handler
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).send('Something broke!');
+  if (err.code === 'EBADCSRFTOKEN') {
+    return res.status(403).send('Invalid CSRF token');
+  }
+
+  // Log full error server-side (redacted by Logger)
+  console.error(err);
+
+  // Send sanitized error to client
+  res.status(500).send('An internal error occurred');
 });
 
 // Start scanning
@@ -589,9 +650,9 @@ async function startScanning() {
 
     console.log('Configured scan interval:', config.scanInterval);
     console.log(`Starting initial scan at ${new Date().toISOString()}`);
-    if(config.disableAutomaticProcessing != 'yes') {
+    if (config.disableAutomaticProcessing != 'yes') {
       await scanInitial();
-  
+
       cron.schedule(config.scanInterval, async () => {
         console.log(`Starting scheduled scan at ${new Date().toISOString()}`);
         await scanDocuments();
@@ -601,6 +662,15 @@ async function startScanning() {
     console.error('[ERROR] in startScanning:', error);
   }
 }
+
+// Centralized error handler
+app.use((err, req, res, next) => {
+  console.error('[SERVER ERROR]', err);
+  res.status(500).json({
+    message: 'Internal Server Error',
+    error: process.env.NODE_ENV === 'development' ? err.message : 'An unexpected error occurred'
+  });
+});
 
 // Error handlers
 // process.on('SIGTERM', async () => {
@@ -623,7 +693,7 @@ process.on('uncaughtException', (error) => {
 
 process.on('unhandledRejection', (reason, promise) => {
   console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-  process.exit(1);
+  // Don't crash - log and continue
 });
 
 async function gracefulShutdown(signal) {

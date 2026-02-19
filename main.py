@@ -1357,7 +1357,7 @@ class SearchEngine:
         except Exception as e:
             logger.error(f"Error in search: {str(e)}")
             logger.error(traceback.format_exc())
-            raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
+            raise HTTPException(status_code=500, detail="An internal error occurred while processing your search request")
 
 # Indexierung als Hintergrundaufgabe
 def run_indexing(force_update=False, check_new=False):
@@ -1715,7 +1715,7 @@ async def search_documents(request: SearchRequest, search_engine: SearchEngine =
     except Exception as e:
         logger.error(f"Search error: {str(e)}")
         logger.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="An internal error occurred while processing your search request")
 
 @app.post("/context", response_model=dict)
 async def get_context(request: AskQuestionRequest, search_engine: SearchEngine = Depends(get_search_engine)):
@@ -1770,7 +1770,7 @@ async def get_context(request: AskQuestionRequest, search_engine: SearchEngine =
     except Exception as e:
         logger.error(f"Context error: {str(e)}")
         logger.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="An internal error occurred while processing your context request")
 
 @app.get("/status", response_model=dict)
 async def get_status():

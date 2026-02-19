@@ -1,8 +1,18 @@
 // service to debug the paperless-ngx api routes
 const env = require('dotenv').config();
 const axios = require('axios');
+const { validateApiUrl } = require('./serviceUtils');
 const paperless_api = process.env.PAPERLESS_API_URL;
 const paperless_token = process.env.PAPERLESS_API_TOKEN;
+
+// Validate Paperless API URL on module load
+if (paperless_api) {
+    const validation = validateApiUrl(paperless_api, { allowPrivateIPs: true });
+    if (!validation.valid) {
+        console.error('[SECURITY] Paperless API URL validation failed:', validation.error);
+        throw new Error(`Invalid Paperless API URL: ${validation.error}`);
+    }
+}
 
 const getDocuments = async () => {
     try {

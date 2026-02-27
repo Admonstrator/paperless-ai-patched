@@ -32,27 +32,34 @@ jobs:
       - name: Generate version tag
         id: version
         run: |
-          # Extract base version from config.js
-          BASE_VERSION=$(grep "PAPERLESS_AI_VERSION:" config/config.js | sed "s/.*'\(.*\)'.*/\1/")
-          echo "Base version: $BASE_VERSION"
-          
-          # Get all tags matching the base version pattern
+          # Use today's date as version base: vYYYY-MM-DD
+          DATE_PREFIX="v$(date +%Y-%m-%d)"
+          echo "Date prefix: $DATE_PREFIX"
+
+          # Find highest build number for today's date
           git fetch --tags
-          LATEST_BUILD=$(git tag -l "v${BASE_VERSION}-*" | sed "s/v${BASE_VERSION}-//" | sort -n | tail -1)
-          
-          # If no build number found, start with 1
+          LATEST_BUILD=$(git tag -l "${DATE_PREFIX}-*" | sed "s/${DATE_PREFIX}-//" | grep '^[0-9]\+$' | sort -n | tail -1)
+
+          # Increment or start at 01
           if [ -z "$LATEST_BUILD" ]; then
-            BUILD_NUMBER=1
+            BUILD_NUMBER="01"
           else
-            BUILD_NUMBER=$((LATEST_BUILD + 1))
+            BUILD_NUMBER=$(printf "%02d" $((10#$LATEST_BUILD + 1)))
           fi
-          
-          VERSION_TAG="v${BASE_VERSION}-${BUILD_NUMBER}"
+
+          VERSION_TAG="${DATE_PREFIX}-${BUILD_NUMBER}"
           echo "Generated version tag: $VERSION_TAG"
-          
+
           echo "tag=$VERSION_TAG" >> $GITHUB_OUTPUT
-          echo "base=$BASE_VERSION" >> $GITHUB_OUTPUT
+          echo "base=$DATE_PREFIX" >> $GITHUB_OUTPUT
       
+      - name: Update version in config.js
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        run: |
+          VERSION_TAG="${{ steps.version.outputs.tag }}"
+          sed -i "s|PAPERLESS_AI_VERSION: '.*'|PAPERLESS_AI_VERSION: '${VERSION_TAG}'|" config/config.js
+          echo "✅ config.js updated to $VERSION_TAG"
+
       - name: Create and push tag
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         env:
@@ -61,6 +68,9 @@ jobs:
           VERSION_TAG="${{ steps.version.outputs.tag }}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add config/config.js
+          git diff --cached --quiet || git commit -m "🤖 Bump version to ${VERSION_TAG} [automated]"
+          git push origin HEAD
           git tag -a "$VERSION_TAG" -m "Automated build $VERSION_TAG"
           git push origin "$VERSION_TAG"
 

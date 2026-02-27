@@ -77,7 +77,7 @@ console.log('Loaded environment variables:', {
 });
 
 module.exports = {
-  PAPERLESS_AI_VERSION: '3.0.9-admon.1',
+  PAPERLESS_AI_VERSION: 'v2026-02-27-01',
   CONFIGURED: false,
   getApiKey,
   getJwtSecret,

@@ -78,18 +78,18 @@ jobs:
           # Always protect these exact tags
           PROTECTED_TAGS="latest latest-lite latest-full"
 
-          # Get versioned lite tags (e.g. v3.0.9-admon.1-2-lite), sorted by push date desc
-          lite_tags=$(jq -r '[.[] | select(.name | test("^v.*-lite$"))] | sort_by(.last_pushed) | reverse | .['"$KEEP_COUNT"':] | .[].name' /tmp/all_tags.json)
+          # Get versioned lite tags (e.g. v2026-02-27-01-lite), sorted by push date desc
+          lite_tags=$(jq -r '[.[] | select(.name | test("^v[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]+-lite$"))] | sort_by(.last_pushed) | reverse | .['"$KEEP_COUNT"':] | .[].name' /tmp/all_tags.json)
           echo "🔵 Lite tags to delete: $(echo "$lite_tags" | grep '.' | wc -l)"
           [ -n "$lite_tags" ] && echo "$lite_tags" || true
 
-          # Get versioned full tags (e.g. v3.0.9-admon.1-2-full), sorted by push date desc
-          full_tags=$(jq -r '[.[] | select(.name | test("^v.*-full$"))] | sort_by(.last_pushed) | reverse | .['"$KEEP_COUNT"':] | .[].name' /tmp/all_tags.json)
+          # Get versioned full tags (e.g. v2026-02-27-01-full), sorted by push date desc
+          full_tags=$(jq -r '[.[] | select(.name | test("^v[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]+-full$"))] | sort_by(.last_pushed) | reverse | .['"$KEEP_COUNT"':] | .[].name' /tmp/all_tags.json)
           echo "🟢 Full tags to delete: $(echo "$full_tags" | grep '.' | wc -l)"
           [ -n "$full_tags" ] && echo "$full_tags" || true
 
-          # Get plain versioned tags (e.g. v3.0.9-admon.1-2), sorted by push date desc
-          version_tags=$(jq -r '[.[] | select(.name | test("^v[0-9]") and (test("-lite$") | not) and (test("-full$") | not))] | sort_by(.last_pushed) | reverse | .['"$KEEP_COUNT"':] | .[].name' /tmp/all_tags.json)
+          # Get plain versioned tags (e.g. v2026-02-27-01), sorted by push date desc
+          version_tags=$(jq -r '[.[] | select(.name | test("^v[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]+$"))] | sort_by(.last_pushed) | reverse | .['"$KEEP_COUNT"':] | .[].name' /tmp/all_tags.json)
           echo "🟡 Plain versioned tags to delete: $(echo "$version_tags" | grep '.' | wc -l)"
           [ -n "$version_tags" ] && echo "$version_tags" || true
 

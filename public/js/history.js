@@ -757,7 +757,7 @@ class HistoryManager {
 
             if (!cf || (Array.isArray(cf) && cf.length === 0) ||
                 (typeof cf === 'object' && !Array.isArray(cf) && Object.keys(cf).length === 0)) {
-                cfEl.innerHTML = '<span class="text-gray-400 text-sm">No custom fields stored for this entry</span>';
+                cfEl.innerHTML = '<span class="text-gray-400 text-sm">No custom fields were detected or applied for this document</span>';
             } else {
                 const items = Array.isArray(cf) ? cf : Object.values(cf);
                 cfEl.innerHTML = items.map(item => {

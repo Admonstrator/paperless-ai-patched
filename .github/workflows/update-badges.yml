@@ -77,6 +77,9 @@ jobs:
           docker_color=$(get_color $docker_pulls)
           docker_pulls_fmt=$(format_number $docker_pulls)
 
+          # Escape dashes for shields.io badge URLs (single dash → double dash)
+          release_badge="${release//-/--}"
+
           # Get current date
           update_date=$(date '+%Y-%m-%d')
 
@@ -87,7 +90,7 @@ jobs:
           sed -i "s|{{VERSION}}|${release}|g" README.md
 
           # Replace dynamic GitHub release badge with static badge
-          sed -i "s|https://img.shields.io/github/v/release/Admonstrator/paperless-ai-patched?style=for-the-badge\&logo=github\&color=blue|https://img.shields.io/badge/release-${release}-blue?style=for-the-badge\&logo=github|g" README.md
+          sed -i "s|https://img.shields.io/github/v/release/Admonstrator/paperless-ai-patched?style=for-the-badge\&logo=github\&color=blue|https://img.shields.io/badge/release-${release_badge}-blue?style=for-the-badge\&logo=github|g" README.md
 
           # Replace dynamic GitHub stars badge with static badge
           sed -i "s|https://img.shields.io/github/stars/Admonstrator/paperless-ai-patched?style=for-the-badge|https://img.shields.io/badge/stars-${stars}-${stars_color}?style=for-the-badge\&logo=github|g" README.md

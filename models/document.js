@@ -164,6 +164,43 @@ const createProcessingStatus = db.prepare(`
 `);
 createProcessingStatus.run();
 
+// ─── DB Migration System ──────────────────────────────────────────────────────
+// Uses SQLite PRAGMA user_version to track schema version.
+// Each migration runs exactly once and is applied in order.
+// To add a new migration: append an entry to MIGRATIONS with the next version number.
+const MIGRATIONS = [
+  {
+    version: 1,
+    description: 'Add custom_fields column to history_documents',
+    up: (database) => {
+      database.exec("ALTER TABLE history_documents ADD COLUMN custom_fields TEXT DEFAULT '[]'");
+    }
+  }
+];
+
+function runMigrations(database) {
+  const currentVersion = database.pragma('user_version', { simple: true });
+  const pending = MIGRATIONS.filter(m => m.version > currentVersion);
+
+  if (pending.length === 0) {
+    console.log(`[DB Migration] Schema is up to date at v${currentVersion}`);
+    return;
+  }
+
+  for (const migration of pending) {
+    console.log(`[DB Migration] Running migration v${migration.version}: ${migration.description}`);
+    const applyMigration = database.transaction(() => {
+      migration.up(database);
+      database.pragma(`user_version = ${migration.version}`);
+    });
+    applyMigration();
+    console.log(`[DB Migration] Migration v${migration.version} completed successfully`);
+  }
+}
+
+runMigrations(db);
+// ─────────────────────────────────────────────────────────────────────────────
+
 // Add with your other prepared statements
 const upsertProcessingStatus = db.prepare(`
   INSERT INTO processing_status (document_id, title, status)
@@ -272,13 +309,14 @@ module.exports = {
     }
   },
 
-  async addToHistory(documentId, tagIds, title, correspondent) {
+  async addToHistory(documentId, tagIds, title, correspondent, customFields = null) {
     try {
       const tagIdsString = JSON.stringify(tagIds); // Konvertiere Array zu String
+      const customFieldsString = customFields ? JSON.stringify(customFields) : '[]';
       const result = db.prepare(`
-        INSERT INTO history_documents (document_id, tags, title, correspondent)
-        VALUES (?, ?, ?, ?)
-      `).run(documentId, tagIdsString, title, correspondent);
+        INSERT INTO history_documents (document_id, tags, title, correspondent, custom_fields)
+        VALUES (?, ?, ?, ?, ?)
+      `).run(documentId, tagIdsString, title, correspondent, customFieldsString);
       if (result.changes > 0) {
         console.log(`[DEBUG] Document ${title} added to history`);
         return true;
@@ -287,6 +325,24 @@ module.exports = {
     } catch (error) {
       console.error('[ERROR] adding to history:', error);
       return false;
+    }
+  },
+
+  async getHistoryByDocumentId(documentId) {
+    try {
+      return db.prepare('SELECT * FROM history_documents WHERE document_id = ? ORDER BY id DESC LIMIT 1').get(documentId);
+    } catch (error) {
+      console.error('[ERROR] getting history by document ID:', error);
+      return null;
+    }
+  },
+
+  async getMetricsByDocumentId(documentId) {
+    try {
+      return db.prepare('SELECT * FROM openai_metrics WHERE document_id = ? ORDER BY id DESC LIMIT 1').get(documentId);
+    } catch (error) {
+      console.error('[ERROR] getting metrics by document ID:', error);
+      return null;
     }
   },
 

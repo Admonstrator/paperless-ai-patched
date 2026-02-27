@@ -413,7 +413,7 @@ async function saveDocumentChanges(docId, updateData, analysis, originalData) {
       analysis.metrics.completionTokens,
       analysis.metrics.totalTokens
     ),
-    documentModel.addToHistory(docId, updateData.tags, updateData.title, analysis.document.correspondent)
+    documentModel.addToHistory(docId, updateData.tags, updateData.title, analysis.document.correspondent, analysis.document.custom_fields || null)
   ]);
 }
 

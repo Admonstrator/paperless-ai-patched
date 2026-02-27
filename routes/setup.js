@@ -1529,6 +1529,122 @@ router.post('/api/history/clear-cache', isAuthenticated, cacheClearLimiter, asyn
 });
 
 /**
+ * GET /api/history/:id/detail
+ * Returns full AI analysis details for a single document from history,
+ * including a live tag diff against the current state in Paperless-ngx.
+ */
+router.get('/api/history/:id/detail', isAuthenticated, async (req, res) => {
+  try {
+    const documentId = parseInt(req.params.id, 10);
+    if (isNaN(documentId)) {
+      return res.status(400).json({ success: false, error: 'Invalid document ID' });
+    }
+
+    const [history, metrics, allTags] = await Promise.all([
+      documentModel.getHistoryByDocumentId(documentId),
+      documentModel.getMetricsByDocumentId(documentId),
+      paperlessService.getTags()
+    ]);
+
+    if (!history) {
+      return res.status(404).json({ success: false, error: 'No history entry found for this document' });
+    }
+
+    const tagMap = new Map(allTags.map(tag => [tag.id, tag]));
+    const historyTagIds = JSON.parse(history.tags || '[]').map(id => parseInt(id));
+
+    // Try to fetch live document for tag diff
+    let liveTagIds = null;
+    try {
+      const liveDoc = await paperlessService.getDocument(documentId);
+      liveTagIds = (liveDoc.tags || []).map(id => parseInt(id));
+    } catch (e) {
+      console.warn(`[WARN] Could not fetch live document ${documentId} for diff:`, e.message);
+    }
+
+    // Build AI-set tag list with live diff status
+    const aiTags = historyTagIds.map(id => {
+      const tag = tagMap.get(id);
+      if (!tag) return { id, name: `Tag #${id}`, color: '#999999', status: 'unknown' };
+      const status = liveTagIds === null ? 'unknown'
+        : liveTagIds.includes(id) ? 'active' : 'removed';
+      return { id: tag.id, name: tag.name, color: tag.color, status };
+    });
+
+    // Tags in Paperless that were NOT set by AI (added externally)
+    const externalTags = liveTagIds
+      ? liveTagIds
+          .filter(id => !historyTagIds.includes(id))
+          .map(id => {
+            const tag = tagMap.get(id);
+            return tag ? { id: tag.id, name: tag.name, color: tag.color, status: 'added_externally' } : null;
+          })
+          .filter(Boolean)
+      : [];
+
+    // Parse custom_fields safely
+    let customFields = [];
+    try {
+      customFields = JSON.parse(history.custom_fields || '[]');
+    } catch (e) {
+      customFields = [];
+    }
+
+    const baseURL = process.env.PAPERLESS_API_URL.replace(/\/api$/, '');
+
+    res.json({
+      success: true,
+      document_id: documentId,
+      history: {
+        title: history.title,
+        correspondent: history.correspondent,
+        custom_fields: customFields,
+        created_at: history.created_at
+      },
+      tags: {
+        aiSet: aiTags,
+        external: externalTags,
+        liveAvailable: liveTagIds !== null
+      },
+      metrics: metrics ? {
+        promptTokens: metrics.promptTokens,
+        completionTokens: metrics.completionTokens,
+        totalTokens: metrics.totalTokens
+      } : null,
+      link: `${baseURL}/documents/${documentId}/`
+    });
+  } catch (error) {
+    console.error('[ERROR] /api/history/:id/detail:', error);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+/**
+ * POST /api/history/:id/rescan
+ * Removes a document from all tracking tables so it will be picked up
+ * on the next scan. Returns immediately; the actual rescan is triggered
+ * separately via POST /api/scan/now.
+ */
+router.post('/api/history/:id/rescan', isAuthenticated, async (req, res) => {
+  try {
+    const documentId = parseInt(req.params.id, 10);
+    if (isNaN(documentId)) {
+      return res.status(400).json({ success: false, error: 'Invalid document ID' });
+    }
+
+    await documentModel.deleteDocumentsIdList([documentId]);
+
+    res.json({
+      success: true,
+      message: 'Dokument wurde zurückgesetzt und wird beim nächsten Scan erneut verarbeitet.'
+    });
+  } catch (error) {
+    console.error('[ERROR] /api/history/:id/rescan:', error);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+/**
  * @swagger
  * /api/settings/clear-tag-cache:
  *   post:

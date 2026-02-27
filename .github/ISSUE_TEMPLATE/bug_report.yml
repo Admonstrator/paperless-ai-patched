@@ -4,7 +4,7 @@ title: "[Bug]: "
 labels: ["bug", "triage"]
 assignees:
   - ""
-projects: ["clusterzx/paperless-ai"]
+projects: ["admonstrator/paperless-ai-patched"]
 
 body:
   - type: markdown

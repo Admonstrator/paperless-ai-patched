@@ -176,8 +176,8 @@
     <!-- Info Modal: AI Analysis Details -->
     <div id="infoModal" class="modal hidden">
         <div class="modal-overlay"></div>
-        <div class="modal-container" style="max-width:680px;width:95%;">
-            <div class="modal-header" style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div class="modal-container" style="max-width:680px;width:95%;display:flex;flex-direction:column;">
+            <div class="modal-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-shrink:0;">
                 <div>
                     <h3 class="modal-title" id="infoModalTitle">AI Analysis Details</h3>
                     <a id="infoModalLink" href="#" target="_blank" class="text-sm text-blue-500 hover:underline" style="display:none;">
@@ -186,7 +186,7 @@
                 </div>
                 <button class="modal-close" id="infoModalClose"><i class="fas fa-times"></i></button>
             </div>
-            <div class="modal-content">
+            <div class="modal-content" style="flex:1;min-height:0;overflow-y:auto;max-height:none;">
                 <!-- Loading State -->
                 <div id="infoModalLoading" class="text-center py-8">
                     <i class="fas fa-spinner fa-spin text-4xl text-blue-500 mb-3"></i>
@@ -258,18 +258,18 @@
                         </div>
                     </div>
                 </div>
-                <!-- Footer -->
-                <div class="flex justify-end gap-3 mt-5 pt-4 border-t">
-                    <button id="infoModalRestoreBtn" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors" style="display:none;">
-                        <i class="fas fa-rotate-left mr-1"></i> Restore Original
-                    </button>
-                    <button id="infoModalRescanBtn" class="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors">
-                        <i class="fas fa-rotate-right mr-1"></i> Rescan
-                    </button>
-                    <button id="infoModalCloseBtn" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100">
-                        Close
-                    </button>
-                </div>
+            </div>
+            <!-- Footer: outside scrollable area so buttons are always visible -->
+            <div class="flex justify-end gap-3 px-5 py-4 border-t flex-shrink-0" style="background:var(--card-bg);border-radius:0 0 12px 12px;">
+                <button id="infoModalRestoreBtn" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors" style="display:none;">
+                    <i class="fas fa-rotate-left mr-1"></i> Restore Original
+                </button>
+                <button id="infoModalRescanBtn" class="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors">
+                    <i class="fas fa-rotate-right mr-1"></i> Rescan
+                </button>
+                <button id="infoModalCloseBtn" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100">
+                    Close
+                </button>
             </div>
         </div>
     </div>

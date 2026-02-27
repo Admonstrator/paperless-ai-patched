@@ -1,0 +1,185 @@
+name: Docker Hub Prune
+
+on:
+  workflow_dispatch:
+    inputs:
+      keep_count:
+        description: 'Number of versioned tags to keep per image (lite/full)'
+        required: false
+        default: '5'
+        type: string
+      dry_run:
+        description: 'Dry run – only show what would be deleted, do not delete'
+        required: false
+        default: true
+        type: boolean
+  schedule:
+    - cron: '0 3 * * 1' # Every Monday at 03:00 UTC
+
+env:
+  DOCKERHUB_REPO: admonstrator/paperless-ai-patched
+  KEEP_COUNT: ${{ inputs.keep_count || '5' }}
+
+jobs:
+  prune:
+    name: Prune Old Docker Hub Tags
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Authenticate with Docker Hub
+        id: auth
+        run: |
+          token=$(curl -s -X POST \
+            -H "Content-Type: application/json" \
+            -d "{\"username\": \"${{ secrets.DOCKER_HUB_USERNAME }}\", \"password\": \"${{ secrets.DOCKER_HUB_TOKEN }}\"}" \
+            "https://hub.docker.com/v2/users/login/" | jq -r '.token')
+
+          if [ -z "$token" ] || [ "$token" == "null" ]; then
+            echo "❌ Docker Hub authentication failed!"
+            exit 1
+          fi
+
+          echo "HUB_TOKEN=$token" >> $GITHUB_ENV
+          echo "✅ Authenticated with Docker Hub"
+
+      - name: Fetch all tags
+        id: fetch
+        run: |
+          # Fetch all tags (paginated, up to 1000)
+          all_tags="[]"
+          page=1
+          while true; do
+            response=$(curl -s \
+              -H "Authorization: Bearer $HUB_TOKEN" \
+              "https://hub.docker.com/v2/repositories/$DOCKERHUB_REPO/tags/?page=$page&page_size=100")
+
+            count=$(echo "$response" | jq '.count')
+            tags=$(echo "$response" | jq -r '[.results[] | {name: .name, last_pushed: .tag_last_pushed}]')
+            all_tags=$(echo "$all_tags $tags" | jq -s 'add')
+
+            next=$(echo "$response" | jq -r '.next')
+            if [ "$next" == "null" ] || [ -z "$next" ]; then
+              break
+            fi
+            page=$((page + 1))
+          done
+
+          echo "$all_tags" > /tmp/all_tags.json
+          total=$(echo "$all_tags" | jq 'length')
+          echo "📦 Total tags found: $total"
+          echo "📋 Tag names:"
+          jq -r '.[].name' /tmp/all_tags.json | sort
+
+      - name: Determine tags to delete
+        id: plan
+        run: |
+          KEEP_COUNT="${{ inputs.keep_count || '5' }}"
+
+          # Always protect these exact tags
+          PROTECTED_TAGS="latest latest-lite latest-full"
+
+          # Get versioned lite tags (e.g. v3.0.9-admon.1-2-lite), sorted by push date desc
+          lite_tags=$(jq -r '[.[] | select(.name | test("^v.*-lite$"))] | sort_by(.last_pushed) | reverse | .['"$KEEP_COUNT"':] | .[].name' /tmp/all_tags.json)
+          echo "🔵 Lite tags to delete: $(echo "$lite_tags" | grep '.' | wc -l)"
+          [ -n "$lite_tags" ] && echo "$lite_tags" || true
+
+          # Get versioned full tags (e.g. v3.0.9-admon.1-2-full), sorted by push date desc
+          full_tags=$(jq -r '[.[] | select(.name | test("^v.*-full$"))] | sort_by(.last_pushed) | reverse | .['"$KEEP_COUNT"':] | .[].name' /tmp/all_tags.json)
+          echo "🟢 Full tags to delete: $(echo "$full_tags" | grep '.' | wc -l)"
+          [ -n "$full_tags" ] && echo "$full_tags" || true
+
+          # Get plain versioned tags (e.g. v3.0.9-admon.1-2), sorted by push date desc
+          version_tags=$(jq -r '[.[] | select(.name | test("^v[0-9]") and (test("-lite$") | not) and (test("-full$") | not))] | sort_by(.last_pushed) | reverse | .['"$KEEP_COUNT"':] | .[].name' /tmp/all_tags.json)
+          echo "🟡 Plain versioned tags to delete: $(echo "$version_tags" | grep '.' | wc -l)"
+          [ -n "$version_tags" ] && echo "$version_tags" || true
+
+          # Combine all to-delete tags
+          TO_DELETE=$(printf "%s\n%s\n%s" "$lite_tags" "$full_tags" "$version_tags" | grep -v '^$' | sort -u)
+
+          # Remove protected tags just in case
+          for protected in $PROTECTED_TAGS; do
+            TO_DELETE=$(echo "$TO_DELETE" | grep -v "^${protected}$" || true)
+          done
+
+          echo "🗑️ Tags scheduled for deletion:"
+          if [ -z "$TO_DELETE" ]; then
+            echo "  (none)"
+          else
+            echo "$TO_DELETE"
+          fi
+
+          # Save list for next step
+          echo "$TO_DELETE" > /tmp/to_delete.txt
+          count=$(echo "$TO_DELETE" | grep '.' | wc -l)
+          echo "delete_count=${count}" >> $GITHUB_OUTPUT
+
+      - name: Delete tags
+        if: inputs.dry_run != true
+        run: |
+          if [ ! -s /tmp/to_delete.txt ]; then
+            echo "ℹ️ Nothing to delete."
+            exit 0
+          fi
+
+          deleted=0
+          failed=0
+
+          while IFS= read -r tag; do
+            [ -z "$tag" ] && continue
+            echo -n "🗑️ Deleting tag: $tag ... "
+            http_code=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE \
+              -H "Authorization: Bearer $HUB_TOKEN" \
+              "https://hub.docker.com/v2/repositories/$DOCKERHUB_REPO/tags/${tag}/")
+
+            if [ "$http_code" == "204" ]; then
+              echo "✅ deleted"
+              deleted=$((deleted + 1))
+            else
+              echo "❌ failed (HTTP $http_code)"
+              failed=$((failed + 1))
+            fi
+          done < /tmp/to_delete.txt
+
+          echo ""
+          echo "Summary: $deleted deleted, $failed failed"
+
+          if [ "$failed" -gt 0 ]; then
+            exit 1
+          fi
+
+      - name: Dry run summary
+        if: inputs.dry_run == true
+        run: |
+          echo "🔍 DRY RUN – no tags were deleted."
+          echo ""
+          echo "Tags that WOULD be deleted:"
+          if [ -s /tmp/to_delete.txt ] && grep -q '.' /tmp/to_delete.txt; then
+            cat /tmp/to_delete.txt
+          else
+            echo "  (none)"
+          fi
+
+      - name: Create job summary
+        run: |
+          KEEP_COUNT="${{ inputs.keep_count || '5' }}"
+          DRY_RUN="${{ inputs.dry_run }}"
+
+          echo "## 🧹 Docker Hub Prune Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Setting | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Repository | \`$DOCKERHUB_REPO\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Versioned tags kept per variant | $KEEP_COUNT |" >> $GITHUB_STEP_SUMMARY
+          echo "| Protected tags | \`latest\`, \`latest-lite\`, \`latest-full\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Dry run | $DRY_RUN |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ -s /tmp/to_delete.txt ] && grep -q '.' /tmp/to_delete.txt; then
+            count=$(grep -c '.' /tmp/to_delete.txt)
+            echo "### 🗑️ Tags affected ($count)" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            cat /tmp/to_delete.txt >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### ✅ Nothing to delete – repository is already clean" >> $GITHUB_STEP_SUMMARY
+          fi

@@ -60,7 +60,7 @@ jobs:
           sed -i "s|PAPERLESS_AI_VERSION: '.*'|PAPERLESS_AI_VERSION: '${VERSION_TAG}'|" config/config.js
           echo "✅ config.js updated to $VERSION_TAG"
 
-      - name: Create and push tag
+      - name: Commit version bump and create release
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -71,8 +71,24 @@ jobs:
           git add config/config.js
           git diff --cached --quiet || git commit -m "🤖 Bump version to ${VERSION_TAG} [automated]"
           git push origin HEAD
-          git tag -a "$VERSION_TAG" -m "Automated build $VERSION_TAG"
-          git push origin "$VERSION_TAG"
+
+          # Create GitHub Release (also creates the git tag)
+          gh release create "$VERSION_TAG" \
+            --title "Release ${VERSION_TAG}" \
+            --notes "🤖 Automated release ${VERSION_TAG}
+
+          ## Docker Images
+
+          \`\`\`bash
+          # Lite (~500–700 MB) – AI tagging only
+          docker pull admonstrator/paperless-ai-patched:${VERSION_TAG}-lite
+
+          # Full (~1.5–2 GB) – AI tagging + RAG
+          docker pull admonstrator/paperless-ai-patched:${VERSION_TAG}-full
+          \`\`\`
+
+          **Full changelog:** https://github.com/Admonstrator/paperless-ai-patched/commits/main" \
+            --latest
 
   # Job 1: Build and Push Lite Image
   build-push-lite:

@@ -175,6 +175,16 @@ const MIGRATIONS = [
     up: (database) => {
       database.exec("ALTER TABLE history_documents ADD COLUMN custom_fields TEXT DEFAULT '[]'");
     }
+  },
+  {
+    version: 2,
+    description: 'Add document_type_name and language to history_documents; add document_type and language to original_documents',
+    up: (database) => {
+      database.exec('ALTER TABLE history_documents ADD COLUMN document_type_name TEXT DEFAULT NULL');
+      database.exec('ALTER TABLE history_documents ADD COLUMN language TEXT DEFAULT NULL');
+      database.exec('ALTER TABLE original_documents ADD COLUMN document_type INTEGER DEFAULT NULL');
+      database.exec('ALTER TABLE original_documents ADD COLUMN language TEXT DEFAULT NULL');
+    }
   }
 ];
 
@@ -291,13 +301,13 @@ module.exports = {
     }
   },
 
-  async saveOriginalData(documentId, tags, correspondent, title) {
+  async saveOriginalData(documentId, tags, correspondent, title, documentType = null, language = null) {
     try {
       const tagsString = JSON.stringify(tags); // Konvertiere Array zu String
       const result = db.prepare(`
-        INSERT INTO original_documents (document_id, title, tags, correspondent)
-        VALUES (?, ?, ?, ?)
-      `).run(documentId, title, tagsString, correspondent);
+        INSERT INTO original_documents (document_id, title, tags, correspondent, document_type, language)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run(documentId, title, tagsString, correspondent, documentType ?? null, language ?? null);
       if (result.changes > 0) {
         console.log(`[DEBUG] Original data for document ${title} saved`);
         return true;
@@ -309,14 +319,14 @@ module.exports = {
     }
   },
 
-  async addToHistory(documentId, tagIds, title, correspondent, customFields = null) {
+  async addToHistory(documentId, tagIds, title, correspondent, customFields = null, documentTypeName = null, language = null) {
     try {
       const tagIdsString = JSON.stringify(tagIds); // Konvertiere Array zu String
       const customFieldsString = customFields ? JSON.stringify(customFields) : '[]';
       const result = db.prepare(`
-        INSERT INTO history_documents (document_id, tags, title, correspondent, custom_fields)
-        VALUES (?, ?, ?, ?, ?)
-      `).run(documentId, tagIdsString, title, correspondent, customFieldsString);
+        INSERT INTO history_documents (document_id, tags, title, correspondent, custom_fields, document_type_name, language)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).run(documentId, tagIdsString, title, correspondent, customFieldsString, documentTypeName ?? null, language ?? null);
       if (result.changes > 0) {
         console.log(`[DEBUG] Document ${title} added to history`);
         return true;

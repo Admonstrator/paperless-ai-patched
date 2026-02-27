@@ -384,6 +384,13 @@ class HistoryManager {
         document.getElementById('infoModalCloseBtn')?.addEventListener('click', () => this.hideModal(infoModal));
         infoModal?.querySelector('.modal-overlay')?.addEventListener('click', () => this.hideModal(infoModal));
         document.getElementById('infoModalRescanBtn')?.addEventListener('click', () => this._handleRescanClick());
+        document.getElementById('infoModalRestoreBtn')?.addEventListener('click', () => this._handleRestoreClick());
+        document.getElementById('infoModalOriginalToggle')?.addEventListener('click', () => {
+            const body    = document.getElementById('infoModalOriginalBody');
+            const chevron = document.getElementById('infoModalOriginalChevron');
+            const hidden  = body.classList.toggle('hidden');
+            chevron.style.transform = hidden ? '' : 'rotate(90deg)';
+        });
     }
 
     initializeResetButtons() {
@@ -750,6 +757,12 @@ class HistoryManager {
             const corrEl = document.getElementById('infoModalCorrespondent');
             corrEl.textContent = data.history.correspondent || 'Not assigned';
 
+            // --- Document Classification ---
+            document.getElementById('infoModalDocType').textContent =
+                data.history.document_type_name || '\u2013';
+            document.getElementById('infoModalLanguage').textContent =
+                data.history.language || '\u2013';
+
             // --- Custom Fields ---
             const cfSection = document.getElementById('infoModalCustomFieldsSection');
             const cfEl      = document.getElementById('infoModalCustomFields');
@@ -792,6 +805,41 @@ class HistoryManager {
                 tokensSection.style.display = 'none';
             }
 
+            // --- Original State ---
+            const origSection = document.getElementById('infoModalOriginalSection');
+            const restoreBtn  = document.getElementById('infoModalRestoreBtn');
+            const origContent = document.getElementById('infoModalOriginalContent');
+            if (data.original) {
+                origSection.style.display = 'block';
+                restoreBtn.style.display  = 'inline-flex';
+                const tagCount = Array.isArray(data.original.tags) ? data.original.tags.length : 0;
+                origContent.innerHTML = [
+                    `<div class="flex gap-2 py-1 border-b border-gray-100">
+                        <span class="font-medium text-gray-700 min-w-[140px]">Title</span>
+                        <span class="text-gray-600">${this._esc(data.original.title || '\u2013')}</span>
+                    </div>`,
+                    `<div class="flex gap-2 py-1 border-b border-gray-100">
+                        <span class="font-medium text-gray-700 min-w-[140px]">Correspondent</span>
+                        <span class="text-gray-600">${data.original.correspondent ? `ID ${data.original.correspondent}` : 'None'}</span>
+                    </div>`,
+                    `<div class="flex gap-2 py-1 border-b border-gray-100">
+                        <span class="font-medium text-gray-700 min-w-[140px]">Tags</span>
+                        <span class="text-gray-600">${tagCount} tag${tagCount !== 1 ? 's' : ''} (IDs: ${this._esc(data.original.tags.join(', ') || 'none')})</span>
+                    </div>`,
+                    data.original.documentType != null ? `<div class="flex gap-2 py-1 border-b border-gray-100">
+                        <span class="font-medium text-gray-700 min-w-[140px]">Document Type</span>
+                        <span class="text-gray-600">ID ${data.original.documentType}</span>
+                    </div>` : '',
+                    data.original.language ? `<div class="flex gap-2 py-1">
+                        <span class="font-medium text-gray-700 min-w-[140px]">Language</span>
+                        <span class="text-gray-600">${this._esc(data.original.language)}</span>
+                    </div>` : ''
+                ].filter(Boolean).join('');
+            } else {
+                origSection.style.display = 'none';
+                restoreBtn.style.display  = 'none';
+            }
+
             loading.style.display = 'none';
             body.style.display    = 'block';
         } catch (err) {
@@ -812,6 +860,44 @@ class HistoryManager {
     _handleRescanClick() {
         if (this._currentInfoDocId) {
             this.rescanDocument(this._currentInfoDocId);
+        }
+    }
+
+    _handleRestoreClick() {
+        if (this._currentInfoDocId) {
+            this.restoreDocument(this._currentInfoDocId);
+        }
+    }
+
+    async restoreDocument(documentId) {
+        const btn      = document.getElementById('infoModalRestoreBtn');
+        const origHtml = btn?.innerHTML;
+        if (!confirm('Restore this document to its original state (before AI processing)?\nThis will overwrite the current title, tags, correspondent, document type and language in Paperless-ngx.')) {
+            return;
+        }
+        if (btn) {
+            btn.disabled  = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Restoring...';
+        }
+        try {
+            const res = await fetch(`/api/history/${documentId}/restore`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error || 'Restore failed');
+
+            this.hideModal(document.getElementById('infoModal'));
+            this.showToast('Document restored to its original state.', 'success');
+            this.table?.ajax.reload();
+        } catch (err) {
+            console.error('Restore failed:', err);
+            this.showToast('Restore failed: ' + err.message, 'error');
+        } finally {
+            if (btn) {
+                btn.disabled  = false;
+                btn.innerHTML = origHtml;
+            }
         }
     }
 

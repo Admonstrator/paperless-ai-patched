@@ -1652,11 +1652,18 @@ router.post('/api/history/:id/restore', isAuthenticated, async (req, res) => {
       return res.status(404).json({ success: false, error: 'No original data found for this document' });
     }
 
+    // Parse and sanitise — SQLite stores IDs as TEXT which can come back
+    // as float-strings (e.g. '593.0') if they were originally stored as
+    // a JS number that went through JSON serialisation. Paperless-ngx
+    // requires proper integers; parseInt handles both '593', '593.0' and 593.
+    const rawCorrespondent = originalRow.correspondent;
+    const rawDocType       = originalRow.document_type;
+
     const original = {
-      tags:          JSON.parse(originalRow.tags || '[]'),
+      tags:          JSON.parse(originalRow.tags || '[]').map(id => parseInt(id, 10)).filter(id => !isNaN(id)),
       title:         originalRow.title,
-      correspondent: originalRow.correspondent ?? null,
-      documentType:  originalRow.document_type ?? null,
+      correspondent: rawCorrespondent != null ? parseInt(rawCorrespondent, 10) || null : null,
+      documentType:  rawDocType       != null ? parseInt(rawDocType,       10) || null : null,
       language:      originalRow.language ?? null
     };
 

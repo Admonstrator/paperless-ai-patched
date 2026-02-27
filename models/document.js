@@ -304,10 +304,14 @@ module.exports = {
   async saveOriginalData(documentId, tags, correspondent, title, documentType = null, language = null) {
     try {
       const tagsString = JSON.stringify(tags); // Konvertiere Array zu String
+      // Explicitly cast IDs to integer before storage to avoid SQLite TEXT-affinity
+      // converting JS floats (e.g. 593.0) to '593.0' instead of '593'.
+      const correspondentInt = correspondent != null ? parseInt(correspondent, 10) || null : null;
+      const documentTypeInt  = documentType  != null ? parseInt(documentType,  10) || null : null;
       const result = db.prepare(`
         INSERT INTO original_documents (document_id, title, tags, correspondent, document_type, language)
         VALUES (?, ?, ?, ?, ?, ?)
-      `).run(documentId, title, tagsString, correspondent, documentType ?? null, language ?? null);
+      `).run(documentId, title, tagsString, correspondentInt, documentTypeInt, language ?? null);
       if (result.changes > 0) {
         console.log(`[DEBUG] Original data for document ${title} saved`);
         return true;

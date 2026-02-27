@@ -38,6 +38,9 @@ RUN apt-get update && \
     g++ && \
     rm -rf /var/lib/apt/lists/*
 
+# Upgrade npm to fix CVE-2026-26960, CVE-2026-26996, CVE-2026-27903, CVE-2026-27904
+RUN npm install -g npm@latest
+
 # Copy package files and install dependencies
 COPY package*.json ./
 RUN --mount=type=cache,target=/root/.npm \
@@ -56,6 +59,9 @@ RUN apt-get update && \
     ca-certificates && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# Upgrade npm to fix CVE-2026-26960, CVE-2026-26996, CVE-2026-27903, CVE-2026-27904
+RUN npm install -g npm@latest
 
 # Install PM2 globally
 RUN npm install pm2 -g && npm cache clean --force

@@ -1587,7 +1587,20 @@ router.get('/api/history/:id/detail', isAuthenticated, async (req, res) => {
     try {
       customFields = JSON.parse(history.custom_fields || '[]');
     } catch (e) {
-      customFields = [];
+      customFields = []; 
+    }
+
+    // Load original data for Restore feature
+    const originalRow = await documentModel.getOriginalData(documentId);
+    let originalData = null;
+    if (originalRow) {
+      originalData = {
+        title:         originalRow.title,
+        correspondent: originalRow.correspondent,
+        tags:          JSON.parse(originalRow.tags || '[]'),
+        documentType:  originalRow.document_type ?? null,
+        language:      originalRow.language ?? null
+      };
     }
 
     const baseURL = process.env.PAPERLESS_API_URL.replace(/\/api$/, '');
@@ -1596,25 +1609,72 @@ router.get('/api/history/:id/detail', isAuthenticated, async (req, res) => {
       success: true,
       document_id: documentId,
       history: {
-        title: history.title,
-        correspondent: history.correspondent,
-        custom_fields: customFields,
-        created_at: history.created_at
+        title:              history.title,
+        correspondent:      history.correspondent,
+        custom_fields:      customFields,
+        document_type_name: history.document_type_name ?? null,
+        language:           history.language ?? null,
+        created_at:         history.created_at
       },
       tags: {
-        aiSet: aiTags,
-        external: externalTags,
+        aiSet:         aiTags,
+        external:      externalTags,
         liveAvailable: liveTagIds !== null
       },
       metrics: metrics ? {
-        promptTokens: metrics.promptTokens,
+        promptTokens:     metrics.promptTokens,
         completionTokens: metrics.completionTokens,
-        totalTokens: metrics.totalTokens
+        totalTokens:      metrics.totalTokens
       } : null,
+      original: originalData,
       link: `${baseURL}/documents/${documentId}/`
     });
   } catch (error) {
     console.error('[ERROR] /api/history/:id/detail:', error);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+/**
+ * POST /api/history/:id/restore
+ * Restores a document in Paperless-ngx to its original (pre-AI) state
+ * using the saved original_documents data.
+ */
+router.post('/api/history/:id/restore', isAuthenticated, async (req, res) => {
+  try {
+    const documentId = parseInt(req.params.id, 10);
+    if (isNaN(documentId)) {
+      return res.status(400).json({ success: false, error: 'Invalid document ID' });
+    }
+
+    const originalRow = await documentModel.getOriginalData(documentId);
+    if (!originalRow) {
+      return res.status(404).json({ success: false, error: 'No original data found for this document' });
+    }
+
+    // Parse and sanitise — SQLite stores IDs as TEXT which can come back
+    // as float-strings (e.g. '593.0') if they were originally stored as
+    // a JS number that went through JSON serialisation. Paperless-ngx
+    // requires proper integers; parseInt handles both '593', '593.0' and 593.
+    const rawCorrespondent = originalRow.correspondent;
+    const rawDocType       = originalRow.document_type;
+
+    const original = {
+      tags:          JSON.parse(originalRow.tags || '[]').map(id => parseInt(id, 10)).filter(id => !isNaN(id)),
+      title:         originalRow.title,
+      correspondent: rawCorrespondent != null ? parseInt(rawCorrespondent, 10) || null : null,
+      documentType:  rawDocType       != null ? parseInt(rawDocType,       10) || null : null,
+      language:      originalRow.language ?? null
+    };
+
+    const result = await paperlessService.restoreDocument(documentId, original);
+    if (!result) {
+      return res.status(500).json({ success: false, error: 'Failed to restore document in Paperless-ngx' });
+    }
+
+    res.json({ success: true, message: 'Document restored to its original state.' });
+  } catch (error) {
+    console.error('[ERROR] /api/history/:id/restore:', error);
     res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
@@ -2196,8 +2256,13 @@ async function saveDocumentChanges(docId, updateData, analysis, originalData) {
   const historyCustomFields = updateData._customFieldsForHistory || null;
   delete updateData._customFieldsForHistory;
 
+  const historyDocTypeName = analysis.document.document_type ?? null;
+  const historyLanguage    = analysis.document.language ?? null;
+  const origDocType        = originalData.document_type ?? null;
+  const origLanguage       = originalData.language ?? null;
+
   await Promise.all([
-    documentModel.saveOriginalData(docId, originalTags, originalCorrespondent, originalTitle),
+    documentModel.saveOriginalData(docId, originalTags, originalCorrespondent, originalTitle, origDocType, origLanguage),
     paperlessService.updateDocument(docId, updateData),
     documentModel.addProcessedDocument(docId, updateData.title),
     documentModel.addOpenAIMetrics(
@@ -2206,7 +2271,7 @@ async function saveDocumentChanges(docId, updateData, analysis, originalData) {
       analysis.metrics.completionTokens,
       analysis.metrics.totalTokens
     ),
-    documentModel.addToHistory(docId, updateData.tags, updateData.title, analysis.document.correspondent, historyCustomFields)
+    documentModel.addToHistory(docId, updateData.tags, updateData.title, analysis.document.correspondent, historyCustomFields, historyDocTypeName, historyLanguage)
   ]);
 }
 

@@ -1391,6 +1391,34 @@ async getOrCreateDocumentType(name) {
       return null;
     }
   }
+
+  /**
+   * Restore a document to its original state (before AI processing).
+   * Unlike updateDocument(), this method does NOT merge tags or skip correspondents —
+   * it sends the original values directly as an exact PATCH.
+   * @param {number} documentId
+   * @param {{ tags?: number[], title?: string, correspondent?: number|null, documentType?: number|null, language?: string|null }} original
+   */
+  async restoreDocument(documentId, original) {
+    this.initialize();
+    if (!this.client) return null;
+    try {
+      const patch = {};
+      if (Array.isArray(original.tags))          patch.tags          = original.tags;
+      if (original.title != null)                 patch.title         = original.title;
+      if (original.correspondent !== undefined)   patch.correspondent = original.correspondent;
+      if (original.documentType   !== undefined)  patch.document_type = original.documentType;
+      if (original.language       != null)        patch.language      = original.language;
+
+      console.log(`[DEBUG] Restoring document ${documentId} to original state:`, patch);
+      await this.client.patch(`/documents/${documentId}/`, patch);
+      console.log(`[SUCCESS] Restored document ${documentId}`);
+      return await this.getDocument(documentId);
+    } catch (error) {
+      console.error(`[ERROR] restoring document ${documentId}:`, error.message);
+      return null;
+    }
+  }
 }
 
 

@@ -416,8 +416,13 @@ async function saveDocumentChanges(docId, updateData, analysis, originalData) {
   const historyCustomFields = updateData._customFieldsForHistory || null;
   delete updateData._customFieldsForHistory;
 
+  const historyDocTypeName = analysis.document.document_type ?? null;
+  const historyLanguage    = analysis.document.language ?? null;
+  const origDocType        = originalData.document_type ?? null;
+  const origLanguage       = originalData.language ?? null;
+
   await Promise.all([
-    documentModel.saveOriginalData(docId, originalTags, originalCorrespondent, originalTitle),
+    documentModel.saveOriginalData(docId, originalTags, originalCorrespondent, originalTitle, origDocType, origLanguage),
     paperlessService.updateDocument(docId, updateData),
     documentModel.addProcessedDocument(docId, updateData.title),
     documentModel.addOpenAIMetrics(
@@ -426,7 +431,7 @@ async function saveDocumentChanges(docId, updateData, analysis, originalData) {
       analysis.metrics.completionTokens,
       analysis.metrics.totalTokens
     ),
-    documentModel.addToHistory(docId, updateData.tags, updateData.title, analysis.document.correspondent, historyCustomFields)
+    documentModel.addToHistory(docId, updateData.tags, updateData.title, analysis.document.correspondent, historyCustomFields, historyDocTypeName, historyLanguage)
   ]);
 }
 

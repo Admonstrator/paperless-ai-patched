@@ -69,7 +69,7 @@
                     <li><a href="/settings" class="sidebar-link"><i class="fas fa-cog"></i><span>Settings</span></a></li>
                     <li><a href="/logout" class="sidebar-link"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></a></li>
                 </ul>
-                <a href="https://github.com/clusterzx/paperless-ai" 
+                <a href="https://github.com/admonstrator/paperless-ai-patched" 
                 class="github-button" 
                 style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);">
                 <span class="star-button">
@@ -279,7 +279,7 @@
         // get github stars count from repo
         async function getStarsCount() {
             try {
-                const response = await fetch('https://api.github.com/repos/clusterzx/paperless-ai');
+                const response = await fetch('https://api.github.com/repos/admonstrator/paperless-ai-patched');
                 if (!response.ok) throw new Error('Failed to fetch repo info');
                 
                 const data = await response.json();

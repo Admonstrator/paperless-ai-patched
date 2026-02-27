@@ -3,14 +3,14 @@
   "info": {
     "title": "Paperless-AI API Documentation",
     "version": "1.0.0",
-    "description": "API documentation for the Paperless-AI application",
+    "description": "API documentation for the Paperless-AI patched application",
     "license": {
       "name": "MIT",
       "url": "https://opensource.org/licenses/MIT"
     },
     "contact": {
-      "name": "Clusterzx",
-      "url": "https://github.com/Clusterzx"
+      "name": "Admonstrator",
+      "url": "https://github.com/Admonstrator"
     }
   },
   "servers": [

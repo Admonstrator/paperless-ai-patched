@@ -836,13 +836,13 @@ class HistoryManager {
 
             // 3. Close modal & show toast
             this.hideModal(document.getElementById('infoModal'));
-            this.showToast('Rescan gestartet – Dokument wird beim nächsten Scan erneut verarbeitet.', 'success');
+            this.showToast('Document sent for rescan. It might take a few moments to process.', 'success');
 
             // 4. Reload table
             this.table?.ajax.reload();
         } catch (err) {
             console.error('Rescan failed:', err);
-            this.showToast('Rescan fehlgeschlagen. Bitte erneut versuchen.', 'error');
+            this.showToast('Rescan failed. Please try again.', 'error');
         } finally {
             if (btn) {
                 btn.disabled  = false;

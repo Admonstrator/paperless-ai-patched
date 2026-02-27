@@ -254,17 +254,16 @@ class HistoryManager {
                         return data;
                     }
                 },
-                {
-                    data: 'tags',
-                    render: (data, type) => {
-                        if (type === 'display') {
-                            if (!data?.length) return '<span class="text-gray-400 text-sm">No tags</span>';
-                            return data.map(tag => 
-                                `<span class="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs" data-tag-id="${tag.id}">${tag.name}</span>`
-                            ).join(' ');
-                        }
-                        return data?.map(t => t.name).join(', ') || '';
-                    }
+                {   // AI Info button column (replaces raw tag badges)
+                    data: 'document_id',
+                    render: (data) => {
+                        return `<button onclick="window.historyManager.openInfoModal(${data})" class="px-3 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors" title="Show AI analysis details">
+                            <i class="fa-solid fa-circle-info"></i>
+                            <span class="hidden sm:inline ml-1">Details</span>
+                        </button>`;
+                    },
+                    orderable: false,
+                    width: '80px'
                 },
                 { data: 'correspondent' },
                 {
@@ -330,6 +329,7 @@ class HistoryManager {
             if (e.key === 'Escape') {
                 this.hideModal(this.confirmModal);
                 this.hideModal(this.confirmModalAll);
+                this.hideModal(document.getElementById('infoModal'));
             }
         });
 
@@ -376,6 +376,20 @@ class HistoryManager {
 
         document.getElementById('cancelValidate')?.addEventListener('click', () => {
             this.hideModal(this.validateModal);
+        });
+
+        // Info Modal handlers
+        const infoModal = document.getElementById('infoModal');
+        document.getElementById('infoModalClose')?.addEventListener('click', () => this.hideModal(infoModal));
+        document.getElementById('infoModalCloseBtn')?.addEventListener('click', () => this.hideModal(infoModal));
+        infoModal?.querySelector('.modal-overlay')?.addEventListener('click', () => this.hideModal(infoModal));
+        document.getElementById('infoModalRescanBtn')?.addEventListener('click', () => this._handleRescanClick());
+        document.getElementById('infoModalRestoreBtn')?.addEventListener('click', () => this._handleRestoreClick());
+        document.getElementById('infoModalOriginalToggle')?.addEventListener('click', () => {
+            const body    = document.getElementById('infoModalOriginalBody');
+            const chevron = document.getElementById('infoModalOriginalChevron');
+            const hidden  = body.classList.toggle('hidden');
+            chevron.style.transform = hidden ? '' : 'rotate(90deg)';
         });
     }
 
@@ -647,6 +661,297 @@ class HistoryManager {
             });
         }
     }
+
+    // ── Info Modal ──────────────────────────────────────────────────────────────
+
+    async openInfoModal(documentId) {
+        this._currentInfoDocId = documentId;
+        const modal        = document.getElementById('infoModal');
+        const loading      = document.getElementById('infoModalLoading');
+        const body         = document.getElementById('infoModalBody');
+        const titleEl      = document.getElementById('infoModalTitle');
+        const linkEl       = document.getElementById('infoModalLink');
+
+        // Reset to loading state
+        loading.style.display = 'block';
+        body.style.display    = 'none';
+        titleEl.textContent   = 'AI Analysis Details';
+        linkEl.style.display  = 'none';
+        this.showModal(modal);
+
+        try {
+            const res  = await fetch(`/api/history/${documentId}/detail`);
+            const data = await res.json();
+
+            if (!data.success) {
+                throw new Error(data.error || 'Failed to load details');
+            }
+
+            // --- Header ---
+            titleEl.textContent  = data.history.title || `Document #${documentId}`;
+            if (data.link) {
+                linkEl.href          = data.link;
+                linkEl.style.display = 'inline';
+            }
+
+            // --- Tags ---
+            const tagsEl    = document.getElementById('infoModalTags');
+            const extTagsEl = document.getElementById('infoModalExternalTags');
+            const liveHint  = document.getElementById('infoModalLiveHint');
+
+            tagsEl.innerHTML    = '';
+            extTagsEl.innerHTML = '';
+
+            if (data.tags.liveAvailable) {
+                liveHint.textContent = '(live comparison with Paperless-ngx)';
+            } else {
+                liveHint.textContent = '(live data unavailable)';
+            }
+
+            const statusStyle = {
+                active:           'background:#dcfce7;color:#166534;border:1px solid #86efac;',
+                removed:          'background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;',
+                unknown:          'background:#e0e7ff;color:#3730a3;border:1px solid #a5b4fc;',
+                added_externally: 'background:#fef9c3;color:#854d0e;border:1px solid #fde047;'
+            };
+            const statusLabel = {
+                active:           '✓ still active',
+                removed:          '✗ removed',
+                unknown:          '? unknown',
+                added_externally: '+ added externally'
+            };
+
+            if (!data.tags.aiSet.length && !data.tags.external.length) {
+                tagsEl.innerHTML = '<span class="text-gray-400 text-sm">No tags set by AI</span>';
+            }
+
+            data.tags.aiSet.forEach(tag => {
+                const color = tag.color ? `#${tag.color.replace('#','')}` : '#6b7280';
+                const span  = document.createElement('span');
+                span.style  = `padding:3px 10px;border-radius:9999px;font-size:0.75rem;display:inline-flex;align-items:center;gap:4px;` + (statusStyle[tag.status] || '');
+                span.innerHTML = `<span style="width:8px;height:8px;border-radius:50%;background:${color};display:inline-block;"></span>${this._esc(tag.name)}`;
+                if (data.tags.liveAvailable) {
+                    const hint   = document.createElement('span');
+                    hint.style   = 'font-size:0.65rem;opacity:0.75;';
+                    hint.textContent = statusLabel[tag.status] || '';
+                    span.appendChild(hint);
+                }
+                tagsEl.appendChild(span);
+            });
+
+            if (data.tags.external.length) {
+                const label       = document.createElement('div');
+                label.className   = 'w-full text-xs text-gray-400 mt-1 mb-1';
+                label.textContent = 'Tags in Paperless not set by AI:';
+                extTagsEl.appendChild(label);
+                data.tags.external.forEach(tag => {
+                    const color = tag.color ? `#${tag.color.replace('#','')}` : '#6b7280';
+                    const span  = document.createElement('span');
+                    span.style  = `padding:3px 10px;border-radius:9999px;font-size:0.75rem;display:inline-flex;align-items:center;gap:4px;` + statusStyle.added_externally;
+                    span.innerHTML = `<span style="width:8px;height:8px;border-radius:50%;background:${color};display:inline-block;"></span>${this._esc(tag.name)}`;
+                    extTagsEl.appendChild(span);
+                });
+            }
+
+            // --- Correspondent ---
+            const corrEl = document.getElementById('infoModalCorrespondent');
+            corrEl.textContent = data.history.correspondent || 'Not assigned';
+
+            // --- Document Classification ---
+            document.getElementById('infoModalDocType').textContent =
+                data.history.document_type_name || '\u2013';
+            document.getElementById('infoModalLanguage').textContent =
+                data.history.language || '\u2013';
+
+            // --- Custom Fields ---
+            const cfSection = document.getElementById('infoModalCustomFieldsSection');
+            const cfEl      = document.getElementById('infoModalCustomFields');
+            const cf        = data.history.custom_fields;
+
+            if (!cf || (Array.isArray(cf) && cf.length === 0) ||
+                (typeof cf === 'object' && !Array.isArray(cf) && Object.keys(cf).length === 0)) {
+                cfEl.innerHTML = '<span class="text-gray-400 text-sm">No custom fields were detected or applied for this document</span>';
+            } else {
+                const items = Array.isArray(cf) ? cf : Object.values(cf);
+                cfEl.innerHTML = items.map(item => {
+                    const name  = this._esc(item.field_name || item.name || 'Unknown field');
+                    const value = this._esc(String(item.value ?? ''));
+                    return `<div class="flex gap-2 py-1 border-b border-gray-100">
+                        <span class="font-medium text-gray-700 min-w-[140px]">${name}</span>
+                        <span class="text-gray-600">${value}</span>
+                    </div>`;
+                }).join('');
+            }
+
+            // --- Processed At ---
+            document.getElementById('infoModalProcessedAt').textContent =
+                data.history.created_at ? new Date(data.history.created_at).toLocaleString() : 'Unknown';
+
+            // --- Token Usage ---
+            const tokensSection = document.getElementById('infoModalTokensSection');
+            const tokensEl      = document.getElementById('infoModalTokens');
+            if (data.metrics) {
+                tokensSection.style.display = 'block';
+                tokensEl.innerHTML = [
+                    ['Prompt',     data.metrics.promptTokens],
+                    ['Completion', data.metrics.completionTokens],
+                    ['Total',      data.metrics.totalTokens]
+                ].map(([label, val]) =>
+                    `<span class="px-3 py-1 rounded bg-gray-100 text-gray-700">
+                        <span class="font-medium">${label}:</span> ${(val ?? 0).toLocaleString()}
+                    </span>`
+                ).join('');
+            } else {
+                tokensSection.style.display = 'none';
+            }
+
+            // --- Original State ---
+            const origSection = document.getElementById('infoModalOriginalSection');
+            const restoreBtn  = document.getElementById('infoModalRestoreBtn');
+            const origContent = document.getElementById('infoModalOriginalContent');
+            if (data.original) {
+                origSection.style.display = 'block';
+                restoreBtn.style.display  = 'inline-flex';
+                const tagCount = Array.isArray(data.original.tags) ? data.original.tags.length : 0;
+                origContent.innerHTML = [
+                    `<div class="flex gap-2 py-1 border-b border-gray-100">
+                        <span class="font-medium text-gray-700 min-w-[140px]">Title</span>
+                        <span class="text-gray-600">${this._esc(data.original.title || '\u2013')}</span>
+                    </div>`,
+                    `<div class="flex gap-2 py-1 border-b border-gray-100">
+                        <span class="font-medium text-gray-700 min-w-[140px]">Correspondent</span>
+                        <span class="text-gray-600">${data.original.correspondent ? `ID ${data.original.correspondent}` : 'None'}</span>
+                    </div>`,
+                    `<div class="flex gap-2 py-1 border-b border-gray-100">
+                        <span class="font-medium text-gray-700 min-w-[140px]">Tags</span>
+                        <span class="text-gray-600">${tagCount} tag${tagCount !== 1 ? 's' : ''} (IDs: ${this._esc(data.original.tags.join(', ') || 'none')})</span>
+                    </div>`,
+                    data.original.documentType != null ? `<div class="flex gap-2 py-1 border-b border-gray-100">
+                        <span class="font-medium text-gray-700 min-w-[140px]">Document Type</span>
+                        <span class="text-gray-600">ID ${data.original.documentType}</span>
+                    </div>` : '',
+                    data.original.language ? `<div class="flex gap-2 py-1">
+                        <span class="font-medium text-gray-700 min-w-[140px]">Language</span>
+                        <span class="text-gray-600">${this._esc(data.original.language)}</span>
+                    </div>` : ''
+                ].filter(Boolean).join('');
+            } else {
+                origSection.style.display = 'none';
+                restoreBtn.style.display  = 'none';
+            }
+
+            loading.style.display = 'none';
+            body.style.display    = 'block';
+        } catch (err) {
+            console.error('Error loading info modal:', err);
+            loading.innerHTML = `<div class="text-red-500 py-4">
+                <i class="fas fa-exclamation-triangle text-3xl mb-2"></i>
+                <div>Failed to load details: ${this._esc(err.message)}</div>
+            </div>`;
+        }
+    }
+
+    _esc(str) {
+        return String(str)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    _handleRescanClick() {
+        if (this._currentInfoDocId) {
+            this.rescanDocument(this._currentInfoDocId);
+        }
+    }
+
+    _handleRestoreClick() {
+        if (this._currentInfoDocId) {
+            this.restoreDocument(this._currentInfoDocId);
+        }
+    }
+
+    async restoreDocument(documentId) {
+        const btn      = document.getElementById('infoModalRestoreBtn');
+        const origHtml = btn?.innerHTML;
+        if (!confirm('Restore this document to its original state (before AI processing)?\nThis will overwrite the current title, tags, correspondent, document type and language in Paperless-ngx.')) {
+            return;
+        }
+        if (btn) {
+            btn.disabled  = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Restoring...';
+        }
+        try {
+            const res = await fetch(`/api/history/${documentId}/restore`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error || 'Restore failed');
+
+            this.hideModal(document.getElementById('infoModal'));
+            this.showToast('Document restored to its original state.', 'success');
+            this.table?.ajax.reload();
+        } catch (err) {
+            console.error('Restore failed:', err);
+            this.showToast('Restore failed: ' + err.message, 'error');
+        } finally {
+            if (btn) {
+                btn.disabled  = false;
+                btn.innerHTML = origHtml;
+            }
+        }
+    }
+
+    async rescanDocument(documentId) {
+        const btn = document.getElementById('infoModalRescanBtn');
+        const origHtml = btn?.innerHTML;
+        if (btn) {
+            btn.disabled   = true;
+            btn.innerHTML  = '<i class="fas fa-spinner fa-spin mr-1"></i> Rescanning...';
+        }
+
+        try {
+            // 1. Reset document in DB
+            const resetRes = await fetch(`/api/history/${documentId}/rescan`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            if (!resetRes.ok) throw new Error('Reset failed');
+
+            // 2. Trigger immediate scan (fire and forget)
+            fetch('/api/scan/now', { method: 'POST' }).catch(() => {});
+
+            // 3. Close modal & show toast
+            this.hideModal(document.getElementById('infoModal'));
+            this.showToast('Document sent for rescan. It might take a few moments to process.', 'success');
+
+            // 4. Reload table
+            this.table?.ajax.reload();
+        } catch (err) {
+            console.error('Rescan failed:', err);
+            this.showToast('Rescan failed. Please try again.', 'error');
+        } finally {
+            if (btn) {
+                btn.disabled  = false;
+                btn.innerHTML = origHtml;
+            }
+        }
+    }
+
+    showToast(message, type = 'success') {
+        const toast   = document.getElementById('toastNotification');
+        const inner   = document.getElementById('toastInner');
+        const icon    = document.getElementById('toastIcon');
+        const msgEl   = document.getElementById('toastMessage');
+
+        msgEl.textContent  = message;
+        icon.className     = type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-circle';
+        inner.className    = `${type === 'success' ? 'bg-green-500' : 'bg-red-500'} text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3`;
+
+        toast.classList.remove('hidden');
+        setTimeout(() => toast.classList.add('hidden'), 4000);
+    }
+
+    // ────────────────────────────────────────────────────────────────────────────
 
     async forceReloadFilters() {
         const btn = document.getElementById('forceReloadBtn');

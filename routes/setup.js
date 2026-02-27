@@ -1529,6 +1529,182 @@ router.post('/api/history/clear-cache', isAuthenticated, cacheClearLimiter, asyn
 });
 
 /**
+ * GET /api/history/:id/detail
+ * Returns full AI analysis details for a single document from history,
+ * including a live tag diff against the current state in Paperless-ngx.
+ */
+router.get('/api/history/:id/detail', isAuthenticated, async (req, res) => {
+  try {
+    const documentId = parseInt(req.params.id, 10);
+    if (isNaN(documentId)) {
+      return res.status(400).json({ success: false, error: 'Invalid document ID' });
+    }
+
+    const [history, metrics, allTags] = await Promise.all([
+      documentModel.getHistoryByDocumentId(documentId),
+      documentModel.getMetricsByDocumentId(documentId),
+      paperlessService.getTags()
+    ]);
+
+    if (!history) {
+      return res.status(404).json({ success: false, error: 'No history entry found for this document' });
+    }
+
+    const tagMap = new Map(allTags.map(tag => [tag.id, tag]));
+    const historyTagIds = JSON.parse(history.tags || '[]').map(id => parseInt(id));
+
+    // Try to fetch live document for tag diff
+    let liveTagIds = null;
+    try {
+      const liveDoc = await paperlessService.getDocument(documentId);
+      liveTagIds = (liveDoc.tags || []).map(id => parseInt(id));
+    } catch (e) {
+      console.warn(`[WARN] Could not fetch live document ${documentId} for diff:`, e.message);
+    }
+
+    // Build AI-set tag list with live diff status
+    const aiTags = historyTagIds.map(id => {
+      const tag = tagMap.get(id);
+      if (!tag) return { id, name: `Tag #${id}`, color: '#999999', status: 'unknown' };
+      const status = liveTagIds === null ? 'unknown'
+        : liveTagIds.includes(id) ? 'active' : 'removed';
+      return { id: tag.id, name: tag.name, color: tag.color, status };
+    });
+
+    // Tags in Paperless that were NOT set by AI (added externally)
+    const externalTags = liveTagIds
+      ? liveTagIds
+          .filter(id => !historyTagIds.includes(id))
+          .map(id => {
+            const tag = tagMap.get(id);
+            return tag ? { id: tag.id, name: tag.name, color: tag.color, status: 'added_externally' } : null;
+          })
+          .filter(Boolean)
+      : [];
+
+    // Parse custom_fields safely
+    let customFields = [];
+    try {
+      customFields = JSON.parse(history.custom_fields || '[]');
+    } catch (e) {
+      customFields = []; 
+    }
+
+    // Load original data for Restore feature
+    const originalRow = await documentModel.getOriginalData(documentId);
+    let originalData = null;
+    if (originalRow) {
+      originalData = {
+        title:         originalRow.title,
+        correspondent: originalRow.correspondent,
+        tags:          JSON.parse(originalRow.tags || '[]'),
+        documentType:  originalRow.document_type ?? null,
+        language:      originalRow.language ?? null
+      };
+    }
+
+    const baseURL = process.env.PAPERLESS_API_URL.replace(/\/api$/, '');
+
+    res.json({
+      success: true,
+      document_id: documentId,
+      history: {
+        title:              history.title,
+        correspondent:      history.correspondent,
+        custom_fields:      customFields,
+        document_type_name: history.document_type_name ?? null,
+        language:           history.language ?? null,
+        created_at:         history.created_at
+      },
+      tags: {
+        aiSet:         aiTags,
+        external:      externalTags,
+        liveAvailable: liveTagIds !== null
+      },
+      metrics: metrics ? {
+        promptTokens:     metrics.promptTokens,
+        completionTokens: metrics.completionTokens,
+        totalTokens:      metrics.totalTokens
+      } : null,
+      original: originalData,
+      link: `${baseURL}/documents/${documentId}/`
+    });
+  } catch (error) {
+    console.error('[ERROR] /api/history/:id/detail:', error);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+/**
+ * POST /api/history/:id/restore
+ * Restores a document in Paperless-ngx to its original (pre-AI) state
+ * using the saved original_documents data.
+ */
+router.post('/api/history/:id/restore', isAuthenticated, async (req, res) => {
+  try {
+    const documentId = parseInt(req.params.id, 10);
+    if (isNaN(documentId)) {
+      return res.status(400).json({ success: false, error: 'Invalid document ID' });
+    }
+
+    const originalRow = await documentModel.getOriginalData(documentId);
+    if (!originalRow) {
+      return res.status(404).json({ success: false, error: 'No original data found for this document' });
+    }
+
+    // Parse and sanitise — SQLite stores IDs as TEXT which can come back
+    // as float-strings (e.g. '593.0') if they were originally stored as
+    // a JS number that went through JSON serialisation. Paperless-ngx
+    // requires proper integers; parseInt handles both '593', '593.0' and 593.
+    const rawCorrespondent = originalRow.correspondent;
+    const rawDocType       = originalRow.document_type;
+
+    const original = {
+      tags:          JSON.parse(originalRow.tags || '[]').map(id => parseInt(id, 10)).filter(id => !isNaN(id)),
+      title:         originalRow.title,
+      correspondent: rawCorrespondent != null ? parseInt(rawCorrespondent, 10) || null : null,
+      documentType:  rawDocType       != null ? parseInt(rawDocType,       10) || null : null,
+      language:      originalRow.language ?? null
+    };
+
+    const result = await paperlessService.restoreDocument(documentId, original);
+    if (!result) {
+      return res.status(500).json({ success: false, error: 'Failed to restore document in Paperless-ngx' });
+    }
+
+    res.json({ success: true, message: 'Document restored to its original state.' });
+  } catch (error) {
+    console.error('[ERROR] /api/history/:id/restore:', error);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+/**
+ * POST /api/history/:id/rescan
+ * Removes a document from all tracking tables so it will be picked up
+ * on the next scan. Returns immediately; the actual rescan is triggered
+ * separately via POST /api/scan/now.
+ */
+router.post('/api/history/:id/rescan', isAuthenticated, async (req, res) => {
+  try {
+    const documentId = parseInt(req.params.id, 10);
+    if (isNaN(documentId)) {
+      return res.status(400).json({ success: false, error: 'Invalid document ID' });
+    }
+
+    await documentModel.deleteDocumentsIdList([documentId]);
+
+    res.json({
+      success: true,
+      message: 'Dokument wurde zurückgesetzt und wird beim nächsten Scan erneut verarbeitet.'
+    });
+  } catch (error) {
+    console.error('[ERROR] /api/history/:id/rescan:', error);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+/**
  * @swagger
  * /api/settings/clear-tag-cache:
  *   post:
@@ -2002,6 +2178,7 @@ async function buildUpdateData(analysis, doc) {
   if (config.limitFunctions?.activateCustomFields !== 'no' && analysis.document.custom_fields) {
     const customFields = analysis.document.custom_fields;
     const processedFields = [];
+    const customFieldsForHistory = [];
 
     // Get existing custom fields
     const existingFields = await paperlessService.getExistingCustomFields(doc.id);
@@ -2030,6 +2207,10 @@ async function buildUpdateData(analysis, doc) {
           field: fieldDetails.id,
           value: validation.value
         });
+        customFieldsForHistory.push({
+          field_name: customField.field_name,
+          value: validation.value
+        });
         processedFieldIds.add(fieldDetails.id);
       }
     }
@@ -2043,6 +2224,9 @@ async function buildUpdateData(analysis, doc) {
 
     if (processedFields.length > 0) {
       updateData.custom_fields = processedFields;
+    }
+    if (customFieldsForHistory.length > 0) {
+      updateData._customFieldsForHistory = customFieldsForHistory;
     }
   }
 
@@ -2069,8 +2253,16 @@ async function buildUpdateData(analysis, doc) {
 async function saveDocumentChanges(docId, updateData, analysis, originalData) {
   const { tags: originalTags, correspondent: originalCorrespondent, title: originalTitle } = originalData;
   
+  const historyCustomFields = updateData._customFieldsForHistory || null;
+  delete updateData._customFieldsForHistory;
+
+  const historyDocTypeName = analysis.document.document_type ?? null;
+  const historyLanguage    = analysis.document.language ?? null;
+  const origDocType        = originalData.document_type ?? null;
+  const origLanguage       = originalData.language ?? null;
+
   await Promise.all([
-    documentModel.saveOriginalData(docId, originalTags, originalCorrespondent, originalTitle),
+    documentModel.saveOriginalData(docId, originalTags, originalCorrespondent, originalTitle, origDocType, origLanguage),
     paperlessService.updateDocument(docId, updateData),
     documentModel.addProcessedDocument(docId, updateData.title),
     documentModel.addOpenAIMetrics(
@@ -2079,7 +2271,7 @@ async function saveDocumentChanges(docId, updateData, analysis, originalData) {
       analysis.metrics.completionTokens,
       analysis.metrics.totalTokens
     ),
-    documentModel.addToHistory(docId, updateData.tags, updateData.title, analysis.document.correspondent)
+    documentModel.addToHistory(docId, updateData.tags, updateData.title, analysis.document.correspondent, historyCustomFields, historyDocTypeName, historyLanguage)
   ]);
 }
 

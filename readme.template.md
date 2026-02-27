@@ -62,6 +62,7 @@ To be transparent: many fixes here are the result of AI-assisted analysis, manua
 - 🖥️ Web interface for manual AI tagging (`/manual`)
 - 📜 Tag rules and filters for selective document processing
 - 📊 Usage tracking and token metrics
+- 🔍 History Info-Modal – inspect AI analysis results (tags with live diff, document type, language, custom fields, token usage), view the original pre-AI state, and trigger a rescan or full restore with one click
 - 🌓 Dark mode support
 - 📱 Responsive mobile-friendly UI
 
@@ -83,6 +84,8 @@ This fork integrates all community improvements with full documentation in [`Inc
 | **Docker**       | [DOCKER-001](Included_Fixes/DOCKER-001-optimize-images/)       | Optimized multi-stage builds (Lite ~500 MB, Full ~1.5 GB) | ✅ Applied |
 |                  | [DOCKER-002](Included_Fixes/DOCKER-002-upgrade-nodejs-24-lts/) | Upgrade to Node.js 24 LTS                                 | ✅ Applied |
 | **UI/UX**        | [UI-002](Included_Fixes/UI-002-date-boolean-custom-fields/)    | Date/Boolean custom field types in settings               | ✅ Applied |
+|                  | [UI-003](Included_Fixes/UI-003-history-info-modal/)            | History Info-Modal with rescan & DB migration system      | ✅ Applied |
+|                  | [UI-004](Included_Fixes/UI-004-history-restore-doctype-language/) | History Modal: Restore Original + Document Type & Language | ✅ Applied |
 | **Dependencies** | [DEP-001](Included_Fixes/DEP-001-remove-sqlite3/)              | Remove unused sqlite3 dependency                          | ✅ Applied |
 | **CI/CD**        | [CI-001](Included_Fixes/CI-001-auto-version-tagging/)          | Automatic version tagging via GitHub Actions              | ✅ Applied |
 

@@ -336,6 +336,7 @@ async function buildUpdateData(analysis, doc) {
   if (config.limitFunctions?.activateCustomFields !== 'no' && analysis.document.custom_fields) {
     const customFields = analysis.document.custom_fields;
     const processedFields = [];
+    const customFieldsForHistory = [];
 
     // Get existing custom fields
     const existingFields = await paperlessService.getExistingCustomFields(doc.id);
@@ -364,6 +365,11 @@ async function buildUpdateData(analysis, doc) {
           field: fieldDetails.id,
           value: validation.value
         });
+        // Capture name + validated value for history at the point where we have both
+        customFieldsForHistory.push({
+          field_name: customField.field_name,
+          value: validation.value
+        });
         processedFieldIds.add(fieldDetails.id);
       }
     }
@@ -377,6 +383,9 @@ async function buildUpdateData(analysis, doc) {
 
     if (processedFields.length > 0) {
       updateData.custom_fields = processedFields;
+    }
+    if (customFieldsForHistory.length > 0) {
+      updateData._customFieldsForHistory = customFieldsForHistory;
     }
   }
 
@@ -402,9 +411,18 @@ async function buildUpdateData(analysis, doc) {
 
 async function saveDocumentChanges(docId, updateData, analysis, originalData) {
   const { tags: originalTags, correspondent: originalCorrespondent, title: originalTitle } = originalData;
-  
+
+  // Pull out history-only data and remove it before sending updateData to Paperless
+  const historyCustomFields = updateData._customFieldsForHistory || null;
+  delete updateData._customFieldsForHistory;
+
+  const historyDocTypeName = analysis.document.document_type ?? null;
+  const historyLanguage    = analysis.document.language ?? null;
+  const origDocType        = originalData.document_type ?? null;
+  const origLanguage       = originalData.language ?? null;
+
   await Promise.all([
-    documentModel.saveOriginalData(docId, originalTags, originalCorrespondent, originalTitle),
+    documentModel.saveOriginalData(docId, originalTags, originalCorrespondent, originalTitle, origDocType, origLanguage),
     paperlessService.updateDocument(docId, updateData),
     documentModel.addProcessedDocument(docId, updateData.title),
     documentModel.addOpenAIMetrics(
@@ -413,7 +431,7 @@ async function saveDocumentChanges(docId, updateData, analysis, originalData) {
       analysis.metrics.completionTokens,
       analysis.metrics.totalTokens
     ),
-    documentModel.addToHistory(docId, updateData.tags, updateData.title, analysis.document.correspondent)
+    documentModel.addToHistory(docId, updateData.tags, updateData.title, analysis.document.correspondent, historyCustomFields, historyDocTypeName, historyLanguage)
   ]);
 }
 

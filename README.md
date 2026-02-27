@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="./logo.png" width="200" alt="Paperless-AI Patched Logo" style="border-radius: 10px; margin: 20px 0;">
+<img src="./logo.png" alt="Paperless-AI Patched Logo" style="border-radius: 10px; margin: 20px 0;">
 
 # 📄 Paperless-AI Patched
 

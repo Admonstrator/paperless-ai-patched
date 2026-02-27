@@ -6,7 +6,7 @@
 
 **An integration fork of Paperless-AI – picking up where the original left off.**
 
-[![Latest Release](https://img.shields.io/badge/release-N/A-blue?style=for-the-badge&logo=github)](https://github.com/Admonstrator/paperless-ai-patched/releases/latest)
+[![Latest Release](https://img.shields.io/badge/release-v2026-02-27-01-blue?style=for-the-badge&logo=github)](https://github.com/Admonstrator/paperless-ai-patched/releases/latest)
 [![Docker Pulls](https://img.shields.io/badge/docker%20pulls-1.5k-brightgreen?style=for-the-badge&logo=docker)](https://hub.docker.com/r/admonstrator/paperless-ai-patched)
 [![License](https://img.shields.io/github/license/Admonstrator/paperless-ai-patched?style=for-the-badge)](LICENSE)
 [![Stars](https://img.shields.io/badge/stars-0-orange?style=for-the-badge&logo=github)](https://github.com/Admonstrator/paperless-ai-patched/stargazers)
@@ -24,7 +24,7 @@ This fork started as a personal tinkering project – collecting pending upstrea
 To be transparent: many fixes here are the result of AI-assisted analysis, manual testing, and careful review. Not magic – just methodical patching.
 
 > 🔧 **Integration Fork** – Collects, tests, and applies upstream PRs and community fixes  
-> 📦 **Current Version** – `N/A`  
+> 📦 **Current Version** – `v2026-02-27-01`  
 > 🔒 **Security First** – Regular dependency updates and vulnerability patches  
 > ⚠️ **Upstream Credit** – All original work belongs to [clusterzx](https://github.com/clusterzx)
 

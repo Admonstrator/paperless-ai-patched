@@ -2,6 +2,12 @@
 
 After starting the container for the first time, open [http://localhost:3000](http://localhost:3000) in your browser. You'll be greeted by the setup wizard.
 
+Need all available Docker environment variables? See the [Configuration reference](configuration.md#docker-environment-variables).
+
+!!! warning "Current limitation"
+    The setup assistant is not yet complete for all configuration paths.
+    In Docker environments, you should define the key variables directly via `environment:` / `.env` (at minimum `PAPERLESS_API_URL`, `PAPERLESS_API_TOKEN`, `AI_PROVIDER`, and matching provider credentials).
+
 ---
 
 ## Step 1: Create an Admin Account

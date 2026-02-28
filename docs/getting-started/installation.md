@@ -59,6 +59,12 @@ docker compose up -d
 
 Then open [http://localhost:3000](http://localhost:3000) and follow the [First Setup](first-setup.md) guide.
 
+Need all available Docker environment variables? See the [Configuration reference](configuration.md#docker-environment-variables).
+
+!!! warning "Important"
+  Because the setup assistant does not yet cover all options, Docker environment variables are currently near-mandatory for reliable deployments.
+  At minimum, set: `PAPERLESS_API_URL`, `PAPERLESS_API_TOKEN`, `AI_PROVIDER`, and provider-specific credentials (for example `OPENAI_API_KEY`, or `OLLAMA_API_URL` + `OLLAMA_MODEL`, or `AZURE_*`, or `CUSTOM_*`).
+
 !!! tip "Same Docker network as Paperless-ngx?"
     If you run both containers in the same Docker Compose project or network, use the service name as the Paperless-ngx URL (e.g. `http://paperless-ngx:8000`) instead of `localhost`.
 

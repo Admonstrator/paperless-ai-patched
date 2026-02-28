@@ -8,6 +8,7 @@ const AIServiceFactory = require('./services/aiServiceFactory');
 const documentModel = require('./models/document');
 const setupService = require('./services/setupService');
 const setupRoutes = require('./routes/setup');
+const mistralOcrService = require('./services/mistralOcrService');
 
 // Add environment variables for RAG service if not already set
 process.env.RAG_SERVICE_URL = process.env.RAG_SERVICE_URL || 'http://localhost:8000';
@@ -257,6 +258,13 @@ async function processDocument(doc, existingTags, existingCorrespondentList, exi
 
   if (!content || content.length < MIN_CONTENT_LENGTH) {
     console.log(`[DEBUG] Document ${doc.id} has insufficient content (${content?.length || 0} chars, minimum: ${MIN_CONTENT_LENGTH}), skipping analysis`);
+    // Queue for Mistral OCR if enabled
+    if (mistralOcrService.isEnabled()) {
+      const added = await documentModel.addToOcrQueue(doc.id, doc.title, 'short_content');
+      if (added) {
+        console.log(`[OCR] Document ${doc.id} queued for Mistral OCR (short_content)`);
+      }
+    }
     return null;
   }
 
@@ -276,6 +284,13 @@ async function processDocument(doc, existingTags, existingCorrespondentList, exi
   const analysis = await aiService.analyzeDocument(content, existingTags, existingCorrespondentList, existingDocumentTypesList, doc.id);
   console.log('Repsonse from AI service:', analysis);
   if (analysis.error) {
+    // If AI reported insufficient content, queue for Mistral OCR
+    if (mistralOcrService.isEnabled() && analysis.error === 'Insufficient content for AI analysis') {
+      const added = await documentModel.addToOcrQueue(doc.id, doc.title, 'ai_failed');
+      if (added) {
+        console.log(`[OCR] Document ${doc.id} queued for Mistral OCR (ai_failed)`);
+      }
+    }
     // Increment retry count on error
     retryTracker.set(doc.id, docRetries + 1);
     throw new Error(`[ERROR] Document analysis failed: ${analysis.error}`);

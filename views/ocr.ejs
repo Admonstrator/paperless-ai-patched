@@ -1,0 +1,342 @@
+<!-- views/ocr.ejs -->
+<!DOCTYPE html>
+<html lang="en" class="h-full" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OCR Queue - Paperless-AI</title>
+    <script src="https://cdn.tailwindcss.com/3.4.16"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <style>
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 10px;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .status-pending   { background: #fef3c7; color: #92400e; }
+        .status-processing{ background: #dbeafe; color: #1e40af; }
+        .status-done      { background: #d1fae5; color: #065f46; }
+        .status-failed    { background: #fee2e2; color: #991b1b; }
+        [data-theme="dark"] .status-pending   { background: #78350f; color: #fef3c7; }
+        [data-theme="dark"] .status-processing{ background: #1e3a5f; color: #bfdbfe; }
+        [data-theme="dark"] .status-done      { background: #064e3b; color: #a7f3d0; }
+        [data-theme="dark"] .status-failed    { background: #7f1d1d; color: #fecaca; }
+
+        .reason-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 10px;
+            border-radius: 9999px;
+            font-size: 0.72rem;
+            font-weight: 500;
+            background: #e5e7eb;
+            color: #374151;
+        }
+        [data-theme="dark"] .reason-badge { background: #374151; color: #e5e7eb; }
+
+        #progressOverlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 9000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #progressBox {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 2rem;
+            width: 560px;
+            max-width: 95vw;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        #progressLog {
+            max-height: 260px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 0.8rem;
+            background: var(--input-bg, #f9fafb);
+            border: 1px solid var(--border-color, #e5e7eb);
+            border-radius: 6px;
+            padding: 0.75rem 1rem;
+        }
+        .log-line { margin-bottom: 4px; }
+        .log-download { color: #3b82f6; }
+        .log-ocr      { color: #8b5cf6; }
+        .log-writeback{ color: #f59e0b; }
+        .log-ai       { color: #10b981; }
+        .log-done     { color: #10b981; font-weight: bold; }
+        .log-error    { color: #ef4444; font-weight: bold; }
+        .log-progress, .log-start, .log-item_download,
+        .log-item_ocr, .log-item_writeback, .log-item_ai,
+        .log-item_done, .log-item_error { color: var(--text-color, #374151); }
+
+        .disabled-overlay {
+            text-align: center;
+            padding: 3rem 2rem;
+        }
+    </style>
+</head>
+<body class="h-full">
+    <button id="themeToggle" class="theme-toggle">
+        <i class="fas fa-moon dark:fas fa-sun"></i>
+    </button>
+
+    <div class="layout-container">
+        <button id="mobileMenuButton" class="mobile-menu-button">
+            <i class="fas fa-bars"></i>
+        </button>
+        <!-- Sidebar -->
+        <div id="sidebarOverlay" class="sidebar-overlay"></div>
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <img src="/favicon.ico" class="no-invert" alt="Paperless AI Logo" style="height: 60px;">
+                <h1 class="brand-title">Paperless-AI<small style="display: block;"><%= version %></small></h1>
+            </div>
+
+            <nav class="sidebar-nav">
+                <ul>
+                    <li><a href="/dashboard" class="sidebar-link"><i class="fas fa-home"></i><span>Dashboard</span></a></li>
+                    <li><a href="/manual" class="sidebar-link"><i class="fas fa-file-alt"></i><span>Manual</span></a></li>
+                    <li><a href="/chat" class="sidebar-link"><i class="fa-solid fa-comment"></i><span>Chat</span></a></li>
+                    <% if (ragEnabled) { %>
+                    <li><a href="/rag" class="sidebar-link"><i class="fa-solid fa-comment"></i><span>RAG Chat</span></a></li>
+                    <% } %>
+                    <li><a href="/playground" class="sidebar-link"><i class="fa-solid fa-flask-vial"></i><span>Playground</span></a></li>
+                    <li><a href="/history" class="sidebar-link"><i class="fa-solid fa-clock-rotate-left"></i><span>History</span></a></li>
+                    <li><a href="/ocr" class="sidebar-link active"><i class="fa-solid fa-eye"></i><span>OCR Queue</span></a></li>
+                    <li><a href="/settings" class="sidebar-link"><i class="fas fa-cog"></i><span>Settings</span></a></li>
+                    <li><a href="/logout" class="sidebar-link"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></a></li>
+                </ul>
+                <a href="https://github.com/admonstrator/paperless-ai-patched"
+                   class="github-button"
+                   style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);">
+                    <span class="star-button">
+                        <svg class="star-icon" height="16" width="16" viewBox="0 0 16 16">
+                            <path d="M8 .25a.75.75 0 01.673.418l1.882 3.815 4.21.612a.75.75 0 01.416 1.279l-3.046 2.97.719 4.192a.75.75 0 01-1.088.791L8 12.347l-3.766 1.98a.75.75 0 01-1.088-.79l.72-4.194L.818 6.374a.75.75 0 01.416-1.28l4.21-.611L7.327.668A.75.75 0 018 .25z"></path>
+                        </svg>
+                        Star
+                    </span>
+                    <span id="starCount" class="star-count">1.2k</span>
+                </a>
+                <p style="position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%); font-size: 10px; color: #555; text-align: center;">
+                    Please support us on GitHub
+                </p>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <div class="content-wrapper">
+                <div class="content-header flex justify-between items-center mb-6">
+                    <div>
+                        <h1 class="content-title">OCR Queue</h1>
+                        <p class="text-sm text-gray-500 mt-1">
+                            Documents with missing or insufficient OCR text queued for Mistral OCR reprocessing.
+                        </p>
+                    </div>
+                    <div class="flex gap-3 items-center flex-wrap">
+                        <!-- Stats badges -->
+                        <span id="statPending" class="status-badge status-pending"><i class="fas fa-hourglass-half"></i> <span id="statPendingCount">…</span> pending</span>
+                        <span id="statDone" class="status-badge status-done"><i class="fas fa-check"></i> <span id="statDoneCount">…</span> done</span>
+                        <span id="statFailed" class="status-badge status-failed"><i class="fas fa-times"></i> <span id="statFailedCount">…</span> failed</span>
+                    </div>
+                </div>
+
+                <% if (!ocrEnabled) { %>
+                <!-- Feature disabled notice -->
+                <div class="material-card mb-6">
+                    <div class="disabled-overlay">
+                        <i class="fas fa-eye-slash text-5xl text-gray-400 mb-4"></i>
+                        <h2 class="text-xl font-semibold mb-2">Mistral OCR is not enabled</h2>
+                        <p class="text-gray-500 mb-4 max-w-lg mx-auto">
+                            To use this feature, set the following variables in your <strong>data/.env</strong> file and restart the service:
+                        </p>
+                        <pre class="text-left inline-block bg-gray-100 dark:bg-gray-800 rounded-lg px-5 py-3 text-sm font-mono mb-4">MISTRAL_OCR_ENABLED=yes
+MISTRAL_API_KEY=your_key_here
+MISTRAL_OCR_MODEL=mistral-ocr-latest</pre>
+                        <p class="text-gray-400 text-xs">You can get a Mistral API key at <a href="https://console.mistral.ai" target="_blank" class="text-blue-500 hover:underline">console.mistral.ai</a></p>
+                    </div>
+                </div>
+                <% } %>
+
+                <!-- Toolbar -->
+                <div class="material-card mb-4 flex flex-wrap gap-3 items-center p-4">
+                    <!-- Manual add -->
+                    <div class="flex gap-2 items-center flex-1 min-w-[200px]">
+                        <input type="number" id="manualDocId" placeholder="Document ID"
+                               class="px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-40"
+                               min="1">
+                        <button id="addManualBtn"
+                                class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm whitespace-nowrap"
+                                title="Add document manually to OCR queue">
+                            <i class="fas fa-plus"></i> Add to Queue
+                        </button>
+                    </div>
+
+                    <!-- Auto-analyze toggle -->
+                    <label class="flex items-center gap-2 cursor-pointer select-none text-sm">
+                        <div class="relative">
+                            <input type="checkbox" id="autoAnalyzeToggle" class="sr-only peer">
+                            <div class="w-10 h-5 bg-gray-300 peer-checked:bg-blue-500 rounded-full transition-colors"></div>
+                            <div class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform peer-checked:translate-x-5"></div>
+                        </div>
+                        <span>AI analysis after OCR</span>
+                    </label>
+
+                    <!-- Status filter -->
+                    <select id="statusFilter" class="px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">All statuses</option>
+                        <option value="pending">Pending</option>
+                        <option value="processing">Processing</option>
+                        <option value="done">Done</option>
+                        <option value="failed">Failed</option>
+                    </select>
+
+                    <!-- Process all button -->
+                    <button id="processAllBtn"
+                            class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm whitespace-nowrap ml-auto"
+                            title="Process all pending items">
+                        <i class="fas fa-play"></i> Process All Pending
+                    </button>
+                </div>
+
+                <!-- Queue Table -->
+                <div class="material-card">
+                    <div class="overflow-x-auto">
+                        <table id="ocrTable" class="w-full">
+                            <thead>
+                                <tr>
+                                    <th class="text-left py-3 px-4">Doc ID</th>
+                                    <th class="text-left py-3 px-4">Title</th>
+                                    <th class="text-left py-3 px-4">Reason</th>
+                                    <th class="text-left py-3 px-4">Status</th>
+                                    <th class="text-left py-3 px-4">Added</th>
+                                    <th class="text-left py-3 px-4">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ocrTableBody">
+                                <tr>
+                                    <td colspan="6" class="text-center py-8 text-gray-400">
+                                        <i class="fas fa-spinner fa-spin mr-2"></i> Loading queue…
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- Pagination -->
+                    <div class="flex justify-between items-center mt-4 px-4 pb-4 flex-wrap gap-2">
+                        <span id="tableInfo" class="text-sm text-gray-500"></span>
+                        <div class="flex gap-2">
+                            <button id="prevPageBtn" class="px-3 py-1 border rounded text-sm hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed" disabled>
+                                <i class="fas fa-chevron-left"></i> Prev
+                            </button>
+                            <button id="nextPageBtn" class="px-3 py-1 border rounded text-sm hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed" disabled>
+                                Next <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Progress Overlay (SSE) -->
+    <div id="progressOverlay" style="display:none;">
+        <div id="progressBox">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-semibold text-lg" id="progressTitle">Processing…</h3>
+                <button id="progressCloseBtn" class="text-gray-400 hover:text-gray-600" style="display:none;">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <!-- Progress bar -->
+            <div class="w-full bg-gray-200 rounded-full h-2 mb-4">
+                <div id="progressBar" class="bg-blue-500 h-2 rounded-full transition-all duration-500" style="width:0%"></div>
+            </div>
+
+            <div id="progressLog"></div>
+
+            <div class="mt-4 flex justify-end">
+                <button id="progressDoneBtn" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors" style="display:none;">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toastNotification" class="fixed bottom-6 right-6 z-50 hidden" style="z-index:9999;">
+        <div id="toastInner" class="bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3">
+            <i id="toastIcon" class="fas fa-check-circle"></i>
+            <span id="toastMessage">Done</span>
+        </div>
+    </div>
+
+    <script>
+        // ----- Sidebar mobile -----
+        document.addEventListener('DOMContentLoaded', function () {
+            const mobileMenuButton = document.getElementById('mobileMenuButton');
+            const sidebar = document.querySelector('.sidebar');
+            const sidebarOverlay = document.getElementById('sidebarOverlay');
+
+            function toggleSidebar(event) {
+                event.stopPropagation();
+                sidebar.classList.toggle('active');
+                sidebarOverlay.classList.toggle('active');
+                const icon = mobileMenuButton.querySelector('i');
+                if (sidebar.classList.contains('active')) {
+                    icon.classList.replace('fa-bars', 'fa-times');
+                } else {
+                    icon.classList.replace('fa-times', 'fa-bars');
+                }
+            }
+            mobileMenuButton.addEventListener('click', toggleSidebar);
+            sidebarOverlay.addEventListener('click', function (event) {
+                event.stopPropagation();
+                if (sidebar.classList.contains('active')) toggleSidebar(event);
+            });
+            sidebar.addEventListener('click', function (e) { e.stopPropagation(); });
+            document.querySelectorAll('.sidebar-link').forEach(l => l.addEventListener('click', e => e.stopPropagation()));
+        });
+    </script>
+    <script>
+        // GitHub stars
+        async function getStarsCount() {
+            try {
+                const r = await fetch('https://api.github.com/repos/admonstrator/paperless-ai-patched');
+                const d = await r.json();
+                const el = document.getElementById('starCount');
+                if (el && d.stargazers_count !== undefined) {
+                    el.textContent = d.stargazers_count >= 1000
+                        ? (d.stargazers_count / 1000).toFixed(1) + 'k'
+                        : d.stargazers_count;
+                }
+            } catch (_) {}
+        }
+        getStarsCount();
+    </script>
+    <script>
+        // Theme toggle
+        const themeToggle = document.getElementById('themeToggle');
+        const html = document.documentElement;
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        html.setAttribute('data-theme', savedTheme);
+        themeToggle.addEventListener('click', () => {
+            const newTheme = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+        });
+    </script>
+    <script src="/js/ocr.js"></script>
+</body>
+</html>

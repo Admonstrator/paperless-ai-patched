@@ -7,7 +7,7 @@
 **An integration fork of Paperless-AI – picking up where the original left off.**
 
 [![Latest Release](https://img.shields.io/github/v/release/admonstrator/paperless-ai-next?style=for-the-badge&logo=github&color=blue)](https://github.com/admonstrator/paperless-ai-next/releases/latest)
-[![Docker Pulls](https://img.shields.io/badge/docker%20pulls-0-orange?style=for-the-badge&logo=docker)](https://hub.docker.com/r/admonstrator/paperless-ai-next)
+[![Docker Pulls](https://img.shields.io/badge/docker%20pulls-40-yellow?style=for-the-badge&logo=docker)](https://hub.docker.com/r/admonstrator/paperless-ai-next)
 [![License](https://img.shields.io/github/license/admonstrator/paperless-ai-next?style=for-the-badge)](LICENSE)
 [![Stars](https://img.shields.io/github/stars/admonstrator/paperless-ai-next?style=for-the-badge)](https://github.com/admonstrator/paperless-ai-next/stargazers)
 [![Docs](https://img.shields.io/badge/docs-paperless--ai--next.admon.me-blue?style=for-the-badge&logo=readthedocs)](https://paperless-ai-next.admon.me/)
@@ -23,7 +23,7 @@
 This fork collects pending upstream PRs, applies security patches, and tests improvements. Since the upstream project is no longer actively maintained, it has grown into the most up-to-date version available.
 
 > ⚠️ **Upstream Credit** – All original work belongs to [clusterzx](https://github.com/clusterzx)  
-> 📦 **Current Version** – `v2026-02-27-03`
+> 📦 **Current Version** – `v2026-02-28-01`
 
 📖 **[Full documentation →](https://paperless-ai-next.admon.me/)**
 

@@ -3,14 +3,14 @@
   "info": {
     "title": "Paperless-AI API Documentation",
     "version": "1.0.0",
-    "description": "API documentation for the Paperless-AI Next application",
+    "description": "API documentation for the Paperless-AI application",
     "license": {
       "name": "MIT",
       "url": "https://opensource.org/licenses/MIT"
     },
     "contact": {
-      "name": "Admonstrator",
-      "url": "https://github.com/Admonstrator"
+      "name": "admonstrator",
+      "url": "https://github.com/admonstrator"
     }
   },
   "servers": [
@@ -1863,6 +1863,9 @@
           "401": {
             "description": "Unauthorized - authentication required"
           },
+          "429": {
+            "description": "Too many requests - rate limit exceeded"
+          },
           "500": {
             "description": "Server error"
           }
@@ -1905,6 +1908,9 @@
           },
           "401": {
             "description": "Unauthorized - authentication required"
+          },
+          "429": {
+            "description": "Too many requests - rate limit exceeded (max 10 requests per 15 minutes)"
           },
           "500": {
             "description": "Server error"

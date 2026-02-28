@@ -64,7 +64,7 @@ All config loads from `data/.env` via `config/config.js`. Key patterns:
 - API key support via `x-api-key` header
 - Middleware: `isAuthenticated` checks both JWT and API key
 - Protected routes use `protectApiRoute` middleware
-- **Pattern**: All `/api/*` routes require authentication except `/api-docs`
+- **Pattern**: All `/api/*` routes require authentication, including `/api-docs`
 
 ### Server-Side Pagination (PERF-001)
 History table uses SQL-based pagination instead of loading all records:

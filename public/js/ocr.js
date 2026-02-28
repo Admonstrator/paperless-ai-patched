@@ -143,7 +143,7 @@
 
             const hasOcrText = !!(item.ocr_text && String(item.ocr_text).trim());
             const analyzeBtn = (item.status === 'done' && hasOcrText)
-                ? `<button class="px-3 py-1 bg-violet-500 text-white rounded-lg text-xs hover:bg-violet-600 transition-colors analyze-btn" data-id="${item.document_id}" title="Start AI analysis using existing OCR text"><i class="fas fa-robot"></i> Jetzt AI analysieren</button>`
+                ? `<button class="px-3 py-1 bg-violet-500 text-white rounded-lg text-xs hover:bg-violet-600 transition-colors analyze-btn" data-id="${item.document_id}" title="Start AI analysis using existing OCR text"><i class="fas fa-robot"></i> Analyze with AI now</button>`
                 : '';
 
             const infoBtn = hasOcrText

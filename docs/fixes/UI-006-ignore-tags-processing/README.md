@@ -2,34 +2,34 @@
 
 ## Background
 
-Bisher konnte die Verarbeitung auf bestimmte Tags eingeschränkt werden (`TAGS` + `PROCESS_PREDEFINED_DOCUMENTS`), aber es gab keine Möglichkeit, Tags explizit auszuschließen.
+Processing could already be restricted to specific tags (`TAGS` + `PROCESS_PREDEFINED_DOCUMENTS`), but there was no way to explicitly exclude tags.
 
-Für viele Workflows ist das notwendig, z. B. wenn Dokumente mit bestimmten Markierungen nie automatisch verarbeitet werden sollen.
+This is required for many workflows, for example when documents with specific markers should never be processed automatically.
 
 ## Changes
 
 - `views/setup.ejs`
-  - Neues Eingabefeld **Ignore Tags** ergänzt.
-  - Werte werden als CSV in `ignoreTags` gespeichert.
+  - Added a new **Ignore Tags** input field.
+  - Values are stored as CSV in `ignoreTags`.
 - `views/settings.ejs`
-  - Neues Eingabefeld **Ignore Tags** ergänzt.
-  - Werte werden als CSV in `ignoreTags` gespeichert.
+  - Added a new **Ignore Tags** input field.
+  - Values are stored as CSV in `ignoreTags`.
 - `public/js/setup.js`
-  - Tag-Manager erweitert, damit zusätzlich die Ignore-Tag-Liste gepflegt werden kann.
+  - Extended the tag manager to also handle the ignore-tag list.
 - `public/js/settings.js`
-  - Zusätzlicher `TagsManager` für Ignore-Tags initialisiert.
+  - Initialized an additional `TagsManager` for ignore tags.
 - `routes/setup.js`
-  - Setup/Settings GET: `IGNORE_TAGS` geladen und als Array normalisiert.
-  - Setup/Settings POST: `ignoreTags` verarbeitet und als `IGNORE_TAGS` persistiert.
-  - Dashboard: Dokumentanzahl auf **effektiv verarbeitbare** Dokumente umgestellt.
+  - Setup/Settings GET: loaded `IGNORE_TAGS` and normalized it as an array.
+  - Setup/Settings POST: processed `ignoreTags` and persisted it as `IGNORE_TAGS`.
+  - Dashboard: switched document count to **effectively processable** documents.
 - `services/paperlessService.js`
-  - Include-/Exclude-Tag-Helfer ergänzt (`parseTagList`, `resolveTagIdsByName`, `filterDocumentsByExcludedTagIds`).
-  - `getAllDocuments()` filtert jetzt zusätzlich nach `IGNORE_TAGS`.
-  - `getEffectiveDocumentCount()` ergänzt (für Dashboard-Statistik).
+  - Added include/exclude tag helpers (`parseTagList`, `resolveTagIdsByName`, `filterDocumentsByExcludedTagIds`).
+  - `getAllDocuments()` now also filters by `IGNORE_TAGS`.
+  - Added `getEffectiveDocumentCount()` (for dashboard statistics).
 - `config/config.js`
-  - `ignoreTags` aus `IGNORE_TAGS` ergänzt.
+  - Added `ignoreTags` sourced from `IGNORE_TAGS`.
 - `tests/test-ignore-tags-filter.js`
-  - Neue Tests für Include+Exclude, Exclude-only und ohne Exclude.
+  - Added tests for include+exclude, exclude-only, and no-exclude.
 
 ## Testing
 
@@ -37,17 +37,17 @@ Für viele Workflows ist das notwendig, z. B. wenn Dokumente mit bestimmten Mark
 node tests/test-ignore-tags-filter.js
 ```
 
-Zusätzlich manuell geprüft:
+Additionally verified manually:
 
-- Setup/Settings zeigen Ignore-Tags an und speichern sie.
-- Reguläre Scans verarbeiten Dokumente mit Ignore-Tags nicht.
-- Dashboard nutzt die bereinigte Gesamtmenge.
+- Setup/Settings display ignore tags and persist them correctly.
+- Regular scans do not process documents containing ignored tags.
+- Dashboard uses the adjusted effective total.
 
 ## Impact
 
-- Funktionalität: Administrierbares Ausschließen von Tags bei regulären Scans.
-- UX: Neue Felder in Setup und Settings.
-- Statistik: Dashboard zählt verarbeitbare Dokumente (Exclude-bereinigt).
+- Functionality: configurable exclusion of tags during regular scans.
+- UX: new fields in setup and settings.
+- Statistics: dashboard counts processable documents (exclude-adjusted).
 
 ## Upstream Status
 

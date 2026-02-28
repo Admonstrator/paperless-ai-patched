@@ -6,7 +6,7 @@ Contributions are welcome! Here's how to get involved.
 
 ## Reporting issues
 
-If something doesn't work as expected, please [open an issue](https://github.com/Admonstrator/paperless-ai-next/issues). Include:
+If something doesn't work as expected, please [open an issue](https://github.com/admonstrator/paperless-ai-next/issues). Include:
 
 - What you expected to happen
 - What actually happened
@@ -42,18 +42,6 @@ npm run test
 ```
 
 The application will be available at `http://localhost:3000`. You'll still need a running Paperless-ngx instance to connect to.
-
----
-
-## Integrating upstream fixes
-
-If you want to bring in a fix from the upstream [clusterzx/paperless-ai](https://github.com/clusterzx/paperless-ai) repository:
-
-1. Create a branch: e.g. `PR-800-fix-something`
-2. Apply the changes
-3. Add a `Included_Fixes/PR-800-fix-something/README.md` documenting what was changed
-4. Update `Included_Fixes/README.md` and `docs/changelog.md` with the new entry
-5. Open a pull request
 
 ---
 

@@ -377,6 +377,28 @@ function validateCustomFieldValue(fieldName, rawValue, dataType) {
     return { skip: false, value: strValue };
 }
 
+/**
+ * Decide whether an AI error should trigger OCR queue fallback.
+ *
+ * @param {string} errorMessage - Error message returned by AI analysis
+ * @returns {boolean}
+ */
+function shouldQueueForOcrOnAiError(errorMessage) {
+    if (typeof errorMessage !== 'string' || !errorMessage.trim()) {
+        return false;
+    }
+
+    const normalizedError = errorMessage.toLowerCase();
+    const ocrRelevantErrorMarkers = [
+        'insufficient content for ai analysis',
+        'invalid response structure',
+        'invalid json response from api',
+        'invalid api response structure'
+    ];
+
+    return ocrRelevantErrorMarkers.some(marker => normalizedError.includes(marker));
+}
+
 module.exports = {
     calculateTokens,
     calculateTotalPromptTokens,
@@ -385,5 +407,6 @@ module.exports = {
     validateUrl,
     validateApiUrl,
     validateUrlAgainstBase,
-    validateCustomFieldValue
+    validateCustomFieldValue,
+    shouldQueueForOcrOnAiError
 };

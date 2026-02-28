@@ -1,4 +1,4 @@
-# Copilot Instructions for Paperless-AI Next
+# Copilot Instructions for Paperless-AI next
 
 ## Project Context
 Community fork of [clusterzx/paperless-ai](https://github.com/clusterzx/paperless-ai) - an AI-powered document processing extension for Paperless-ngx. This fork focuses on integration testing, performance optimizations, and Docker improvements. Core development credit belongs to the upstream project.

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Permanently Failed - Paperless-AI</title>
+    <script src="/vendor/tailwind/tailwindcss-3.4.16.js"></script>
+    <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <style>
+        .reason-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 10px;
+            border-radius: 9999px;
+            font-size: 0.72rem;
+            font-weight: 500;
+            background: #e5e7eb;
+            color: #374151;
+        }
+        [data-theme="dark"] .reason-badge { background: #374151; color: #e5e7eb; }
+    </style>
+</head>
+<body class="h-full">
+    <button id="themeToggle" class="theme-toggle">
+        <i class="fas fa-moon dark:fas fa-sun"></i>
+    </button>
+
+    <div class="layout-container">
+        <button id="mobileMenuButton" class="mobile-menu-button">
+            <i class="fas fa-bars"></i>
+        </button>
+        <div id="sidebarOverlay" class="sidebar-overlay"></div>
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <img src="/favicon.webp" class="no-invert" alt="Paperless AI Logo" style="height: 60px;">
+                <h1 class="brand-title"><span class="relative inline-block">Paperless-AI<span class="absolute right-0 top-0 translate-x-1/2 -translate-y-1/2 rotate-12 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-100 text-blue-700">next</span></span><small style="display: block;"><%= version %></small></h1>
+            </div>
+
+            <nav class="sidebar-nav">
+                <ul>
+                    <li><a href="/dashboard" class="sidebar-link"><i class="fas fa-home"></i><span>Dashboard</span></a></li>
+                    <li><a href="/manual" class="sidebar-link"><i class="fas fa-file-alt"></i><span>Manual</span></a></li>
+                    <% if (chatEnabled) { %>
+                    <li><a href="/chat" class="sidebar-link"><i class="fa-solid fa-comment"></i><span>Chat</span></a></li>
+                    <% } %>
+                    <% if (ragEnabled) { %>
+                    <li><a href="/rag" class="sidebar-link"><i class="fa-solid fa-comment"></i><span>RAG Chat</span></a></li>
+                    <% } %>
+                    <li><a href="/playground" class="sidebar-link"><i class="fa-solid fa-flask-vial"></i><span>Playground</span></a></li>
+                    <li><a href="/history" class="sidebar-link"><i class="fa-solid fa-clock-rotate-left"></i><span>History</span></a></li>
+                    <li><a href="/ocr" class="sidebar-link"><i class="fa-solid fa-eye"></i><span>OCR Queue</span><span id="sidebarOcrBadge" class="ml-2 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800 hidden">0</span></a></li>
+                    <li><a href="/failed" class="sidebar-link active"><i class="fa-solid fa-ban"></i><span>Permanently Failed</span><span id="sidebarFailedBadge" class="ml-2 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-100 text-red-700 hidden">0</span></a></li>
+                    <li><a href="/settings" class="sidebar-link"><i class="fas fa-cog"></i><span>Settings</span></a></li>
+                    <li><a href="/logout" class="sidebar-link"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <div class="content-wrapper">
+                <div class="content-header flex justify-between items-center mb-6">
+                    <div>
+                        <h1 class="content-title">Permanently Failed Documents</h1>
+                        <p class="text-sm text-gray-500 mt-1">
+                            These documents are skipped by automatic scanning until you reset them.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="material-card">
+                    <div class="overflow-x-auto">
+                        <table id="failedTable" class="w-full">
+                            <thead>
+                                <tr>
+                                    <th class="text-left py-3 px-4">Doc ID</th>
+                                    <th class="text-left py-3 px-4">Title</th>
+                                    <th class="text-left py-3 px-4">Reason</th>
+                                    <th class="text-left py-3 px-4">Source</th>
+                                    <th class="text-left py-3 px-4">Updated</th>
+                                    <th class="text-left py-3 px-4">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="failedTableBody">
+                                <tr>
+                                    <td colspan="6" class="text-center py-8 text-gray-400">
+                                        <i class="fas fa-spinner fa-spin mr-2"></i> Loading permanently failed queue…
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="flex justify-between items-center mt-4 px-4 pb-4 flex-wrap gap-2">
+                        <span id="failedTableInfo" class="text-sm text-gray-500"></span>
+                        <div class="flex gap-2">
+                            <button id="failedPrevPageBtn" class="px-3 py-1 border rounded text-sm hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed" disabled>
+                                <i class="fas fa-chevron-left"></i> Prev
+                            </button>
+                            <button id="failedNextPageBtn" class="px-3 py-1 border rounded text-sm hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed" disabled>
+                                Next <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="toastNotification" class="fixed bottom-6 right-6 z-50 hidden" style="z-index:9999;">
+        <div id="toastInner" class="bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3">
+            <i id="toastIcon" class="fas fa-check-circle"></i>
+            <span id="toastMessage">Done</span>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const mobileMenuButton = document.getElementById('mobileMenuButton');
+            const sidebar = document.querySelector('.sidebar');
+            const sidebarOverlay = document.getElementById('sidebarOverlay');
+
+            function toggleSidebar(event) {
+                event.stopPropagation();
+                sidebar.classList.toggle('active');
+                sidebarOverlay.classList.toggle('active');
+                const icon = mobileMenuButton.querySelector('i');
+                if (sidebar.classList.contains('active')) {
+                    icon.classList.replace('fa-bars', 'fa-times');
+                } else {
+                    icon.classList.replace('fa-times', 'fa-bars');
+                }
+            }
+            mobileMenuButton.addEventListener('click', toggleSidebar);
+            sidebarOverlay.addEventListener('click', function (event) {
+                event.stopPropagation();
+                if (sidebar.classList.contains('active')) toggleSidebar(event);
+            });
+        });
+
+        const themeToggle = document.getElementById('themeToggle');
+        const html = document.documentElement;
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        html.setAttribute('data-theme', savedTheme);
+        themeToggle.addEventListener('click', () => {
+            const newTheme = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+        });
+    </script>
+    <script src="/js/failed.js"></script>
+    <script src="/js/sidebar-badges.js"></script>
+</body>
+</html>

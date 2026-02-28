@@ -1,6 +1,6 @@
 # Automatic Tagging
 
-Paperless-AI constantly monitors your Paperless-ngx inbox. Every few minutes (configurable), it checks for new documents and processes them automatically.
+Paperless-AI next constantly monitors your Paperless-ngx inbox. Every few minutes (configurable), it checks for new documents and processes them automatically.
 
 ---
 

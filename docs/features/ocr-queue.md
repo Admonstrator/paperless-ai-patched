@@ -11,7 +11,7 @@ The OCR Queue is the rescue system for these documents.
 
 ## How it works
 
-When Paperless-AI encounters a document with very little or unreadable text, it automatically adds it to the **OCR Queue** instead of skipping it silently.
+When Paperless-AI next encounters a document with very little or unreadable text, it automatically adds it to the **OCR Queue** instead of skipping it silently.
 
 From **/ocr** you can then:
 

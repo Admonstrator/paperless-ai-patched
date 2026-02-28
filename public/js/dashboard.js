@@ -98,6 +98,24 @@ class ChartManager {
 }
 
 class DashboardStatsLoader {
+    constructor() {
+        this.minimumLoadingTimeMs = 400;
+    }
+
+    setLoadingState(isLoading) {
+        const valueElements = document.querySelectorAll('[data-dashboard-value]');
+        valueElements.forEach((valueElement) => {
+            valueElement.classList.toggle('hidden', isLoading);
+            valueElement.setAttribute('aria-hidden', isLoading ? 'true' : 'false');
+
+            const skeleton = document.getElementById(`${valueElement.id}Skeleton`);
+            if (!skeleton) return;
+            skeleton.classList.toggle('hidden', !isLoading);
+            skeleton.setAttribute('aria-hidden', isLoading ? 'false' : 'true');
+            skeleton.setAttribute('aria-busy', isLoading ? 'true' : 'false');
+        });
+    }
+
     formatNumber(value) {
         return Number(value || 0).toLocaleString();
     }
@@ -157,6 +175,8 @@ class DashboardStatsLoader {
     }
 
     async load() {
+        const loadingStartedAt = Date.now();
+        this.setLoadingState(true);
         try {
             const response = await fetch('/api/dashboard/stats');
             if (!response.ok) {
@@ -181,6 +201,12 @@ class DashboardStatsLoader {
             this.updateCharts(payload);
         } catch (error) {
             console.error('Error loading dashboard stats:', error);
+        } finally {
+            const elapsedMs = Date.now() - loadingStartedAt;
+            if (elapsedMs < this.minimumLoadingTimeMs) {
+                await new Promise(resolve => setTimeout(resolve, this.minimumLoadingTimeMs - elapsedMs));
+            }
+            this.setLoadingState(false);
         }
     }
 }

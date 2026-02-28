@@ -1,4 +1,4 @@
-# Paperless-AI Next
+# Paperless-AI next
 
 **Automatically tag, sort, and search your documents using AI – no cloud required.**
 
@@ -8,9 +8,9 @@
 
 ---
 
-Paperless-AI connects to your [Paperless-ngx](https://github.com/paperless-ngx/paperless-ngx) instance and uses an AI of your choice to automatically read, understand, and classify your documents.
+Paperless-AI next connects to your [Paperless-ngx](https://github.com/paperless-ngx/paperless-ngx) instance and uses an AI of your choice to automatically read, understand, and classify your documents.
 
-Every time a new document lands in Paperless-ngx, Paperless-AI picks it up, figures out what it is, and assigns the right tags, title, document type, and correspondent – so you don't have to.
+Every time a new document lands in Paperless-ngx, Paperless-AI next picks it up, figures out what it is, and assigns the right tags, title, document type, and correspondent – so you don't have to.
 
 ---
 
@@ -38,6 +38,7 @@ Works with OpenAI, Ollama (local), Azure OpenAI, DeepSeek, OpenRouter, Perplexit
 |---|---|---|
 | AI auto-tagging | ✅ | ✅ |
 | Manual processing | ✅ | ✅ |
+| OCR rescue with Mistral | ✅ | ✅ |
 | RAG semantic search | ❌ | ✅ |
 | Image size | ~500–700 MB | ~1.5–2 GB |
 

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Paperless-AI Chat</title>
+    <title>Paperless-AI next Chat</title>
     <script src="/vendor/tailwind/tailwindcss-3.4.16.js"></script>
     <script src="/vendor/marked/marked.min.js"></script>
     <script src="/vendor/highlight/highlight.min.js"></script>
@@ -25,15 +25,17 @@
         <div id="sidebarOverlay" class="sidebar-overlay"></div>
         <aside class="sidebar">
             <div class="sidebar-header">
-                <img src="/favicon.ico" class="no-invert" alt="Paperless AI Logo" style="height: 60px;">
-                <h1 class="brand-title">Paperless-AI<small style="display: block;"><%= version %></small></h1>
+                <img src="/favicon.webp" class="no-invert" alt="Paperless AI Logo" style="height: 60px;">
+                <h1 class="brand-title"><span class="relative inline-block">Paperless-AI<span class="absolute right-0 top-0 translate-x-1/2 -translate-y-1/2 rotate-12 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-100 text-blue-700">next</span></span><small style="display: block;"><%= version %></small></h1>
             </div>
 
             <nav class="sidebar-nav">
                 <ul>
                     <li><a href="/dashboard" class="sidebar-link"><i class="fas fa-home"></i><span>Dashboard</span></a></li>
                     <li><a href="/manual" class="sidebar-link"><i class="fas fa-file-alt"></i><span>Manual</span></a></li>
+                    <% if (chatEnabled) { %>
                     <li><a href="/chat" class="sidebar-link active"><i class="fa-solid fa-comment"></i><span>Chat</span></a></li>
+                    <% } %>
                     <% if (ragEnabled) { %>
                     <li>
                         <a href="/rag" class="sidebar-link">
@@ -44,7 +46,8 @@
                     <% } %>
                     <li><a href="/playground" class="sidebar-link"><i class="fa-solid fa-flask-vial"></i><span>Playground</span></a></li>
                     <li><a href="/history" class="sidebar-link"><i class="fa-solid fa-clock-rotate-left"></i><span>History</span></a></li>
-                    <li><a href="/ocr" class="sidebar-link"><i class="fa-solid fa-eye"></i><span>OCR Queue</span></a></li>
+                    <li><a href="/ocr" class="sidebar-link"><i class="fa-solid fa-eye"></i><span>OCR Queue</span><span id="sidebarOcrBadge" class="ml-2 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800 hidden">0</span></a></li>
+                    <li><a href="/failed" class="sidebar-link"><i class="fa-solid fa-ban"></i><span>Permanently Failed</span><span id="sidebarFailedBadge" class="ml-2 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-100 text-red-700 hidden">0</span></a></li>
                     <li><a href="/settings" class="sidebar-link"><i class="fas fa-cog"></i><span>Settings</span></a></li>
                     <li><a href="/logout" class="sidebar-link"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></a></li>
                 </ul>
@@ -115,6 +118,7 @@
             </div>
         </main>
     </div>
+        <script src="/js/sidebar-badges.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const mobileMenuButton = document.getElementById('mobileMenuButton');

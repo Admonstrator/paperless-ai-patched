@@ -1,10 +1,10 @@
 <div align="center">
 
-<img src="./logo.png" alt="Paperless-AI Next Logo" weight="200" style="border-radius: 10px; margin: 20px 0;">
+<img src="./logo.png" alt="Paperless-AI next Logo" weight="200" style="border-radius: 10px; margin: 20px 0;">
 
-# 📄 Paperless-AI Next
+# 📄 Paperless-AI next
 
-**An integration fork of Paperless-AI – picking up where the original left off.**
+**An integration fork of Paperless-AI next – picking up where the original left off.**
 
 [![Latest Release](https://img.shields.io/github/v/release/admonstrator/paperless-ai-next?style=for-the-badge&logo=github&color=blue)](https://github.com/admonstrator/paperless-ai-next/releases/latest)
 [![Docker Pulls](https://img.shields.io/badge/docker%20pulls-40-yellow?style=for-the-badge&logo=docker)](https://hub.docker.com/r/admonstrator/paperless-ai-next)

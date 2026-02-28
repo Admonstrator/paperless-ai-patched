@@ -18,7 +18,7 @@ export RAG_SERVICE_URL="http://localhost:8000"
 export RAG_SERVICE_ENABLED="true"
 
 # Start the Node.js application
-echo "Starting Node.js Paperless-AI service..."
+echo "Starting Node.js Paperless-AI next service..."
 pm2-runtime ecosystem.config.js
 
 # If Node.js exits, kill the Python service

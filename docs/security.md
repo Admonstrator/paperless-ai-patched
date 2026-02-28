@@ -20,7 +20,7 @@ Instead, use [GitHub Security Advisories](https://github.com/Admonstrator/paperl
 
 ## Security notes
 
-- Paperless-AI requires access to your Paperless-ngx API. Use a dedicated API token with the minimum required permissions.
+- Paperless-AI next requires access to your Paperless-ngx API. Use a dedicated API token with the minimum required permissions.
 - If you use an external AI provider (OpenAI, Azure, Mistral), your document text is sent to that provider. Review their privacy and data retention policies.
 - Using Ollama keeps all data on your own network.
 - The web UI should not be exposed to the public internet without additional authentication (reverse proxy with auth, VPN, etc.).

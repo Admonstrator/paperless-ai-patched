@@ -3,9 +3,9 @@ const swaggerJSDoc = require('swagger-jsdoc');
 const swaggerDefinition = {
   openapi: '3.0.0',
   info: {
-    title: 'Paperless-AI API Documentation',
+    title: 'Paperless-AI next API Documentation',
     version: '1.0.0',
-    description: 'API documentation for the Paperless-AI application',
+    description: 'API documentation for the Paperless-AI next application',
     license: {
       name: 'MIT',
       url: 'https://opensource.org/licenses/MIT',

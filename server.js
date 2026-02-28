@@ -135,7 +135,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
  *   get:
  *     summary: Retrieve the OpenAPI specification
  *     description: |
- *       Returns the complete OpenAPI specification for the Paperless-AI API.
+ *       Returns the complete OpenAPI specification for the Paperless-AI next API.
  *       This endpoint attempts to serve a static OpenAPI JSON file first, falling back
  *       to dynamically generating the specification if the file cannot be read.
  *       
@@ -239,6 +239,13 @@ async function saveOpenApiSpec() {
 async function processDocument(doc, existingTags, existingCorrespondentList, existingDocumentTypesList, ownUserId) {
   const isProcessed = await documentModel.isDocumentProcessed(doc.id);
   if (isProcessed) return null;
+
+  const isFailed = await documentModel.isDocumentFailed(doc.id);
+  if (isFailed) {
+    console.log(`[DEBUG] Document ${doc.id} is marked as permanently failed, skipping until reset`);
+    return null;
+  }
+
   await documentModel.setProcessingStatus(doc.id, doc.title, 'processing');
 
   //Check if the Document can be edited
@@ -264,6 +271,10 @@ async function processDocument(doc, existingTags, existingCorrespondentList, exi
       if (added) {
         console.log(`[OCR] Document ${doc.id} queued for Mistral OCR (short_content)`);
       }
+    } else {
+      await documentModel.setProcessingStatus(doc.id, doc.title, 'failed');
+      await documentModel.addFailedDocument(doc.id, doc.title, `insufficient_content_lt_${MIN_CONTENT_LENGTH}`, 'ai');
+      retryTracker.delete(doc.id);
     }
     return null;
   }
@@ -284,6 +295,8 @@ async function processDocument(doc, existingTags, existingCorrespondentList, exi
   const analysis = await aiService.analyzeDocument(content, existingTags, existingCorrespondentList, existingDocumentTypesList, doc.id);
   console.log('Repsonse from AI service:', analysis);
   if (analysis.error) {
+    let queuedForOcr = false;
+    let markedTerminalFailed = false;
     // Queue for Mistral OCR on OCR-relevant AI errors (e.g. low content, invalid response structure)
     if (mistralOcrService.isEnabled() && shouldQueueForOcrOnAiError(analysis.error)) {
       const queueReason = classifyOcrQueueReasonFromAiError(analysis.error);
@@ -291,9 +304,25 @@ async function processDocument(doc, existingTags, existingCorrespondentList, exi
       if (added) {
         console.log(`[OCR] Document ${doc.id} queued for Mistral OCR (ai_failed: ${analysis.error})`);
       }
+      queuedForOcr = true;
     }
+
+    if (!mistralOcrService.isEnabled()) {
+      await documentModel.setProcessingStatus(doc.id, doc.title, 'failed');
+      await documentModel.addFailedDocument(doc.id, doc.title, 'ai_failed_ocr_disabled', 'ai');
+      retryTracker.delete(doc.id);
+      markedTerminalFailed = true;
+    } else if (!queuedForOcr) {
+      await documentModel.setProcessingStatus(doc.id, doc.title, 'failed');
+      await documentModel.addFailedDocument(doc.id, doc.title, 'ai_failed_without_ocr_fallback', 'ai');
+      retryTracker.delete(doc.id);
+      markedTerminalFailed = true;
+    }
+
     // Increment retry count on error
-    retryTracker.set(doc.id, docRetries + 1);
+    if (!markedTerminalFailed) {
+      retryTracker.set(doc.id, docRetries + 1);
+    }
     throw new Error(`[ERROR] Document analysis failed: ${analysis.error}`);
   }
 

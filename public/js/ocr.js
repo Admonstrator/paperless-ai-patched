@@ -33,6 +33,13 @@
 
     // ── Init ───────────────────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', function () {
+        const urlParams = new URLSearchParams(window.location.search);
+        const initialStatus = (urlParams.get('status') || '').trim();
+        if (initialStatus && ['pending', 'processing', 'done', 'failed'].includes(initialStatus)) {
+            currentStatus = initialStatus;
+            if (statusFilter) statusFilter.value = initialStatus;
+        }
+
         loadQueue();
         loadStats();
 
@@ -100,7 +107,7 @@
             'ai_failed': '<i class="fas fa-robot mr-1"></i>AI analysis failed',
             'ai_insufficient_content': '<i class="fas fa-robot mr-1"></i>AI: insufficient content',
             'ai_invalid_json': '<i class="fas fa-brackets-curly mr-1"></i>AI: invalid JSON response',
-            'ai_invalid_response_structure': '<i class="fas fa-diagram-project mr-1"></i>AI: invalid response structure',
+            'ai_invalid_response_structure': '<i class="fas fa-diagram-project mr-1"></i>AI: no tags/correspondent found',
             'ai_invalid_api_response_structure': '<i class="fas fa-server mr-1"></i>AI: invalid API response structure',
             'ai_failed_unknown': '<i class="fas fa-triangle-exclamation mr-1"></i>AI failed (unknown)',
             'manual': '<i class="fas fa-hand-pointer mr-1"></i>Manual'

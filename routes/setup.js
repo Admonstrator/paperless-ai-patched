@@ -4949,4 +4949,220 @@ router.get('/dashboard/doc/:id', async (req, res) => {
   }
 });
 
+const mistralOcrService = require('../services/mistralOcrService');
+
+// ─── OCR Queue Routes ─────────────────────────────────────────────────────
+
+// Page: OCR Queue UI
+router.get('/ocr', protectApiRoute, async (req, res) => {
+  try {
+    return res.render('ocr', {
+      version: configFile.PAPERLESS_AI_VERSION || ' ',
+      ragEnabled: process.env.RAG_SERVICE_ENABLED === 'true',
+      ocrEnabled: configFile.mistralOcr?.enabled === 'yes'
+    });
+  } catch (error) {
+    console.error('[ERROR] OCR page:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// API: Get paginated queue
+router.get('/api/ocr/queue', isAuthenticated, async (req, res) => {
+  try {
+    const start = parseInt(req.query.start || '0', 10);
+    const length = parseInt(req.query.length || '25', 10);
+    const search = req.query.search || '';
+    const statusFilter = req.query.status || '';
+
+    const { docs, total } = await documentModel.getOcrQueuePaginated({
+      search,
+      statusFilter,
+      limit: length,
+      offset: start
+    });
+
+    // Enrich with Paperless URL for linking
+    const paperlessUrl = (process.env.PAPERLESS_API_URL || '').replace('/api', '');
+
+    return res.json({
+      success: true,
+      data: docs,
+      recordsTotal: total,
+      recordsFiltered: total,
+      paperlessUrl
+    });
+  } catch (error) {
+    console.error('[ERROR] GET /api/ocr/queue:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// API: Add a document manually to OCR queue
+router.post('/api/ocr/queue/add', isAuthenticated, async (req, res) => {
+  try {
+    const { documentId } = req.body;
+    if (!documentId) {
+      return res.status(400).json({ success: false, error: 'documentId is required' });
+    }
+    const docIdNum = parseInt(documentId, 10);
+    if (isNaN(docIdNum)) {
+      return res.status(400).json({ success: false, error: 'documentId must be a number' });
+    }
+
+    // Fetch title from Paperless
+    let title = `Document ${docIdNum}`;
+    try {
+      const doc = await paperlessService.getDocument(docIdNum);
+      title = doc?.title || title;
+    } catch (_) { /* ignore – use fallback title */ }
+
+    const added = await documentModel.addToOcrQueue(docIdNum, title, 'manual');
+    if (!added) {
+      return res.json({ success: false, message: 'Document already in queue or could not be added' });
+    }
+    return res.json({ success: true, message: `Document ${docIdNum} added to OCR queue` });
+  } catch (error) {
+    console.error('[ERROR] POST /api/ocr/queue/add:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// API: Remove a document from OCR queue
+router.delete('/api/ocr/queue/:documentId', isAuthenticated, async (req, res) => {
+  try {
+    const documentId = parseInt(req.params.documentId, 10);
+    if (isNaN(documentId)) {
+      return res.status(400).json({ success: false, error: 'Invalid document ID' });
+    }
+    const removed = await documentModel.removeFromOcrQueue(documentId);
+    return res.json({ success: removed, message: removed ? 'Removed from queue' : 'Not found in queue' });
+  } catch (error) {
+    console.error('[ERROR] DELETE /api/ocr/queue/:documentId:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// API: Process a single document with Mistral OCR (SSE)
+router.post('/api/ocr/process/:documentId', isAuthenticated, async (req, res) => {
+  const documentId = parseInt(req.params.documentId, 10);
+  if (isNaN(documentId)) {
+    return res.status(400).json({ success: false, error: 'Invalid document ID' });
+  }
+
+  const autoAnalyze = req.body?.autoAnalyze === true || req.body?.autoAnalyze === 'true';
+
+  // Set up SSE
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'X-Accel-Buffering': 'no',
+    'Connection': 'keep-alive'
+  });
+
+  const send = (data) => {
+    res.write(`data: ${JSON.stringify(data)}\n\n`);
+    if (res.flush) res.flush();
+  };
+
+  try {
+    if (!mistralOcrService.isEnabled()) {
+      send({ step: 'error', message: 'Mistral OCR is not enabled. Set MISTRAL_OCR_ENABLED=yes in your .env file.' });
+      return res.end();
+    }
+
+    await mistralOcrService.processQueueItem(documentId, {
+      autoAnalyze,
+      progressCallback: (step, message, data) => {
+        send({ step, message, ...data });
+      }
+    });
+
+  } catch (error) {
+    send({ step: 'error', message: error.message });
+  }
+
+  res.end();
+});
+
+// API: Process all pending items in OCR queue (SSE)
+router.post('/api/ocr/process-all', isAuthenticated, async (req, res) => {
+  const autoAnalyze = req.body?.autoAnalyze === true || req.body?.autoAnalyze === 'true';
+
+  // Set up SSE
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'X-Accel-Buffering': 'no',
+    'Connection': 'keep-alive'
+  });
+
+  const send = (data) => {
+    res.write(`data: ${JSON.stringify(data)}\n\n`);
+    if (res.flush) res.flush();
+  };
+
+  try {
+    if (!mistralOcrService.isEnabled()) {
+      send({ step: 'error', message: 'Mistral OCR is not enabled. Set MISTRAL_OCR_ENABLED=yes in your .env file.' });
+      return res.end();
+    }
+
+    const pendingItems = await documentModel.getOcrQueue('pending');
+    const total = pendingItems.length;
+
+    if (total === 0) {
+      send({ step: 'done', message: 'No pending items in OCR queue.' });
+      return res.end();
+    }
+
+    send({ step: 'start', message: `Processing ${total} document(s)…`, total });
+
+    let completed = 0;
+    let failed = 0;
+
+    for (const item of pendingItems) {
+      send({ step: 'progress', message: `Processing document ${item.document_id} (${item.title})…`, documentId: item.document_id, completed, total });
+
+      try {
+        await mistralOcrService.processQueueItem(item.document_id, {
+          autoAnalyze,
+          progressCallback: (step, message, data) => {
+            send({ step: `item_${step}`, message, documentId: item.document_id, ...data });
+          }
+        });
+        completed++;
+      } catch (err) {
+        failed++;
+        send({ step: 'item_error', message: `Document ${item.document_id} failed: ${err.message}`, documentId: item.document_id });
+      }
+    }
+
+    send({ step: 'done', message: `Batch complete. ${completed} succeeded, ${failed} failed.`, completed, failed, total });
+
+  } catch (error) {
+    send({ step: 'error', message: error.message });
+  }
+
+  res.end();
+});
+
+// API: Get OCR queue statistics
+router.get('/api/ocr/stats', isAuthenticated, async (req, res) => {
+  try {
+    const allItems = await documentModel.getOcrQueue();
+    const stats = {
+      pending: allItems.filter(i => i.status === 'pending').length,
+      processing: allItems.filter(i => i.status === 'processing').length,
+      done: allItems.filter(i => i.status === 'done').length,
+      failed: allItems.filter(i => i.status === 'failed').length,
+      total: allItems.length,
+      ocrEnabled: mistralOcrService.isEnabled()
+    };
+    return res.json({ success: true, stats });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 module.exports = router;

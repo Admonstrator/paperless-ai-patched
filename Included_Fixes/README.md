@@ -36,6 +36,7 @@ Each subdirectory represents an integrated fix with:
 | [UI-002](UI-002-date-boolean-custom-fields/) | Add Date/Boolean custom field types to settings UI | ✅ Applied | 2026-02-27 |
 | [UI-003](UI-003-history-info-modal/) | History Info-Modal with live tag diff, token stats & Rescan | ✅ Applied | 2026-02-27 |
 | [UI-004](UI-004-history-restore-doctype-language/) | History Modal: Restore Original + Document Type & Language | ✅ Applied | 2026-02-27 |
+| [UI-005](UI-005-mistral-ocr-queue/) | Mistral OCR Queue für schlecht gescannte Dokumente | ✅ Applied | 2026-02-28 |
 | [CI-001](CI-001-auto-version-tagging/) | Automatic version tagging for builds | ✅ Applied | 2025-12-04 |
 | [SEC-001](SEC-001-ssrf-code-injection/) | SSRF & Code Injection Fixes | ✅ Applied | 2025-12-03 |
 | [SEC-002](SEC-002-urllib3-cve-2026-21441/) | Fix urllib3 decompression-bomb (CVE-2026-21441) | ✅ Applied | 2026-01-09 |

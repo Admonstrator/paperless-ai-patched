@@ -185,6 +185,24 @@ const MIGRATIONS = [
       database.exec('ALTER TABLE original_documents ADD COLUMN document_type INTEGER DEFAULT NULL');
       database.exec('ALTER TABLE original_documents ADD COLUMN language TEXT DEFAULT NULL');
     }
+  },
+  {
+    version: 3,
+    description: 'Create ocr_queue table for Mistral OCR processing',
+    up: (database) => {
+      database.exec(`
+        CREATE TABLE IF NOT EXISTS ocr_queue (
+          id INTEGER PRIMARY KEY,
+          document_id INTEGER UNIQUE,
+          title TEXT,
+          reason TEXT DEFAULT 'manual',
+          status TEXT DEFAULT 'pending',
+          ocr_text TEXT DEFAULT NULL,
+          added_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          processed_at DATETIME DEFAULT NULL
+        )
+      `);
+    }
   }
 ];
 
@@ -718,5 +736,104 @@ async getCurrentProcessingStatus() {
         reject(error);
       }
     });
+  },
+
+  // ─── OCR Queue Methods ────────────────────────────────────────────────────
+
+  async addToOcrQueue(documentId, title, reason = 'manual') {
+    try {
+      const result = db.prepare(`
+        INSERT INTO ocr_queue (document_id, title, reason, status)
+        VALUES (?, ?, ?, 'pending')
+        ON CONFLICT(document_id) DO UPDATE SET
+          title = excluded.title,
+          reason = excluded.reason,
+          status = CASE WHEN status = 'done' THEN 'done' ELSE 'pending' END,
+          added_at = CASE WHEN status = 'done' THEN added_at ELSE CURRENT_TIMESTAMP END
+        WHERE status != 'processing'
+      `).run(documentId, title, reason);
+      return result.changes > 0;
+    } catch (error) {
+      console.error('[ERROR] adding to OCR queue:', error);
+      return false;
+    }
+  },
+
+  async getOcrQueue(status = null) {
+    try {
+      if (status) {
+        return db.prepare('SELECT * FROM ocr_queue WHERE status = ? ORDER BY added_at DESC').all(status);
+      }
+      return db.prepare('SELECT * FROM ocr_queue ORDER BY added_at DESC').all();
+    } catch (error) {
+      console.error('[ERROR] getting OCR queue:', error);
+      return [];
+    }
+  },
+
+  async getOcrQueuePaginated({ search = '', statusFilter = '', limit = 10, offset = 0 }) {
+    try {
+      const searchPattern = search ? `%${search}%` : '%';
+      const docs = db.prepare(`
+        SELECT * FROM ocr_queue
+        WHERE (title LIKE ? OR CAST(document_id AS TEXT) LIKE ?)
+          AND (? = '' OR status = ?)
+        ORDER BY added_at DESC
+        LIMIT ? OFFSET ?
+      `).all(searchPattern, searchPattern, statusFilter, statusFilter, limit, offset);
+      const countRow = db.prepare(`
+        SELECT COUNT(*) as count FROM ocr_queue
+        WHERE (title LIKE ? OR CAST(document_id AS TEXT) LIKE ?)
+          AND (? = '' OR status = ?)
+      `).get(searchPattern, searchPattern, statusFilter, statusFilter);
+      return { docs, total: countRow.count };
+    } catch (error) {
+      console.error('[ERROR] getting paginated OCR queue:', error);
+      return { docs: [], total: 0 };
+    }
+  },
+
+  async getOcrQueueItem(documentId) {
+    try {
+      return db.prepare('SELECT * FROM ocr_queue WHERE document_id = ?').get(documentId);
+    } catch (error) {
+      console.error('[ERROR] getting OCR queue item:', error);
+      return null;
+    }
+  },
+
+  async updateOcrQueueStatus(documentId, status, ocrText = null) {
+    try {
+      const result = db.prepare(`
+        UPDATE ocr_queue SET
+          status = ?,
+          ocr_text = COALESCE(?, ocr_text),
+          processed_at = CASE WHEN ? IN ('done', 'failed') THEN CURRENT_TIMESTAMP ELSE processed_at END
+        WHERE document_id = ?
+      `).run(status, ocrText, status, documentId);
+      return result.changes > 0;
+    } catch (error) {
+      console.error('[ERROR] updating OCR queue status:', error);
+      return false;
+    }
+  },
+
+  async removeFromOcrQueue(documentId) {
+    try {
+      const result = db.prepare('DELETE FROM ocr_queue WHERE document_id = ?').run(documentId);
+      return result.changes > 0;
+    } catch (error) {
+      console.error('[ERROR] removing from OCR queue:', error);
+      return false;
+    }
+  },
+
+  async getOcrQueueCount() {
+    try {
+      return db.prepare("SELECT COUNT(*) as count FROM ocr_queue WHERE status = 'pending'").get().count;
+    } catch (error) {
+      console.error('[ERROR] getting OCR queue count:', error);
+      return 0;
+    }
   }
 };

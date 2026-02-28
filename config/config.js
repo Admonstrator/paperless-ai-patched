@@ -127,6 +127,11 @@ module.exports = {
     deploymentName: process.env.AZURE_DEPLOYMENT_NAME || '',
     apiVersion: process.env.AZURE_API_VERSION || '2023-05-15'
   },
+  mistralOcr: {
+    enabled: parseEnvBoolean(process.env.MISTRAL_OCR_ENABLED, 'no'),
+    apiKey: process.env.MISTRAL_API_KEY || '',
+    model: process.env.MISTRAL_OCR_MODEL || 'mistral-ocr-latest'
+  },
   customFields: process.env.CUSTOM_FIELDS || '',
   aiProvider: process.env.AI_PROVIDER || 'openai',
   scanInterval: process.env.SCAN_INTERVAL || '*/30 * * * *',

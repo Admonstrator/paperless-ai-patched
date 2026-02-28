@@ -19,6 +19,10 @@ services:
       - PAPERLESS_AI_PORT=${PAPERLESS_AI_PORT:-3000}
       - RAG_SERVICE_URL=http://localhost:8000
       - RAG_SERVICE_ENABLED=true
+      # Mistral OCR Queue (optional) – re-OCR poorly scanned documents
+      # - MISTRAL_OCR_ENABLED=yes
+      # - MISTRAL_API_KEY=your_key_here
+      # - MISTRAL_OCR_MODEL=mistral-ocr-latest
     ports:
       - "3000:${PAPERLESS_AI_PORT:-3000}"
     volumes:

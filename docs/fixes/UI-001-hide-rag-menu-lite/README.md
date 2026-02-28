@@ -126,10 +126,10 @@ RAG_SERVICE_ENABLED=true
 docker exec <container-id> env | grep RAG_SERVICE_ENABLED
 
 # Test Lite image
-docker run -e RAG_SERVICE_ENABLED=false -p 3000:3000 admonstrator/paperless-ai-patched:lite
+docker run -e RAG_SERVICE_ENABLED=false -p 3000:3000 admonstrator/paperless-ai-next:lite
 
 # Test Full image
-docker run -e RAG_SERVICE_ENABLED=true -p 3000:3000 admonstrator/paperless-ai-patched:full
+docker run -e RAG_SERVICE_ENABLED=true -p 3000:3000 admonstrator/paperless-ai-next:full
 ```
 
 ## 📊 Impact

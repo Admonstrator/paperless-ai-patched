@@ -62,4 +62,4 @@ When integrating a new fix:
 
 - **Upstream Repository**: [clusterzx/paperless-ai](https://github.com/clusterzx/paperless-ai)
 - **Upstream PRs**: [Pull Requests](https://github.com/clusterzx/paperless-ai/pulls)
-- **Our Issues**: [Fork Issues](https://github.com/Admonstrator/paperless-ai-patched/issues)
+- **Our Issues**: [Fork Issues](https://github.com/Admonstrator/paperless-ai-next/issues)

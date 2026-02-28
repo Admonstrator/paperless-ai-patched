@@ -20,7 +20,7 @@ The smallest image (~500–700 MB). Automatically tags, titles, and classifies d
 ```yaml
 services:
   paperless-ai:
-    image: admonstrator/paperless-ai-patched:latest-lite
+    image: admonstrator/paperless-ai-next:latest-lite
     container_name: paperless-ai
     restart: unless-stopped
     ports:
@@ -38,7 +38,7 @@ Larger image (~1.5–2 GB). Includes everything from Lite plus the RAG AI chat t
 ```yaml
 services:
   paperless-ai:
-    image: admonstrator/paperless-ai-patched:latest-full
+    image: admonstrator/paperless-ai-next:latest-full
     container_name: paperless-ai
     restart: unless-stopped
     ports:

@@ -81,13 +81,13 @@ jobs:
 
           \`\`\`bash
           # Lite (~500–700 MB) – AI tagging only
-          docker pull admonstrator/paperless-ai-patched:${VERSION_TAG}-lite
+          docker pull admonstrator/paperless-ai-next:${VERSION_TAG}-lite
 
           # Full (~1.5–2 GB) – AI tagging + RAG
-          docker pull admonstrator/paperless-ai-patched:${VERSION_TAG}-full
+          docker pull admonstrator/paperless-ai-next:${VERSION_TAG}-full
           \`\`\`
 
-          **Full changelog:** https://github.com/Admonstrator/paperless-ai-patched/commits/main" \
+          **Full changelog:** https://github.com/Admonstrator/paperless-ai-next/commits/main" \
             --latest
 
   # Job 1: Build and Push Lite Image
@@ -116,7 +116,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: admonstrator/paperless-ai-patched
+          images: admonstrator/paperless-ai-next
           tags: |
             type=raw,value=${{ needs.generate-version.outputs.version_tag }}
             type=raw,value=${{ needs.generate-version.outputs.version_tag }}-lite
@@ -133,8 +133,8 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           platforms: linux/amd64,linux/arm64
-          cache-from: type=registry,ref=admonstrator/paperless-ai-patched:buildcache
-          cache-to: type=registry,ref=admonstrator/paperless-ai-patched:buildcache,mode=max
+          cache-from: type=registry,ref=admonstrator/paperless-ai-next:buildcache
+          cache-to: type=registry,ref=admonstrator/paperless-ai-next:buildcache,mode=max
         timeout-minutes: 45
 
   # Job 2: Build and Push Full Image (optional)
@@ -164,7 +164,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: admonstrator/paperless-ai-patched
+          images: admonstrator/paperless-ai-next
           tags: |
             type=raw,value=${{ needs.generate-version.outputs.version_tag }}-full
             type=raw,value=latest-full,enable=${{ inputs.also_tag_latest || github.event_name == 'push' }}
@@ -179,8 +179,8 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           platforms: linux/amd64,linux/arm64
-          cache-from: type=registry,ref=admonstrator/paperless-ai-patched:buildcache
-          cache-to: type=registry,ref=admonstrator/paperless-ai-patched:buildcache,mode=max
+          cache-from: type=registry,ref=admonstrator/paperless-ai-next:buildcache
+          cache-to: type=registry,ref=admonstrator/paperless-ai-next:buildcache,mode=max
         timeout-minutes: 60
 
   # Job 3: Summary
@@ -206,7 +206,7 @@ jobs:
           echo "- **Features:** Full AI tagging, no RAG" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
-          echo "docker pull admonstrator/paperless-ai-patched:${{ needs.generate-version.outputs.version_tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull admonstrator/paperless-ai-next:${{ needs.generate-version.outputs.version_tag }}" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
@@ -217,7 +217,7 @@ jobs:
             echo "- **Features:** AI tagging + RAG semantic search" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
-            echo "docker pull admonstrator/paperless-ai-patched:${{ needs.generate-version.outputs.version_tag }}-full" >> $GITHUB_STEP_SUMMARY
+            echo "docker pull admonstrator/paperless-ai-next:${{ needs.generate-version.outputs.version_tag }}-full" >> $GITHUB_STEP_SUMMARY
             echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
           else
             echo "#### ℹ️ Full Image" >> $GITHUB_STEP_SUMMARY
@@ -226,5 +226,5 @@ jobs:
           
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "---" >> $GITHUB_STEP_SUMMARY
-          echo "**Repository:** [Admonstrator/paperless-ai-patched](https://github.com/Admonstrator/paperless-ai-patched)" >> $GITHUB_STEP_SUMMARY
-          echo "**Docker Hub:** [admonstrator/paperless-ai-patched](https://hub.docker.com/r/admonstrator/paperless-ai-patched)" >> $GITHUB_STEP_SUMMARY
+          echo "**Repository:** [Admonstrator/paperless-ai-next](https://github.com/Admonstrator/paperless-ai-next)" >> $GITHUB_STEP_SUMMARY
+          echo "**Docker Hub:** [admonstrator/paperless-ai-next](https://hub.docker.com/r/admonstrator/paperless-ai-next)" >> $GITHUB_STEP_SUMMARY

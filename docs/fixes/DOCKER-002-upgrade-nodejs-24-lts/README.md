@@ -44,17 +44,17 @@ npm view axios engines.node
 ### Build Testing
 ```bash
 # Test main Dockerfile build
-docker build -t paperless-ai-patched:test .
+docker build -t paperless-ai-next:test .
 
 # Test lite version build
-docker build -f Dockerfile.lite -t paperless-ai-patched:lite-test .
+docker build -f Dockerfile.lite -t paperless-ai-next:lite-test .
 
 # Verify Node.js version in images
-docker run --rm paperless-ai-patched:test node --version
+docker run --rm paperless-ai-next:test node --version
 # Expected output: v24.x.x
 
 # Run basic functionality test
-docker run --rm -e PAPERLESS_AI_PORT=3000 paperless-ai-patched:test npm --version
+docker run --rm -e PAPERLESS_AI_PORT=3000 paperless-ai-next:test npm --version
 ```
 
 ### Runtime Verification

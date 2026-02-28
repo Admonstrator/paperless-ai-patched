@@ -4,7 +4,7 @@
 
 Please **do not** open a public issue for security vulnerabilities.
 
-Instead, use [GitHub Security Advisories](https://github.com/Admonstrator/paperless-ai-patched/security/advisories/new) to report a vulnerability privately. We'll respond as quickly as possible.
+Instead, use [GitHub Security Advisories](https://github.com/Admonstrator/paperless-ai-next/security/advisories/new) to report a vulnerability privately. We'll respond as quickly as possible.
 
 ---
 

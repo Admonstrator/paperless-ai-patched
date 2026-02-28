@@ -6,7 +6,7 @@ Contributions are welcome! Here's how to get involved.
 
 ## Reporting issues
 
-If something doesn't work as expected, please [open an issue](https://github.com/Admonstrator/paperless-ai-patched/issues). Include:
+If something doesn't work as expected, please [open an issue](https://github.com/Admonstrator/paperless-ai-next/issues). Include:
 
 - What you expected to happen
 - What actually happened

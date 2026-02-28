@@ -28,7 +28,7 @@ require('dotenv').config({ path: '../data/.env' });
  * Rate limiter for cache clearing operations
  * Prevents abuse of cache invalidation endpoints by limiting requests to 10 per 15 minutes per IP
  * 
- * @see https://github.com/admonstrator/paperless-ai-patched/security/code-scanning/143
+ * @see https://github.com/admonstrator/paperless-ai-next/security/code-scanning/143
  */
 const cacheClearLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes

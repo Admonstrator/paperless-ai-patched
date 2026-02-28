@@ -1,4 +1,4 @@
-# Copilot Instructions for Paperless-AI Patched
+# Copilot Instructions for Paperless-AI Next
 
 ## Project Context
 Community fork of [clusterzx/paperless-ai](https://github.com/clusterzx/paperless-ai) - an AI-powered document processing extension for Paperless-ngx. This fork focuses on integration testing, performance optimizations, and Docker improvements. Core development credit belongs to the upstream project.
@@ -262,4 +262,4 @@ mkdocs build --strict  # CI check
 - `docs/changelog.md` = compact user-facing overview with links to fix pages
 - Root `README.md` = minimal (~80 lines): badges, Quick Start Docker Compose, link to Docs site
 
-> For comprehensive architecture details, API reference and configuration options see the live Docs site at `https://admonstrator.github.io/paperless-ai-patched/` or run `mkdocs serve` locally.
+> For comprehensive architecture details, API reference and configuration options see the live Docs site at `https://admonstrator.github.io/paperless-ai-next/` or run `mkdocs serve` locally.

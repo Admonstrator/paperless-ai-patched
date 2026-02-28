@@ -1,10 +1,10 @@
-# Paperless-AI Patched
+# Paperless-AI Next
 
 **Automatically tag, sort, and search your documents using AI – no cloud required.**
 
-[![Latest Release](https://img.shields.io/github/v/release/Admonstrator/paperless-ai-patched?style=for-the-badge&logo=github&color=blue)](https://github.com/Admonstrator/paperless-ai-patched/releases/latest)
-[![Docker Pulls](https://img.shields.io/docker/pulls/admonstrator/paperless-ai-patched?style=for-the-badge&logo=docker)](https://hub.docker.com/r/admonstrator/paperless-ai-patched)
-[![License](https://img.shields.io/github/license/Admonstrator/paperless-ai-patched?style=for-the-badge)](https://github.com/Admonstrator/paperless-ai-patched/blob/main/LICENSE)
+[![Latest Release](https://img.shields.io/github/v/release/Admonstrator/paperless-ai-next?style=for-the-badge&logo=github&color=blue)](https://github.com/Admonstrator/paperless-ai-next/releases/latest)
+[![Docker Pulls](https://img.shields.io/docker/pulls/admonstrator/paperless-ai-next?style=for-the-badge&logo=docker)](https://hub.docker.com/r/admonstrator/paperless-ai-next)
+[![License](https://img.shields.io/github/license/Admonstrator/paperless-ai-next?style=for-the-badge)](https://github.com/Admonstrator/paperless-ai-next/blob/main/LICENSE)
 
 ---
 
@@ -48,7 +48,7 @@ Works with OpenAI, Ollama (local), Azure OpenAI, DeepSeek, OpenRouter, Perplexit
 ```yaml
 services:
   paperless-ai:
-    image: admonstrator/paperless-ai-patched:latest-lite
+    image: admonstrator/paperless-ai-next:latest-lite
     container_name: paperless-ai
     restart: unless-stopped
     ports:

@@ -1,12 +1,12 @@
 services:
   paperless-ai:
     # Docker Hub (default)
-    image: admonstrator/paperless-ai-patched:latest
+    image: admonstrator/paperless-ai-next:latest
     
     # For RAG support, use the full image (~1.5-2 GB):
-    # image: admonstrator/paperless-ai-patched:latest-full
+    # image: admonstrator/paperless-ai-next:latest-full
     
-    container_name: paperless-ai
+    container_name: paperless-ai-next
     network_mode: bridge
     restart: unless-stopped
     cap_drop:
@@ -26,7 +26,7 @@ services:
     ports:
       - "3000:${PAPERLESS_AI_PORT:-3000}"
     volumes:
-      - paperless-ai_data:/app/data
+      - paperless-ai-next_data:/app/data
 
 volumes:
-  paperless-ai_data:
+  paperless-ai-next_data:

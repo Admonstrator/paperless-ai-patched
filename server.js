@@ -151,6 +151,13 @@ app.use('/api-docs', isAuthenticated, swaggerUi.serve, swaggerUi.setup(swaggerSp
  *             schema:
  *               type: object
  *               description: The complete OpenAPI specification
+ *       302:
+ *         description: Redirect to login when authentication is missing or invalid
+ *         headers:
+ *           Location:
+ *             schema:
+ *               type: string
+ *               example: /login
  *       404:
  *         description: OpenAPI specification file not found
  *         content:
@@ -568,7 +575,6 @@ async function scanDocuments() {
 
 // Routes
 app.use('/', setupRoutes);
-const authRoutes = require('./routes/auth');
 const ragRoutes = require('./routes/rag');
 
 // Mount RAG routes if enabled

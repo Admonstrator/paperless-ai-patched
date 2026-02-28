@@ -135,7 +135,8 @@ res.flush();
 ## Fix Documentation & Workflow
 
 ### Documentation Pattern
-All integrated fixes documented in `Included_Fixes/` with pattern: `{PR|PERF|SEC|DOCKER|CI}-NNN-name/README.md`
+All integrated fixes live in `docs/fixes/` with pattern: `{PR|PERF|SEC|DOCKER|CI}-NNN-name/README.md`.
+`Included_Fixes/` is a symlink → `docs/fixes/`, so both paths resolve to the same files.
 
 ### Change Workflow (IMPORTANT)
 **Every change MUST follow this process:**
@@ -153,35 +154,36 @@ All integrated fixes documented in `Included_Fixes/` with pattern: `{PR|PERF|SEC
    - Test thoroughly
    - Commit with descriptive messages
 
-3. **Document in Included_Fixes/**
+3. **Document the fix**
+
+   Create `docs/fixes/{TYPE}-{NNN}-{name}/README.md` (also accessible as `Included_Fixes/{TYPE}-{NNN}-{name}/README.md` via symlink):
    ```bash
-   mkdir -p Included_Fixes/{TYPE}-{NNN}-{name}/
+   mkdir -p docs/fixes/{TYPE}-{NNN}-{name}/
    ```
-   
-   Create `README.md` with:
+
+   Structure:
    - **Background**: Why this fix was needed
    - **Changes**: What was modified (file-by-file if complex)
    - **Testing**: How to verify the fix
    - **Impact**: Performance/security/functionality improvements
    - **Upstream Status**: Link to upstream PR if applicable
-   
-   See existing fixes for reference:
-   - `Included_Fixes/PR-772-infinite-retry-fix/README.md`
-   - `Included_Fixes/PERF-001-history-pagination/README.md`
-   - `Included_Fixes/SEC-001-ssrf-code-injection/README.md`
 
-4. **Update Included_Fixes/README.md**
+   See existing fixes for reference:
+   - `docs/fixes/PR-772-infinite-retry-fix/README.md`
+
+4. **Update `docs/fixes/README.md`**
    - Add entry to appropriate table (PRs, Performance, Security, etc.)
    - Include fix ID, title, status (✅ Applied), and integration date
 
-5. **Update Global README.md**
-   - Add entry to "Integrated Fixes" table in main `README.md`
-   - Use same format: `| Category | [FIX-ID](link) | Description | ✅ Status |`
-   - Keep table organized by category
+5. **Update `docs/changelog.md`**
+   - Add a row to the appropriate table section
+   - Format: `| [FIX-ID](fixes/{TYPE}-{NNN}-{name}/README.md) | Description | Date |`
+   - **Also add the new fix to `mkdocs.yml` nav** under the matching Fixes sub-section
+   - **The root `README.md` does NOT contain a fixes table** — it links to the Docs site
 
 6. **Commit Documentation**
    ```bash
-   git add Included_Fixes/ README.md
+   git add docs/
    git commit -m "docs: document {TYPE}-{NNN} fix"
    ```
 
@@ -230,5 +232,34 @@ node tests/test-new-feature.js
 - [ ] Upstream declined (reason)
 ```
 
-## Additional Context
-See `COPILOT.md` for comprehensive documentation including API reference, configuration details, and troubleshooting guides.
+## Documentation Site
+
+This project uses **MkDocs + Material for MkDocs** for user-facing documentation, deployed to GitHub Pages via `.github/workflows/deploy-docs.yml`.
+
+### Structure
+- `docs/index.md` – Landing page (About + Features)
+- `docs/getting-started/` – Installation, First Setup, Configuration
+- `docs/features/` – Auto-tagging, AI Chat, Manual Tagging, OCR Queue, History
+- `docs/fixes/` – One subdirectory per fix (`{TYPE}-NNN-name/README.md`), plus `README.md` overview table
+  - `Included_Fixes/` in the repo root is a symlink to this directory
+- `docs/how-it-works.md` – Simple "How it works" overview
+- `docs/changelog.md` – Compact table of all fixes, links to `docs/fixes/` pages
+- `docs/contributing.md` – Contribution guide
+- `docs/security.md` – Security policy and fixed vulnerabilities
+- `mkdocs.yml` – Site config (nav, theme, plugins)
+- `docs/requirements.txt` – Docs-only Python deps (separate from app `requirements.txt`)
+
+### Local Preview
+```bash
+pip install -r docs/requirements.txt
+mkdocs serve        # → http://localhost:8000
+mkdocs build --strict  # CI check
+```
+
+### Single Source of Truth Rules
+- `docs/fixes/*/README.md` = authoritative fix record (also accessible via `Included_Fixes/*` symlink)
+- `docs/fixes/README.md` = the fixes overview table
+- `docs/changelog.md` = compact user-facing overview with links to fix pages
+- Root `README.md` = minimal (~80 lines): badges, Quick Start Docker Compose, link to Docs site
+
+> For comprehensive architecture details, API reference and configuration options see the live Docs site at `https://admonstrator.github.io/paperless-ai-patched/` or run `mkdocs serve` locally.

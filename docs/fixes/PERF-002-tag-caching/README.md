@@ -648,9 +648,9 @@ CACHE_BACKGROUND_REFRESH=yes  # Non-blocking refresh
 - **PR-772**: Infinite retry fix (fixed retry loop that caused extra cache refreshes)
 
 ### Documentation
-- [COPILOT.md](../../COPILOT.md#tag-caching-system) - Tag caching architecture
-- [config/config.js](../../config/config.js) - Configuration reference
-- [services/paperlessService.js](../../services/paperlessService.js) - Service implementation
+- [COPILOT.md](https://github.com/Admonstrator/paperless-ai-patched/blob/main/COPILOT.md#tag-caching-system) - Tag caching architecture
+- [config/config.js](https://github.com/Admonstrator/paperless-ai-patched/blob/main/config/config.js) - Configuration reference
+- [services/paperlessService.js](https://github.com/Admonstrator/paperless-ai-patched/blob/main/services/paperlessService.js) - Service implementation
 
 ### Design Patterns Used
 - **Singleton Pattern**: PaperlessService as single cache owner

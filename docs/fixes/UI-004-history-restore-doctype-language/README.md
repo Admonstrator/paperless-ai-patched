@@ -6,7 +6,7 @@
 **Status**: ✅ Applied  
 **Integration Date**: 2026-02-27  
 **Upstream Status**: ⏳ Not submitted (fork-specific)  
-**Depends on**: [UI-003](../UI-003-history-info-modal/) (History Info-Modal)
+**Depends on**: [UI-003](../UI-003-history-info-modal/README.md) (History Info-Modal)
 
 ## 🐛 Problem
 

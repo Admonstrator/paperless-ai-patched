@@ -15,7 +15,7 @@ const documentsService = require('../services/documentsService.js');
 const RAGService = require('../services/ragService.js');
 const fs = require('fs').promises;
 const path = require('path');
-const { validateCustomFieldValue, shouldQueueForOcrOnAiError } = require('../services/serviceUtils');
+const { validateCustomFieldValue, shouldQueueForOcrOnAiError, classifyOcrQueueReasonFromAiError } = require('../services/serviceUtils');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const cookieParser = require('cookie-parser');
@@ -2082,7 +2082,7 @@ async function processDocument(doc, existingTags, existingCorrespondentList, exi
   if (!content || content.length < 10) {
     console.log(`[DEBUG] Document ${doc.id} has insufficient content (${content?.length || 0} chars, minimum: 10), skipping analysis`);
     if (mistralOcrService.isEnabled()) {
-      const added = await documentModel.addToOcrQueue(doc.id, doc.title, 'short_content');
+      const added = await documentModel.addToOcrQueue(doc.id, doc.title, 'short_content_lt_10');
       if (added) {
         console.log(`[OCR] Document ${doc.id} queued for Mistral OCR (short_content)`);
       }
@@ -2125,7 +2125,8 @@ async function processDocument(doc, existingTags, existingCorrespondentList, exi
   console.log('Repsonse from AI service:', analysis);
   if (analysis.error) {
     if (mistralOcrService.isEnabled() && shouldQueueForOcrOnAiError(analysis.error)) {
-      const added = await documentModel.addToOcrQueue(doc.id, doc.title, 'ai_failed');
+      const queueReason = classifyOcrQueueReasonFromAiError(analysis.error);
+      const added = await documentModel.addToOcrQueue(doc.id, doc.title, queueReason);
       if (added) {
         console.log(`[OCR] Document ${doc.id} queued for Mistral OCR (ai_failed: ${analysis.error})`);
       }

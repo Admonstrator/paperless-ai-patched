@@ -19,7 +19,7 @@ const rateLimit = require('express-rate-limit');
 const jwt = require('jsonwebtoken');
 const Logger = require('./services/loggerService');
 const { max } = require('date-fns');
-const { validateCustomFieldValue, shouldQueueForOcrOnAiError } = require('./services/serviceUtils');
+const { validateCustomFieldValue, shouldQueueForOcrOnAiError, classifyOcrQueueReasonFromAiError } = require('./services/serviceUtils');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./swagger');
 
@@ -260,7 +260,7 @@ async function processDocument(doc, existingTags, existingCorrespondentList, exi
     console.log(`[DEBUG] Document ${doc.id} has insufficient content (${content?.length || 0} chars, minimum: ${MIN_CONTENT_LENGTH}), skipping analysis`);
     // Queue for Mistral OCR if enabled
     if (mistralOcrService.isEnabled()) {
-      const added = await documentModel.addToOcrQueue(doc.id, doc.title, 'short_content');
+      const added = await documentModel.addToOcrQueue(doc.id, doc.title, `short_content_lt_${MIN_CONTENT_LENGTH}`);
       if (added) {
         console.log(`[OCR] Document ${doc.id} queued for Mistral OCR (short_content)`);
       }
@@ -286,7 +286,8 @@ async function processDocument(doc, existingTags, existingCorrespondentList, exi
   if (analysis.error) {
     // Queue for Mistral OCR on OCR-relevant AI errors (e.g. low content, invalid response structure)
     if (mistralOcrService.isEnabled() && shouldQueueForOcrOnAiError(analysis.error)) {
-      const added = await documentModel.addToOcrQueue(doc.id, doc.title, 'ai_failed');
+      const queueReason = classifyOcrQueueReasonFromAiError(analysis.error);
+      const added = await documentModel.addToOcrQueue(doc.id, doc.title, queueReason);
       if (added) {
         console.log(`[OCR] Document ${doc.id} queued for Mistral OCR (ai_failed: ${analysis.error})`);
       }

@@ -89,6 +89,37 @@
     }
 
     // ── Render table ───────────────────────────────────────────────────────
+    function formatReasonLabel(reason) {
+        if (!reason) {
+            return '<i class="fas fa-question-circle mr-1"></i>Unknown';
+        }
+
+        const reasonMap = {
+            'short_content': '<i class="fas fa-file-slash mr-1"></i>Content too short',
+            'short_content_lt_10': '<i class="fas fa-file-slash mr-1"></i>Content too short (&lt; 10 chars)',
+            'ai_failed': '<i class="fas fa-robot mr-1"></i>AI analysis failed',
+            'ai_insufficient_content': '<i class="fas fa-robot mr-1"></i>AI: insufficient content',
+            'ai_invalid_json': '<i class="fas fa-brackets-curly mr-1"></i>AI: invalid JSON response',
+            'ai_invalid_response_structure': '<i class="fas fa-diagram-project mr-1"></i>AI: invalid response structure',
+            'ai_invalid_api_response_structure': '<i class="fas fa-server mr-1"></i>AI: invalid API response structure',
+            'ai_failed_unknown': '<i class="fas fa-triangle-exclamation mr-1"></i>AI failed (unknown)',
+            'manual': '<i class="fas fa-hand-pointer mr-1"></i>Manual'
+        };
+
+        if (reasonMap[reason]) {
+            return reasonMap[reason];
+        }
+
+        if (reason.startsWith('short_content_lt_')) {
+            const threshold = reason.replace('short_content_lt_', '');
+            if (/^\d+$/.test(threshold)) {
+                return `<i class="fas fa-file-slash mr-1"></i>Content too short (&lt; ${threshold} chars)`;
+            }
+        }
+
+        return escHtml(reason);
+    }
+
     function renderTable(items) {
         if (!items.length) {
             tableBody.innerHTML = `<tr><td colspan="6" class="text-center py-10 text-gray-400"><i class="fas fa-inbox text-2xl mb-2 block"></i>Queue is empty</td></tr>`;
@@ -100,11 +131,7 @@
                 ? `<a href="${paperlessUrl}/documents/${item.document_id}/details" target="_blank" class="text-blue-500 hover:underline font-mono">#${item.document_id}</a>`
                 : `<span class="font-mono">#${item.document_id}</span>`;
 
-            const reasonLabel = {
-                'short_content': '<i class="fas fa-file-slash mr-1"></i>Short Content',
-                'ai_failed':     '<i class="fas fa-robot mr-1"></i>AI Failed',
-                'manual':        '<i class="fas fa-hand-pointer mr-1"></i>Manual'
-            }[item.reason] || escHtml(item.reason);
+            const reasonLabel = formatReasonLabel(item.reason);
 
             const statusHtml = `<span class="status-badge status-${escHtml(item.status)}">${statusIcon(item.status)} ${escHtml(item.status)}</span>`;
 

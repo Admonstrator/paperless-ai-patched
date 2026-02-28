@@ -399,6 +399,35 @@ function shouldQueueForOcrOnAiError(errorMessage) {
     return ocrRelevantErrorMarkers.some(marker => normalizedError.includes(marker));
 }
 
+/**
+ * Classify OCR queue reason from an AI error message.
+ *
+ * @param {string} errorMessage - Error message returned by AI analysis
+ * @returns {string} OCR queue reason code
+ */
+function classifyOcrQueueReasonFromAiError(errorMessage) {
+    if (typeof errorMessage !== 'string' || !errorMessage.trim()) {
+        return 'ai_failed_unknown';
+    }
+
+    const normalizedError = errorMessage.toLowerCase();
+
+    if (normalizedError.includes('insufficient content for ai analysis')) {
+        return 'ai_insufficient_content';
+    }
+    if (normalizedError.includes('invalid json response from api')) {
+        return 'ai_invalid_json';
+    }
+    if (normalizedError.includes('invalid response structure')) {
+        return 'ai_invalid_response_structure';
+    }
+    if (normalizedError.includes('invalid api response structure')) {
+        return 'ai_invalid_api_response_structure';
+    }
+
+    return 'ai_failed_unknown';
+}
+
 module.exports = {
     calculateTokens,
     calculateTotalPromptTokens,
@@ -408,5 +437,6 @@ module.exports = {
     validateApiUrl,
     validateUrlAgainstBase,
     validateCustomFieldValue,
-    shouldQueueForOcrOnAiError
+    shouldQueueForOcrOnAiError,
+    classifyOcrQueueReasonFromAiError
 };

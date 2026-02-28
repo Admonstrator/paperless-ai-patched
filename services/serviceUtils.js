@@ -392,6 +392,7 @@ function shouldQueueForOcrOnAiError(errorMessage) {
     const ocrRelevantErrorMarkers = [
         'insufficient content for ai analysis',
         'invalid response structure',
+        'could not determine assignable metadata',
         'invalid json response from api',
         'invalid api response structure'
     ];
@@ -419,6 +420,9 @@ function classifyOcrQueueReasonFromAiError(errorMessage) {
         return 'ai_invalid_json';
     }
     if (normalizedError.includes('invalid response structure')) {
+        return 'ai_invalid_response_structure';
+    }
+    if (normalizedError.includes('could not determine assignable metadata')) {
         return 'ai_invalid_response_structure';
     }
     if (normalizedError.includes('invalid api response structure')) {

@@ -248,7 +248,7 @@ class OpenAIService {
       }
 
       if (!parsedResponse || !Array.isArray(parsedResponse.tags) || typeof parsedResponse.correspondent !== 'string') {
-        throw new Error('Invalid response structure: missing tags array or correspondent string');
+        throw new Error('AI could not determine assignable metadata: no tags or correspondent found');
       }
 
       return {
@@ -391,7 +391,7 @@ class OpenAIService {
 
       // Validate response structure
       if (!parsedResponse || !Array.isArray(parsedResponse.tags) || typeof parsedResponse.correspondent !== 'string') {
-        throw new Error('Invalid response structure: missing tags array or correspondent string');
+        throw new Error('AI could not determine assignable metadata: no tags or correspondent found');
       }
 
       return {

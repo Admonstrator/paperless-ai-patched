@@ -14,7 +14,7 @@ const { shouldQueueForOcrOnAiError, classifyOcrQueueReasonFromAiError } = requir
 function run() {
   const positiveCases = [
     'Insufficient content for AI analysis',
-    'Invalid response structure: missing tags array or correspondent string',
+    'AI could not determine assignable metadata: no tags or correspondent found',
     'Invalid JSON response from API',
     'Invalid API response structure'
   ];
@@ -47,7 +47,7 @@ function run() {
       expectedReason: 'ai_invalid_json'
     },
     {
-      message: 'Invalid response structure: missing tags array or correspondent string',
+      message: 'AI could not determine assignable metadata: no tags or correspondent found',
       expectedReason: 'ai_invalid_response_structure'
     },
     {

@@ -5080,6 +5080,49 @@ router.get('/failed', protectApiRoute, async (req, res) => {
   }
 });
 
+// Page: About / Support Information
+router.get('/about', protectApiRoute, async (req, res) => {
+  try {
+    const formatUptime = (totalSeconds) => {
+      const days = Math.floor(totalSeconds / 86400);
+      const hours = Math.floor((totalSeconds % 86400) / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+
+      const parts = [];
+      if (days > 0) parts.push(`${days}d`);
+      if (hours > 0) parts.push(`${hours}h`);
+      if (minutes > 0) parts.push(`${minutes}m`);
+      parts.push(`${seconds}s`);
+      return parts.join(' ');
+    };
+
+    const supportInfo = {
+      appVersion: configFile.PAPERLESS_AI_VERSION || 'unknown',
+      nodeVersion: process.version,
+      platform: `${process.platform} (${process.arch})`,
+      nodeEnv: process.env.NODE_ENV || 'production',
+      aiProvider: configFile.aiProvider || process.env.AI_PROVIDER || 'openai',
+      ragEnabled: process.env.RAG_SERVICE_ENABLED === 'true',
+      chatEnabled: process.env.RAG_SERVICE_ENABLED === 'true',
+      ocrEnabled: configFile.mistralOcr?.enabled === 'yes',
+      serverTimeUtc: new Date().toISOString(),
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+      uptime: formatUptime(Math.floor(process.uptime()))
+    };
+
+    return res.render('about', {
+      version: configFile.PAPERLESS_AI_VERSION || ' ',
+      ragEnabled: process.env.RAG_SERVICE_ENABLED === 'true',
+      chatEnabled: process.env.RAG_SERVICE_ENABLED === 'true',
+      supportInfo
+    });
+  } catch (error) {
+    console.error('[ERROR] About page:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // API: Get paginated queue
 router.get('/api/ocr/queue', isAuthenticated, async (req, res) => {
   try {

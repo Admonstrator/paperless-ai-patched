@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About - Paperless-AI next</title>
+    <script src="/vendor/tailwind/tailwindcss-3.4.16.js"></script>
+    <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body class="h-full">
+    <button id="themeToggle" class="theme-toggle">
+        <i class="fas fa-moon dark:fas fa-sun"></i>
+    </button>
+
+    <div class="layout-container">
+        <button id="mobileMenuButton" class="mobile-menu-button">
+            <i class="fas fa-bars"></i>
+        </button>
+        <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <img src="/favicon.webp" class="no-invert" alt="Paperless AI Logo" style="height: 60px;">
+                <h1 class="brand-title"><span class="relative inline-block">Paperless-AI<span class="absolute right-0 top-0 translate-x-1/2 -translate-y-1/2 rotate-12 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-100 text-blue-700">next</span></span><small style="display: block;"><%= version %></small></h1>
+            </div>
+
+            <nav class="sidebar-nav">
+                <ul>
+                    <li><a href="/dashboard" class="sidebar-link"><i class="fas fa-home"></i><span>Dashboard</span></a></li>
+                    <li><a href="/manual" class="sidebar-link"><i class="fas fa-file-alt"></i><span>Manual</span></a></li>
+                    <% if (chatEnabled) { %>
+                    <li><a href="/chat" class="sidebar-link"><i class="fa-solid fa-comment"></i><span>Chat</span></a></li>
+                    <% } %>
+                    <% if (ragEnabled) { %>
+                    <li><a href="/rag" class="sidebar-link"><i class="fa-solid fa-comment"></i><span>RAG Chat</span></a></li>
+                    <% } %>
+                    <li><a href="/playground" class="sidebar-link"><i class="fa-solid fa-flask-vial"></i><span>Playground</span></a></li>
+                    <li><a href="/history" class="sidebar-link"><i class="fa-solid fa-clock-rotate-left"></i><span>History</span></a></li>
+                    <li><a href="/ocr" class="sidebar-link"><i class="fa-solid fa-eye"></i><span>OCR Queue</span><span id="sidebarOcrBadge" class="ml-2 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800 hidden">0</span></a></li>
+                    <li><a href="/failed" class="sidebar-link"><i class="fa-solid fa-ban"></i><span>Permanently Failed</span><span id="sidebarFailedBadge" class="ml-2 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-100 text-red-700 hidden">0</span></a></li>
+                    <li><a href="/about" class="sidebar-link active"><i class="fa-solid fa-circle-info"></i><span>About</span></a></li>
+                    <li><a href="/settings" class="sidebar-link"><i class="fas fa-cog"></i><span>Settings</span></a></li>
+                    <li><a href="/logout" class="sidebar-link"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <div class="content-wrapper space-y-6">
+                <div class="content-header">
+                    <h1 class="content-title">About this Fork</h1>
+                    <p class="text-sm text-gray-500 mt-1">Support information, project background, and author details.</p>
+                </div>
+
+                <div class="material-card">
+                    <h3 class="card-title">System Information (Support)</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                        <div class="p-3 rounded-lg bg-gray-50"><strong>App Version:</strong> <%= supportInfo.appVersion %></div>
+                        <div class="p-3 rounded-lg bg-gray-50"><strong>Node.js:</strong> <%= supportInfo.nodeVersion %></div>
+                        <div class="p-3 rounded-lg bg-gray-50"><strong>Platform:</strong> <%= supportInfo.platform %></div>
+                        <div class="p-3 rounded-lg bg-gray-50"><strong>Environment:</strong> <%= supportInfo.nodeEnv %></div>
+                        <div class="p-3 rounded-lg bg-gray-50"><strong>AI Provider:</strong> <%= supportInfo.aiProvider %></div>
+                        <div class="p-3 rounded-lg bg-gray-50"><strong>Uptime:</strong> <%= supportInfo.uptime %></div>
+                        <div class="p-3 rounded-lg bg-gray-50"><strong>Server Time (UTC):</strong> <%= supportInfo.serverTimeUtc %></div>
+                        <div class="p-3 rounded-lg bg-gray-50"><strong>Server Timezone:</strong> <%= supportInfo.timezone %></div>
+                        <div class="p-3 rounded-lg bg-gray-50"><strong>RAG Enabled:</strong> <%= supportInfo.ragEnabled ? 'yes' : 'no' %></div>
+                        <div class="p-3 rounded-lg bg-gray-50"><strong>Chat Enabled:</strong> <%= supportInfo.chatEnabled ? 'yes' : 'no' %></div>
+                        <div class="p-3 rounded-lg bg-gray-50"><strong>Mistral OCR Enabled:</strong> <%= supportInfo.ocrEnabled ? 'yes' : 'no' %></div>
+                    </div>
+                </div>
+
+                <div class="material-card">
+                    <h3 class="card-title">This app is awesome because ✨</h3>
+                    <div class="text-sm text-gray-700 space-y-3 leading-relaxed">
+                        <p>
+                            No corporate blah blah - just useful stuff that makes daily document chaos easier to handle 😄
+                        </p>
+                        <ul class="list-disc pl-5 space-y-1">
+                            <li>⚡ Faster dashboard and history pages → less waiting, more doing</li>
+                            <li>🧠 Smarter OCR + AI fallback flows → fewer dead ends when documents are messy</li>
+                            <li>🛡️ Stronger security defaults → safer setup out of the box</li>
+                            <li>🐳 Cleaner Docker workflows → easier updates and less deployment pain</li>
+                            <li>📊 Better status + failure visibility → you immediately see what needs attention</li>
+                            <li>🧰 Practical support info page → easier bug reports and faster help</li>
+                        </ul>
+                        <p>
+                            End result: smoother daily use, cool new features and more magic! 🌟
+                        </p>
+                        <p>
+                            ❤️ Big, fat thank you to the original project:
+                            <a class="text-blue-600 hover:underline" href="https://github.com/clusterzx" target="_blank" rel="noopener noreferrer">@clusterzx</a>
+                            and
+                            <a class="text-blue-600 hover:underline" href="https://github.com/clusterzx/paperless-ai" target="_blank" rel="noopener noreferrer">clusterzx/paperless-ai</a>.
+                            This fork stands on that foundation.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="material-card">
+                    <h3 class="card-title">About the Author 👋</h3>
+                    <div class="text-sm text-gray-700 space-y-2">
+                        <p>
+                            Meet the maintainer behind this fork: <strong>admonstrator (Aaron Viehl)</strong> 🔥
+                            (<a class="text-blue-600 hover:underline" href="https://github.com/admonstrator" target="_blank" rel="noopener noreferrer">@admonstrator</a>)
+                        </p>
+                        <p>
+                            Aaron is all about building practical tools that actually help in daily operations:
+                            less noise, more reliability, smarter automation, fewer annoying edge-case surprises 💪
+                            Also known as “the grumpy nerd next door,” he is CTO at
+                            <a class="text-blue-600 hover:underline" href="https://github.com/singleton-factory" target="_blank" rel="noopener noreferrer">@singleton-factory</a>,
+                            based in Germany.
+                        </p>
+                        <p>
+                            Want updates, ideas, or just nerdy tech talk? 👇
+                            <a class="text-blue-600 hover:underline" href="https://admon.me" target="_blank" rel="noopener noreferrer">admon.me</a>
+                        </p>
+                    </div>
+                </div>
+
+                <div class="material-card border-l-4 border-amber-400">
+                    <h3 class="card-title">Disclaimer (AI Assistance)</h3>
+                    <p class="text-sm text-gray-700 leading-relaxed">
+                        Parts of this project were created with AI assistance. However, architecture decisions,
+                        integration choices, reviews, and final changes are manually validated and tested.
+                        AI support does not replace quality assurance, security review, or accountable maintainer decisions.
+                    </p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const mobileMenuButton = document.getElementById('mobileMenuButton');
+            const sidebar = document.querySelector('.sidebar');
+            const sidebarOverlay = document.getElementById('sidebarOverlay');
+
+            function toggleSidebar(event) {
+                event.stopPropagation();
+                sidebar.classList.toggle('active');
+                sidebarOverlay.classList.toggle('active');
+                const icon = mobileMenuButton.querySelector('i');
+                if (sidebar.classList.contains('active')) {
+                    icon.classList.replace('fa-bars', 'fa-times');
+                } else {
+                    icon.classList.replace('fa-times', 'fa-bars');
+                }
+            }
+
+            mobileMenuButton.addEventListener('click', toggleSidebar);
+            sidebarOverlay.addEventListener('click', function (event) {
+                event.stopPropagation();
+                if (sidebar.classList.contains('active')) toggleSidebar(event);
+            });
+        });
+
+        const themeToggle = document.getElementById('themeToggle');
+        const html = document.documentElement;
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        html.setAttribute('data-theme', savedTheme);
+        themeToggle.addEventListener('click', () => {
+            const newTheme = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+        });
+    </script>
+    <script src="/js/sidebar-badges.js"></script>
+</body>
+</html>

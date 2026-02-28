@@ -15,12 +15,13 @@ const documentsService = require('../services/documentsService.js');
 const RAGService = require('../services/ragService.js');
 const fs = require('fs').promises;
 const path = require('path');
-const { validateCustomFieldValue } = require('../services/serviceUtils');
+const { validateCustomFieldValue, shouldQueueForOcrOnAiError } = require('../services/serviceUtils');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const cookieParser = require('cookie-parser');
 const { authenticateJWT, isAuthenticated } = require('./auth.js');
 const customService = require('../services/customService.js');
+const mistralOcrService = require('../services/mistralOcrService');
 const config = require('../config/config.js');
 require('dotenv').config({ path: '../data/.env' });
 
@@ -2078,8 +2079,14 @@ async function processDocument(doc, existingTags, existingCorrespondentList, exi
     paperlessService.getDocument(doc.id)
   ]);
 
-  if (!content || !content.length >= 10) {
-    console.log(`[DEBUG] Document ${doc.id} has no content, skipping analysis`);
+  if (!content || content.length < 10) {
+    console.log(`[DEBUG] Document ${doc.id} has insufficient content (${content?.length || 0} chars, minimum: 10), skipping analysis`);
+    if (mistralOcrService.isEnabled()) {
+      const added = await documentModel.addToOcrQueue(doc.id, doc.title, 'short_content');
+      if (added) {
+        console.log(`[OCR] Document ${doc.id} queued for Mistral OCR (short_content)`);
+      }
+    }
     return null;
   }
 
@@ -2117,6 +2124,12 @@ async function processDocument(doc, existingTags, existingCorrespondentList, exi
   }
   console.log('Repsonse from AI service:', analysis);
   if (analysis.error) {
+    if (mistralOcrService.isEnabled() && shouldQueueForOcrOnAiError(analysis.error)) {
+      const added = await documentModel.addToOcrQueue(doc.id, doc.title, 'ai_failed');
+      if (added) {
+        console.log(`[OCR] Document ${doc.id} queued for Mistral OCR (ai_failed: ${analysis.error})`);
+      }
+    }
     throw new Error(`[ERROR] Document analysis failed: ${analysis.error}`);
   }
   await documentModel.setProcessingStatus(doc.id, doc.title, 'complete');
@@ -4972,8 +4985,6 @@ router.get('/dashboard/doc/:id', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch document' });
   }
 });
-
-const mistralOcrService = require('../services/mistralOcrService');
 
 // ─── OCR Queue Routes ─────────────────────────────────────────────────────
 

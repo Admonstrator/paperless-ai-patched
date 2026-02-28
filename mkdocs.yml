@@ -1,6 +1,6 @@
 site_name: Paperless-AI Next
 site_description: Community fork of Paperless-AI – collecting upstream PRs, security patches, and performance improvements for Paperless-ngx.
-site_url: https://admonstrator.github.io/paperless-ai-next/
+site_url: https://paperless-ai-next.admon.me
 repo_url: https://github.com/admonstrator/paperless-ai-next
 repo_name: admonstrator/paperless-ai-next
 edit_uri: edit/main/docs/

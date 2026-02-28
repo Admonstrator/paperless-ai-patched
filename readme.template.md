@@ -10,7 +10,7 @@
 [![Docker Pulls](https://img.shields.io/docker/pulls/admonstrator/paperless-ai-next?style=for-the-badge&logo=docker)](https://hub.docker.com/r/admonstrator/paperless-ai-next)
 [![License](https://img.shields.io/github/license/admonstrator/paperless-ai-next?style=for-the-badge)](LICENSE)
 [![Stars](https://img.shields.io/github/stars/admonstrator/paperless-ai-next?style=for-the-badge)](https://github.com/admonstrator/paperless-ai-next/stargazers)
-[![Docs](https://img.shields.io/badge/docs-admonstrator.github.io-blue?style=for-the-badge&logo=readthedocs)](https://admonstrator.github.io/paperless-ai-next/)
+[![Docs](https://img.shields.io/badge/docs-paperless-ai-next.admon.me-blue?style=for-the-badge&logo=readthedocs)](https://paperless-ai-next.admon.me/)
 
 </div>
 
@@ -25,7 +25,7 @@ This fork collects pending upstream PRs, applies security patches, and tests imp
 > ⚠️ **Upstream Credit** – All original work belongs to [clusterzx](https://github.com/clusterzx)  
 > 📦 **Current Version** – `{{VERSION}}`
 
-📖 **[Full documentation →](https://admonstrator.github.io/paperless-ai-next/)**
+📖 **[Full documentation →](https://paperless-ai-next.admon.me/)**
 
 ---
 

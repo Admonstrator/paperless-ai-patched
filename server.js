@@ -8,6 +8,7 @@ const AIServiceFactory = require('./services/aiServiceFactory');
 const documentModel = require('./models/document');
 const setupService = require('./services/setupService');
 const setupRoutes = require('./routes/setup');
+const { isAuthenticated } = require('./routes/auth');
 const mistralOcrService = require('./services/mistralOcrService');
 
 // Add environment variables for RAG service if not already set
@@ -122,8 +123,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(cookieParser());
 app.use(['/api', '/chat', '/manual'], apiGlobalLimiter);
 
-// Swagger documentation route
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+// Swagger documentation route (protected)
+app.use('/api-docs', isAuthenticated, swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   swaggerOptions: {
     url: '/api-docs/openapi.json'
   }
@@ -163,7 +164,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-app.get('/api-docs/openapi.json', (req, res) => {
+app.get('/api-docs/openapi.json', isAuthenticated, (req, res) => {
   const openApiPath = path.join(process.cwd(), 'OPENAPI', 'openapi.json');
   res.setHeader('Content-Type', 'application/json');
   
@@ -180,7 +181,7 @@ app.get('/api-docs/openapi.json', (req, res) => {
 });
 
 // Add a redirect for the old endpoint for backward compatibility
-app.get('/api-docs.json', (req, res) => {
+app.get('/api-docs.json', isAuthenticated, (req, res) => {
   res.redirect('/api-docs/openapi.json');
 });
 
@@ -572,10 +573,10 @@ const ragRoutes = require('./routes/rag');
 
 // Mount RAG routes if enabled
 if (process.env.RAG_SERVICE_ENABLED === 'true') {
-  app.use('/api/rag', ragRoutes);
+  app.use('/api/rag', isAuthenticated, ragRoutes);
   
   // RAG UI route
-  app.get('/rag', async (req, res) => {
+  app.get('/rag', isAuthenticated, async (req, res) => {
     try {
       res.render('rag', { 
         title: 'Dokumenten-Fragen'

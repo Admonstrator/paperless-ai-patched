@@ -2,11 +2,11 @@
 
 ## 🎯 Overview
 
-This feature adds a history validation tool that helps maintain data consistency between the local Paperless-AI database and the Paperless-ngx instance. It addresses issue #471 where the "Unprocessed" counter becomes inaccurate due to orphaned history entries.
+This feature adds a history validation tool that helps maintain data consistency between the local Paperless-AI next database and the Paperless-ngx instance. It addresses issue #471 where the "Unprocessed" counter becomes inaccurate due to orphaned history entries.
 
 ## 🐛 Problem
 
-When documents are deleted in Paperless-ngx, the corresponding entries remain in the Paperless-AI history database. This causes:
+When documents are deleted in Paperless-ngx, the corresponding entries remain in the Paperless-AI next history database. This causes:
 - **Inaccurate "Unprocessed" counter** - Shows documents that no longer exist
 - **Confusion for users** - History displays non-existent documents
 - **Database bloat** - Unnecessary entries consuming storage

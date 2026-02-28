@@ -98,7 +98,7 @@
         <div id="sidebarOverlay" class="sidebar-overlay"></div>
         <aside class="sidebar">
             <div class="sidebar-header">
-                <img src="/favicon.ico" class="no-invert" alt="Paperless AI Logo" style="height: 60px;">
+                <img src="/favicon.webp" class="no-invert" alt="Paperless AI Logo" style="height: 60px;">
                 <h1 class="brand-title">Paperless-AI<small style="display: block;"><%= version %></small></h1>
             </div>
 
@@ -106,13 +106,16 @@
                 <ul>
                     <li><a href="/dashboard" class="sidebar-link"><i class="fas fa-home"></i><span>Dashboard</span></a></li>
                     <li><a href="/manual" class="sidebar-link"><i class="fas fa-file-alt"></i><span>Manual</span></a></li>
+                    <% if (chatEnabled) { %>
                     <li><a href="/chat" class="sidebar-link"><i class="fa-solid fa-comment"></i><span>Chat</span></a></li>
+                    <% } %>
                     <% if (ragEnabled) { %>
                     <li><a href="/rag" class="sidebar-link"><i class="fa-solid fa-comment"></i><span>RAG Chat</span></a></li>
                     <% } %>
                     <li><a href="/playground" class="sidebar-link"><i class="fa-solid fa-flask-vial"></i><span>Playground</span></a></li>
                     <li><a href="/history" class="sidebar-link"><i class="fa-solid fa-clock-rotate-left"></i><span>History</span></a></li>
-                    <li><a href="/ocr" class="sidebar-link active"><i class="fa-solid fa-eye"></i><span>OCR Queue</span></a></li>
+                    <li><a href="/ocr" class="sidebar-link active"><i class="fa-solid fa-eye"></i><span>OCR Queue</span><span id="sidebarOcrBadge" class="ml-2 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800 hidden">0</span></a></li>
+                    <li><a href="/failed" class="sidebar-link"><i class="fa-solid fa-ban"></i><span>Permanently Failed</span><span id="sidebarFailedBadge" class="ml-2 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-100 text-red-700 hidden">0</span></a></li>
                     <li><a href="/settings" class="sidebar-link"><i class="fas fa-cog"></i><span>Settings</span></a></li>
                     <li><a href="/logout" class="sidebar-link"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></a></li>
                 </ul>
@@ -147,7 +150,6 @@
                         <span id="statPending" class="status-badge status-pending"><i class="fas fa-hourglass-half"></i> <span id="statPendingCount">…</span> pending</span>
                         <span id="statDone" class="status-badge status-done"><i class="fas fa-check"></i> <span id="statDoneCount">…</span> done</span>
                         <span id="statFailed" class="status-badge status-failed"><i class="fas fa-times"></i> <span id="statFailedCount">…</span> failed</span>
-                        <span id="statTerminalFailed" class="status-badge status-failed"><i class="fas fa-ban"></i> <span id="statTerminalFailedCount">…</span> terminal failed</span>
                     </div>
                 </div>
 
@@ -240,46 +242,6 @@ MISTRAL_OCR_MODEL=mistral-ocr-latest</pre>
                                 <i class="fas fa-chevron-left"></i> Prev
                             </button>
                             <button id="nextPageBtn" class="px-3 py-1 border rounded text-sm hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed" disabled>
-                                Next <i class="fas fa-chevron-right"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Terminal Failed Table -->
-                <div class="material-card mt-6">
-                    <div class="px-4 pt-4">
-                        <h2 class="text-lg font-semibold">Terminal Failed Documents</h2>
-                        <p class="text-sm text-gray-500 mt-1">These documents are skipped in automatic scans until manually reset.</p>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table id="failedTable" class="w-full">
-                            <thead>
-                                <tr>
-                                    <th class="text-left py-3 px-4">Doc ID</th>
-                                    <th class="text-left py-3 px-4">Title</th>
-                                    <th class="text-left py-3 px-4">Reason</th>
-                                    <th class="text-left py-3 px-4">Source</th>
-                                    <th class="text-left py-3 px-4">Updated</th>
-                                    <th class="text-left py-3 px-4">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="failedTableBody">
-                                <tr>
-                                    <td colspan="6" class="text-center py-8 text-gray-400">
-                                        <i class="fas fa-spinner fa-spin mr-2"></i> Loading failed queue…
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="flex justify-between items-center mt-4 px-4 pb-4 flex-wrap gap-2">
-                        <span id="failedTableInfo" class="text-sm text-gray-500"></span>
-                        <div class="flex gap-2">
-                            <button id="failedPrevPageBtn" class="px-3 py-1 border rounded text-sm hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed" disabled>
-                                <i class="fas fa-chevron-left"></i> Prev
-                            </button>
-                            <button id="failedNextPageBtn" class="px-3 py-1 border rounded text-sm hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed" disabled>
                                 Next <i class="fas fa-chevron-right"></i>
                             </button>
                         </div>
@@ -379,5 +341,6 @@ MISTRAL_OCR_MODEL=mistral-ocr-latest</pre>
         });
     </script>
     <script src="/js/ocr.js"></script>
+    <script src="/js/sidebar-badges.js"></script>
 </body>
 </html>

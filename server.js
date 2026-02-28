@@ -135,7 +135,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
  *   get:
  *     summary: Retrieve the OpenAPI specification
  *     description: |
- *       Returns the complete OpenAPI specification for the Paperless-AI API.
+ *       Returns the complete OpenAPI specification for the Paperless-AI next API.
  *       This endpoint attempts to serve a static OpenAPI JSON file first, falling back
  *       to dynamically generating the specification if the file cannot be read.
  *       
@@ -242,7 +242,7 @@ async function processDocument(doc, existingTags, existingCorrespondentList, exi
 
   const isFailed = await documentModel.isDocumentFailed(doc.id);
   if (isFailed) {
-    console.log(`[DEBUG] Document ${doc.id} is marked as terminally failed, skipping until reset`);
+    console.log(`[DEBUG] Document ${doc.id} is marked as permanently failed, skipping until reset`);
     return null;
   }
 

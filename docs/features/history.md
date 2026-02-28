@@ -1,6 +1,6 @@
 # History & Restore
 
-The **History** page gives you a complete log of everything Paperless-AI has done. Every document that was processed appears here with the full details of what the AI decided – and you can undo any of it.
+The **History** page gives you a complete log of everything Paperless-AI next has done. Every document that was processed appears here with the full details of what the AI decided – and you can undo any of it.
 
 ---
 
@@ -12,7 +12,7 @@ Click on any row in the history table to open the **Info Modal**, which shows:
 - **Document type and language** – What was detected
 - **Custom fields** – Any values assigned
 - **Token usage** – How many tokens the AI used for this document (relevant if you're on a paid plan)
-- **Original state** – What the document looked like *before* Paperless-AI touched it
+- **Original state** – What the document looked like *before* Paperless-AI next touched it
 
 ---
 
@@ -24,10 +24,10 @@ If you're not happy with the AI's result, click **Rescan** in the Info Modal. Th
 
 ## Restore Original
 
-Made a mistake or the AI went completely off track? Click **Restore Original** to revert the document to exactly the state it was in before Paperless-AI processed it – tags, title, document type, correspondent, language, all of it.
+Made a mistake or the AI went completely off track? Click **Restore Original** to revert the document to exactly the state it was in before Paperless-AI next processed it – tags, title, document type, correspondent, language, all of it.
 
 !!! tip
-    The original state is captured the moment Paperless-AI first processes a document. Restoring is always possible as long as the history entry exists.
+    The original state is captured the moment Paperless-AI next first processes a document. Restoring is always possible as long as the history entry exists.
 
 ---
 

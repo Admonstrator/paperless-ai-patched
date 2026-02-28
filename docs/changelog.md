@@ -42,7 +42,7 @@ All improvements and fixes included in this fork, compared to [clusterzx/paperle
 | [UI-004](fixes/UI-004-history-restore-doctype-language/README.md) | History modal: restore original metadata, including document type and language | 2026-02-27 |
 | [UI-005](fixes/UI-005-mistral-ocr-queue/README.md) | New Mistral OCR queue for documents that were poorly scanned | 2026-02-28 |
 | [UI-006](fixes/UI-006-ignore-tags-processing/README.md) | Added ignore-tags filtering for regular scans and adjusted dashboard totals accordingly | 2026-02-28 |
-| [UI-007](fixes/UI-007-terminal-failed-queue/README.md) | Added terminal failed queue with manual reset after AI/OCR hard failures | 2026-02-28 |
+| [UI-007](fixes/UI-007-terminal-failed-queue/README.md) | Added permanently failed queue with manual reset after AI/OCR hard failures | 2026-02-28 |
 
 ---
 

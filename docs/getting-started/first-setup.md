@@ -14,7 +14,7 @@ Choose a username and a secure password. This account is used to log in to Paper
 
 You'll need two things from your Paperless-ngx instance:
 
-**API URL** – The address of your Paperless-ngx server, e.g. `http://paperless:8000` or `http://192.168.1.100:8000`. If Paperless-ngx and Paperless-AI are in the same Docker network, use the service name (e.g. `http://paperless-ngx:8000`).
+**API URL** – The address of your Paperless-ngx server, e.g. `http://paperless:8000` or `http://192.168.1.100:8000`. If Paperless-ngx and Paperless-AI next are in the same Docker network, use the service name (e.g. `http://paperless-ngx:8000`).
 
 **API Token** – Found in Paperless-ngx under *Settings → API Tokens*. Create a new token with full permissions.
 
@@ -54,4 +54,4 @@ Click **Save**. Then restart the container once to apply the configuration and s
 
 ## You're Done!
 
-Paperless-AI will now automatically pick up new documents added to Paperless-ngx, analyze them, and assign metadata. Check the [History](../features/history.md) page to see what's been processed.
+Paperless-AI next will now automatically pick up new documents added to Paperless-ngx, analyze them, and assign metadata. Check the [History](../features/history.md) page to see what's been processed.

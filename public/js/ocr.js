@@ -11,8 +11,6 @@
     let currentSearch = '';
     let currentStatus = '';
     let loadTimeout = null;
-    let failedCurrentPage = 0;
-    let failedTotalRecords = 0;
 
     // ── DOM refs ───────────────────────────────────────────────────────────
     const tableBody       = document.getElementById('ocrTableBody');
@@ -24,10 +22,6 @@
     const manualDocId     = document.getElementById('manualDocId');
     const processAllBtn   = document.getElementById('processAllBtn');
     const autoAnalyze     = document.getElementById('autoAnalyzeToggle');
-    const failedTableBody = document.getElementById('failedTableBody');
-    const failedTableInfo = document.getElementById('failedTableInfo');
-    const failedPrevBtn   = document.getElementById('failedPrevPageBtn');
-    const failedNextBtn   = document.getElementById('failedNextPageBtn');
 
     // Progress overlay
     const overlay      = document.getElementById('progressOverlay');
@@ -39,8 +33,14 @@
 
     // ── Init ───────────────────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', function () {
+        const urlParams = new URLSearchParams(window.location.search);
+        const initialStatus = (urlParams.get('status') || '').trim();
+        if (initialStatus && ['pending', 'processing', 'done', 'failed'].includes(initialStatus)) {
+            currentStatus = initialStatus;
+            if (statusFilter) statusFilter.value = initialStatus;
+        }
+
         loadQueue();
-        loadFailedQueue();
         loadStats();
 
         if (statusFilter) statusFilter.addEventListener('change', function () {
@@ -59,19 +59,6 @@
         if (nextBtn) nextBtn.addEventListener('click', function () {
             const maxPage = Math.ceil(totalRecords / pageSize) - 1;
             if (currentPage < maxPage) { currentPage++; loadQueue(); }
-        });
-        if (failedPrevBtn) failedPrevBtn.addEventListener('click', function () {
-            if (failedCurrentPage > 0) {
-                failedCurrentPage--;
-                loadFailedQueue();
-            }
-        });
-        if (failedNextBtn) failedNextBtn.addEventListener('click', function () {
-            const maxPage = Math.ceil(failedTotalRecords / pageSize) - 1;
-            if (failedCurrentPage < maxPage) {
-                failedCurrentPage++;
-                loadFailedQueue();
-            }
         });
 
         if (closeBtn) closeBtn.addEventListener('click', closeOverlay);
@@ -244,7 +231,6 @@
             setStatCount('statPendingCount', s.pending);
             setStatCount('statDoneCount', s.done);
             setStatCount('statFailedCount', s.failed);
-            setStatCount('statTerminalFailedCount', s.terminalFailed);
         } catch (_) {}
     }
 
@@ -270,7 +256,6 @@
                 showToast(data.message || 'Added to queue');
                 if (manualDocId) manualDocId.value = '';
                 loadQueue();
-                loadFailedQueue();
                 loadStats();
             } else {
                 showToast(data.message || data.error || 'Failed', 'error');
@@ -289,7 +274,6 @@
             const data = await resp.json();
             showToast(data.success ? 'Removed from queue' : (data.message || 'Failed'), data.success ? 'success' : 'error');
             loadQueue();
-            loadFailedQueue();
             loadStats();
         } catch (err) {
             showToast(err.message, 'error');
@@ -308,7 +292,6 @@
         fetchSSE(`/api/ocr/process/${documentId}`, { autoAnalyze: autoAnalyzeVal }, function (done) {
             if (done) {
                 loadQueue();
-                loadFailedQueue();
                 loadStats();
             }
         });
@@ -322,7 +305,6 @@
         fetchSSE('/api/ocr/process-all', { autoAnalyze: autoAnalyzeVal }, function (done) {
             if (done) {
                 loadQueue();
-                loadFailedQueue();
                 loadStats();
             }
         });
@@ -334,130 +316,9 @@
         fetchSSE(`/api/ocr/analyze/${documentId}`, {}, function (done) {
             if (done) {
                 loadQueue();
-                loadFailedQueue();
                 loadStats();
             }
         });
-    }
-
-    // ── Terminal failed queue ─────────────────────────────────────────────
-    async function loadFailedQueue() {
-        if (!failedTableBody) return;
-        failedTableBody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-gray-400"><i class="fas fa-spinner fa-spin mr-2"></i> Loading…</td></tr>`;
-
-        try {
-            const params = new URLSearchParams({
-                start: failedCurrentPage * pageSize,
-                length: pageSize,
-                search: ''
-            });
-            const resp = await fetch(`/api/failed/queue?${params}`);
-            const data = await resp.json();
-            if (!data.success) throw new Error(data.error || 'Failed to load failed queue');
-
-            failedTotalRecords = data.recordsTotal || 0;
-            if (!paperlessUrl) {
-                paperlessUrl = data.paperlessUrl || '';
-            }
-
-            renderFailedTable(data.data || []);
-            updateFailedPagination();
-        } catch (err) {
-            failedTableBody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-red-500"><i class="fas fa-exclamation-triangle mr-2"></i>${escHtml(err.message)}</td></tr>`;
-        }
-    }
-
-    function renderFailedTable(items) {
-        if (!failedTableBody) return;
-
-        if (!items.length) {
-            failedTableBody.innerHTML = `<tr><td colspan="6" class="text-center py-10 text-gray-400"><i class="fas fa-check-circle text-2xl mb-2 block"></i>No terminal failures</td></tr>`;
-            return;
-        }
-
-        failedTableBody.innerHTML = items.map(item => {
-            const docLink = paperlessUrl
-                ? `<a href="${paperlessUrl}/documents/${item.document_id}/details" target="_blank" class="text-blue-500 hover:underline font-mono">#${item.document_id}</a>`
-                : `<span class="font-mono">#${item.document_id}</span>`;
-
-            const reasonLabel = formatFailedReason(item.failed_reason);
-            const sourceLabel = formatFailedSource(item.source);
-            const updated = item.updated_at ? new Date(item.updated_at).toLocaleString() : '–';
-
-            return `<tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border-b border-gray-100 dark:border-gray-700">
-                <td class="py-3 px-4">${docLink}</td>
-                <td class="py-3 px-4 max-w-xs truncate" title="${escHtml(item.title || '')}">${escHtml(item.title || '–')}</td>
-                <td class="py-3 px-4"><span class="reason-badge">${reasonLabel}</span></td>
-                <td class="py-3 px-4 text-sm">${sourceLabel}</td>
-                <td class="py-3 px-4 text-sm text-gray-500 whitespace-nowrap">${updated}</td>
-                <td class="py-3 px-4">
-                    <button class="px-3 py-1 bg-amber-500 text-white rounded-lg text-xs hover:bg-amber-600 transition-colors failed-reset-btn" data-id="${item.document_id}" title="Reset failed state and allow re-scan">
-                        <i class="fas fa-rotate-left"></i> Reset
-                    </button>
-                </td>
-            </tr>`;
-        }).join('');
-
-        failedTableBody.querySelectorAll('.failed-reset-btn').forEach(btn => {
-            btn.addEventListener('click', function () {
-                resetFailedDocument(parseInt(this.dataset.id, 10));
-            });
-        });
-    }
-
-    function formatFailedReason(reason) {
-        const map = {
-            'ocr_failed': '<i class="fas fa-eye-slash mr-1"></i>OCR failed',
-            'ai_failed_after_ocr': '<i class="fas fa-robot mr-1"></i>AI failed after OCR',
-            'ai_failed_ocr_disabled': '<i class="fas fa-power-off mr-1"></i>AI failed (OCR disabled)',
-            'ai_failed_without_ocr_fallback': '<i class="fas fa-triangle-exclamation mr-1"></i>AI failed (no OCR fallback)',
-            'insufficient_content_lt_10': '<i class="fas fa-file-slash mr-1"></i>Insufficient content (&lt; 10 chars)'
-        };
-
-        if (map[reason]) return map[reason];
-        if (reason && reason.startsWith('insufficient_content_lt_')) {
-            const threshold = reason.replace('insufficient_content_lt_', '');
-            if (/^\d+$/.test(threshold)) {
-                return `<i class="fas fa-file-slash mr-1"></i>Insufficient content (&lt; ${threshold} chars)`;
-            }
-        }
-        return escHtml(reason || 'unknown_failure');
-    }
-
-    function formatFailedSource(source) {
-        if (source === 'ocr') return '<span class="text-violet-600">OCR</span>';
-        if (source === 'ai') return '<span class="text-blue-600">AI</span>';
-        return escHtml(source || 'unknown');
-    }
-
-    function updateFailedPagination() {
-        if (!failedTableInfo) return;
-
-        const start = failedCurrentPage * pageSize + 1;
-        const end = Math.min((failedCurrentPage + 1) * pageSize, failedTotalRecords);
-        failedTableInfo.textContent = failedTotalRecords
-            ? `Showing ${start}–${end} of ${failedTotalRecords}`
-            : 'No results';
-
-        if (failedPrevBtn) failedPrevBtn.disabled = failedCurrentPage === 0;
-        if (failedNextBtn) failedNextBtn.disabled = failedTotalRecords === 0 || end >= failedTotalRecords;
-    }
-
-    async function resetFailedDocument(documentId) {
-        try {
-            const resp = await fetch(`/api/failed/reset/${documentId}`, { method: 'POST' });
-            const data = await resp.json();
-            if (data.success) {
-                showToast(data.message || 'Document reset successfully');
-            } else {
-                showToast(data.message || data.error || 'Reset failed', 'error');
-            }
-            loadQueue();
-            loadFailedQueue();
-            loadStats();
-        } catch (error) {
-            showToast(error.message, 'error');
-        }
     }
 
     // ── OCR output info ───────────────────────────────────────────────────

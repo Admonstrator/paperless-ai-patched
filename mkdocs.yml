@@ -1,5 +1,5 @@
-site_name: Paperless-AI Next
-site_description: Community fork of Paperless-AI – collecting upstream PRs, security patches, and performance improvements for Paperless-ngx.
+site_name: Paperless-AI next
+site_description: Community fork of Paperless-AI next – collecting upstream PRs, security patches, and performance improvements for Paperless-ngx.
 site_url: https://paperless-ai-next.admon.me
 repo_url: https://github.com/admonstrator/paperless-ai-next
 repo_name: admonstrator/paperless-ai-next
@@ -88,7 +88,7 @@ nav:
     - UI-004 – Restore original metadata: fixes/UI-004-history-restore-doctype-language/README.md
     - UI-005 – Mistral OCR queue: fixes/UI-005-mistral-ocr-queue/README.md
     - UI-006 – Ignore tags for processing: fixes/UI-006-ignore-tags-processing/README.md
-    - UI-007 – Terminal failed queue: fixes/UI-007-terminal-failed-queue/README.md
+    - UI-007 – Permanently failed queue: fixes/UI-007-terminal-failed-queue/README.md
   - Infrastructure:
     - DOCKER-001 – Optimized images: fixes/DOCKER-001-optimize-images/README.md
     - DOCKER-002 – Node.js 24 LTS: fixes/DOCKER-002-upgrade-nodejs-24-lts/README.md

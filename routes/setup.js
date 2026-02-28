@@ -247,7 +247,7 @@ const protectApiRoute = (req, res, next) => {
  *   get:
  *     summary: Render login page or redirect to setup if no users exist
  *     description: |
- *       Serves the login page for user authentication to the Paperless-AI application.
+ *       Serves the login page for user authentication to the Paperless-AI next application.
  *       If no users exist in the database, the endpoint automatically redirects to the setup page
  *       to complete the initial application configuration.
  *       
@@ -597,7 +597,8 @@ router.get('/playground', protectApiRoute, async (req, res) => {
       correspondentNames,
       paperlessUrl,
       version: configFile.PAPERLESS_AI_VERSION || ' ',
-      ragEnabled: process.env.RAG_SERVICE_ENABLED === 'true'
+      ragEnabled: process.env.RAG_SERVICE_ENABLED === 'true',
+      chatEnabled: process.env.RAG_SERVICE_ENABLED === 'true'
     });
   } catch (error) {
     console.error('[ERRO] loading documents view:', error);
@@ -745,7 +746,7 @@ router.get('/chat', async (req, res) => {
       const {open} = req.query;
       const documents = await paperlessService.getDocuments();
       const version = configFile.PAPERLESS_AI_VERSION || ' ';
-      res.render('chat', { documents, open, version, ragEnabled: process.env.RAG_SERVICE_ENABLED === 'true' });
+      res.render('chat', { documents, open, version, ragEnabled: process.env.RAG_SERVICE_ENABLED === 'true', chatEnabled: process.env.RAG_SERVICE_ENABLED === 'true' });
   } catch (error) {
     console.error('[ERRO] loading documents:', error);
     res.status(500).send('Error loading documents');
@@ -1083,6 +1084,7 @@ router.get('/history', async (req, res) => {
     res.render('history', {
       version: configFile.PAPERLESS_AI_VERSION,
       ragEnabled: process.env.RAG_SERVICE_ENABLED === 'true',
+      chatEnabled: process.env.RAG_SERVICE_ENABLED === 'true',
       filters: {
         allTags: [],  // Will be loaded by JavaScript via /api/history/load-progress
         allCorrespondents: []  // Will be populated when DataTable loads
@@ -2066,7 +2068,7 @@ async function processDocument(doc, existingTags, existingCorrespondentList, exi
 
   const isFailed = await documentModel.isDocumentFailed(doc.id);
   if (isFailed) {
-    console.log(`[DEBUG] Document ${doc.id} is marked as terminally failed, skipping until reset`);
+    console.log(`[DEBUG] Document ${doc.id} is marked as permanently failed, skipping until reset`);
     return null;
   }
 
@@ -2687,6 +2689,7 @@ router.get('/manual', async (req, res) => {
     success: null,
     version,
     ragEnabled: process.env.RAG_SERVICE_ENABLED === 'true',
+    chatEnabled: process.env.RAG_SERVICE_ENABLED === 'true',
     paperlessUrl: process.env.PAPERLESS_API_URL,
     paperlessToken: process.env.PAPERLESS_API_TOKEN,
     config: {}
@@ -2978,7 +2981,7 @@ async function processQueue(customPrompt) {
  *     summary: Webhook for document updates
  *     description: |
  *       Processes incoming webhook notifications from Paperless-ngx about document
- *       changes, additions, or deletions. The webhook allows Paperless-AI to respond
+ *       changes, additions, or deletions. The webhook allows Paperless-AI next to respond
  *       to document changes in real-time.
  *       
  *       When a new document is added or updated in Paperless-ngx, this endpoint can
@@ -3169,7 +3172,8 @@ router.get('/dashboard', async (req, res) => {
       tokensOverall: 0
     }, 
     version,
-    ragEnabled: process.env.RAG_SERVICE_ENABLED === 'true'
+    ragEnabled: process.env.RAG_SERVICE_ENABLED === 'true',
+    chatEnabled: process.env.RAG_SERVICE_ENABLED === 'true'
   });
 });
 
@@ -3361,6 +3365,7 @@ router.get('/settings', async (req, res) => {
   res.render('settings', { 
     version,
     ragEnabled: process.env.RAG_SERVICE_ENABLED === 'true',
+    chatEnabled: process.env.RAG_SERVICE_ENABLED === 'true',
     config,
     success: isConfigured ? 'The application is already configured. You can update the configuration below.' : undefined,
     settingsError: showErrorCheckSettings ? 'Please check your settings. Something is not working correctly.' : undefined
@@ -4034,7 +4039,7 @@ router.get('/health', async (req, res) => {
  *   post:
  *     summary: Submit initial application setup configuration
  *     description: |
- *       Configures the initial setup of the Paperless-AI application, including connections
+ *       Configures the initial setup of the Paperless-AI next application, including connections
  *       to Paperless-ngx, AI provider settings, processing parameters, and user authentication.
  *       
  *       This endpoint is primarily used during the first-time setup of the application and
@@ -4440,7 +4445,7 @@ router.post('/setup', express.json(), async (req, res) => {
  *   post:
  *     summary: Update application settings
  *     description: |
- *       Updates the configuration settings of the Paperless-AI application after initial setup.
+ *       Updates the configuration settings of the Paperless-AI next application after initial setup.
  *       This endpoint allows administrators to modify connections to Paperless-ngx, 
  *       AI provider settings, processing parameters, and feature toggles.
  *       
@@ -5052,10 +5057,25 @@ router.get('/ocr', protectApiRoute, async (req, res) => {
     return res.render('ocr', {
       version: configFile.PAPERLESS_AI_VERSION || ' ',
       ragEnabled: process.env.RAG_SERVICE_ENABLED === 'true',
+      chatEnabled: process.env.RAG_SERVICE_ENABLED === 'true',
       ocrEnabled: configFile.mistralOcr?.enabled === 'yes'
     });
   } catch (error) {
     console.error('[ERROR] OCR page:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Page: Permanently Failed UI
+router.get('/failed', protectApiRoute, async (req, res) => {
+  try {
+    return res.render('failed', {
+      version: configFile.PAPERLESS_AI_VERSION || ' ',
+      ragEnabled: process.env.RAG_SERVICE_ENABLED === 'true',
+      chatEnabled: process.env.RAG_SERVICE_ENABLED === 'true'
+    });
+  } catch (error) {
+    console.error('[ERROR] Failed page:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -5318,7 +5338,7 @@ router.get('/api/ocr/stats', isAuthenticated, async (req, res) => {
       processing: allItems.filter(i => i.status === 'processing').length,
       done: allItems.filter(i => i.status === 'done').length,
       failed: allItems.filter(i => i.status === 'failed').length,
-      terminalFailed: failedDocs.total || 0,
+      permanentlyFailed: failedDocs.total || 0,
       total: allItems.length,
       ocrEnabled: mistralOcrService.isEnabled()
     };
@@ -5328,7 +5348,7 @@ router.get('/api/ocr/stats', isAuthenticated, async (req, res) => {
   }
 });
 
-// API: Get paginated terminally failed documents queue
+// API: Get paginated permanently failed documents queue
 router.get('/api/failed/queue', isAuthenticated, async (req, res) => {
   try {
     const start = parseInt(req.query.start || '0', 10);

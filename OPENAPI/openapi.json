@@ -1,9 +1,9 @@
 {
   "openapi": "3.0.0",
   "info": {
-    "title": "Paperless-AI API Documentation",
+    "title": "Paperless-AI next API Documentation",
     "version": "1.0.0",
-    "description": "API documentation for the Paperless-AI application",
+    "description": "API documentation for the Paperless-AI next application",
     "license": {
       "name": "MIT",
       "url": "https://opensource.org/licenses/MIT"
@@ -492,7 +492,7 @@
     "/api-docs/openapi.json": {
       "get": {
         "summary": "Retrieve the OpenAPI specification",
-        "description": "Returns the complete OpenAPI specification for the Paperless-AI API.\nThis endpoint attempts to serve a static OpenAPI JSON file first, falling back\nto dynamically generating the specification if the file cannot be read.\n\nThe OpenAPI specification document contains all API endpoints, parameters,\nrequest bodies, responses, and schemas for the entire application.\n",
+        "description": "Returns the complete OpenAPI specification for the Paperless-AI next API.\nThis endpoint attempts to serve a static OpenAPI JSON file first, falling back\nto dynamically generating the specification if the file cannot be read.\n\nThe OpenAPI specification document contains all API endpoints, parameters,\nrequest bodies, responses, and schemas for the entire application.\n",
         "tags": [
           "API",
           "System"
@@ -644,7 +644,7 @@
     "/login": {
       "get": {
         "summary": "Render login page or redirect to setup if no users exist",
-        "description": "Serves the login page for user authentication to the Paperless-AI application.\nIf no users exist in the database, the endpoint automatically redirects to the setup page\nto complete the initial application configuration.\n\nThis endpoint handles both new user sessions and returning users whose\nsessions have expired.\n",
+        "description": "Serves the login page for user authentication to the Paperless-AI next application.\nIf no users exist in the database, the endpoint automatically redirects to the setup page\nto complete the initial application configuration.\n\nThis endpoint handles both new user sessions and returning users whose\nsessions have expired.\n",
         "tags": [
           "Authentication",
           "Navigation"
@@ -2241,7 +2241,7 @@
       },
       "post": {
         "summary": "Submit initial application setup configuration",
-        "description": "Configures the initial setup of the Paperless-AI application, including connections\nto Paperless-ngx, AI provider settings, processing parameters, and user authentication.\n\nThis endpoint is primarily used during the first-time setup of the application and\ncreates the necessary configuration files and database tables.\n",
+        "description": "Configures the initial setup of the Paperless-AI next application, including connections\nto Paperless-ngx, AI provider settings, processing parameters, and user authentication.\n\nThis endpoint is primarily used during the first-time setup of the application and\ncreates the necessary configuration files and database tables.\n",
         "tags": [
           "System",
           "Setup"
@@ -2899,7 +2899,7 @@
     "/api/webhook/document": {
       "post": {
         "summary": "Webhook for document updates",
-        "description": "Processes incoming webhook notifications from Paperless-ngx about document\nchanges, additions, or deletions. The webhook allows Paperless-AI to respond\nto document changes in real-time.\n\nWhen a new document is added or updated in Paperless-ngx, this endpoint can\ntrigger automatic AI processing for metadata extraction.\n",
+        "description": "Processes incoming webhook notifications from Paperless-ngx about document\nchanges, additions, or deletions. The webhook allows Paperless-AI next to respond\nto document changes in real-time.\n\nWhen a new document is added or updated in Paperless-ngx, this endpoint can\ntrigger automatic AI processing for metadata extraction.\n",
         "tags": [
           "Documents",
           "API",
@@ -3132,7 +3132,7 @@
       },
       "post": {
         "summary": "Update application settings",
-        "description": "Updates the configuration settings of the Paperless-AI application after initial setup.\nThis endpoint allows administrators to modify connections to Paperless-ngx, \nAI provider settings, processing parameters, and feature toggles.\n\nChanges made through this endpoint are applied immediately and affect all future\ndocument processing operations.\n",
+        "description": "Updates the configuration settings of the Paperless-AI next application after initial setup.\nThis endpoint allows administrators to modify connections to Paperless-ngx, \nAI provider settings, processing parameters, and feature toggles.\n\nChanges made through this endpoint are applied immediately and affect all future\ndocument processing operations.\n",
         "tags": [
           "System",
           "Setup"

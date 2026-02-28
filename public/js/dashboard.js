@@ -31,22 +31,30 @@ class ThemeManager {
 // Chart Initialization
 class ChartManager {
     constructor() {
+        this.documentChart = null;
         this.initializeDocumentChart();
     }
 
     initializeDocumentChart() {
-        const { documentCount, processedCount } = window.dashboardData;
-        const unprocessedCount = documentCount - processedCount;
+        const {
+            documentCount,
+            processedCount,
+            ocrNeededCount = 0,
+            failedCount = 0
+        } = window.dashboardData;
+        const remainingCount = Math.max(0, documentCount - processedCount - ocrNeededCount - failedCount);
 
         const ctx = document.getElementById('documentChart').getContext('2d');
-        new Chart(ctx, {
+        this.documentChart = new Chart(ctx, {
             type: 'doughnut',
             data: {
-                labels: ['AI Processed', 'Unprocessed'],
+                labels: ['AI Processed', 'OCR Needed', 'Failed', 'Unprocessed'],
                 datasets: [{
-                    data: [processedCount, unprocessedCount],
+                    data: [processedCount, ocrNeededCount, failedCount, remainingCount],
                     backgroundColor: [
                         '#3b82f6',  // blue-500
+                        '#f59e0b',  // amber-500
+                        '#ef4444',  // red-500
                         '#e2e8f0'   // gray-200
                     ],
                     borderWidth: 0,
@@ -65,7 +73,7 @@ class ChartManager {
                         callbacks: {
                             label: function(context) {
                                 const value = context.raw;
-                                const total = processedCount + unprocessedCount;
+                                const total = context.dataset.data.reduce((sum, current) => sum + Number(current || 0), 0);
                                 const percentage = ((value / total) * 100).toFixed(1);
                                 return `${value} (${percentage}%)`;
                             }
@@ -74,6 +82,106 @@ class ChartManager {
                 }
             }
         });
+    }
+
+    updateDocumentChart(documentCount, processedCount, ocrNeededCount = 0, failedCount = 0) {
+        if (!this.documentChart) return;
+
+        const safeProcessed = Math.min(processedCount, documentCount);
+        const safeOcrNeeded = Math.max(0, ocrNeededCount);
+        const safeFailed = Math.max(0, failedCount);
+        const unprocessedCount = Math.max(0, documentCount - safeProcessed - safeOcrNeeded - safeFailed);
+
+        this.documentChart.data.datasets[0].data = [safeProcessed, safeOcrNeeded, safeFailed, unprocessedCount];
+        this.documentChart.update();
+    }
+}
+
+class DashboardStatsLoader {
+    formatNumber(value) {
+        return Number(value || 0).toLocaleString();
+    }
+
+    setText(id, value) {
+        const element = document.getElementById(id);
+        if (!element) return;
+        element.textContent = value;
+    }
+
+    updateCharts(stats) {
+        if (window.chartManager) {
+            window.chartManager.updateDocumentChart(
+                stats.paperless_data.documentCount,
+                stats.paperless_data.processedDocumentCount,
+                stats.paperless_data.ocrNeededCount,
+                stats.paperless_data.failedCount
+            );
+        }
+
+        const tokenChart = window.dashboardCharts?.tokenDistribution;
+        if (tokenChart) {
+            tokenChart.data.labels = stats.paperless_data.tokenDistribution.map(dist => dist.range);
+            tokenChart.data.datasets[0].data = stats.paperless_data.tokenDistribution.map(dist => dist.count);
+            tokenChart.update();
+        }
+
+        const typesChart = window.dashboardCharts?.documentTypes;
+        if (typesChart) {
+            typesChart.data.labels = stats.paperless_data.documentTypes.map(type => type.type);
+            typesChart.data.datasets[0].data = stats.paperless_data.documentTypes.map(type => type.count);
+            typesChart.update();
+        }
+    }
+
+    updateCards(stats) {
+        const documentCount = stats.paperless_data.documentCount;
+        const processedCount = Math.min(stats.paperless_data.processedDocumentCount, documentCount);
+        const ocrNeededCount = Math.max(0, stats.paperless_data.ocrNeededCount || 0);
+        const failedCount = Math.max(0, stats.paperless_data.failedCount || 0);
+        const unprocessedCount = Math.max(0, documentCount - processedCount - ocrNeededCount - failedCount);
+
+        this.setText('processedCountValue', this.formatNumber(processedCount));
+        this.setText('ocrNeededCountValue', this.formatNumber(ocrNeededCount));
+        this.setText('failedCountValue', this.formatNumber(failedCount));
+        this.setText('unprocessedCountValue', this.formatNumber(unprocessedCount));
+        this.setText('totalDocumentsValue', this.formatNumber(documentCount));
+
+        this.setText('totalTagsValue', this.formatNumber(stats.paperless_data.tagCount));
+        this.setText('totalCorrespondentsValue', this.formatNumber(stats.paperless_data.correspondentCount));
+
+        this.setText('avgPromptTokensValue', this.formatNumber(stats.openai_data.averagePromptTokens));
+        this.setText('avgCompletionTokensValue', this.formatNumber(stats.openai_data.averageCompletionTokens));
+        this.setText('avgTotalTokensValue', this.formatNumber(stats.openai_data.averageTotalTokens));
+        this.setText('tokensOverallValue', this.formatNumber(stats.openai_data.tokensOverall));
+        this.setText('documentsProcessedValue', this.formatNumber(processedCount));
+    }
+
+    async load() {
+        try {
+            const response = await fetch('/api/dashboard/stats');
+            if (!response.ok) {
+                throw new Error('Failed to load dashboard stats');
+            }
+
+            const payload = await response.json();
+            if (!payload?.success) {
+                throw new Error(payload?.error || 'Invalid dashboard stats response');
+            }
+
+            window.dashboardData = {
+                documentCount: payload.paperless_data.documentCount,
+                processedCount: payload.paperless_data.processedDocumentCount,
+                ocrNeededCount: payload.paperless_data.ocrNeededCount,
+                failedCount: payload.paperless_data.failedCount,
+                tokenDistribution: payload.paperless_data.tokenDistribution,
+                documentTypes: payload.paperless_data.documentTypes
+            };
+
+            this.updateCards(payload);
+            this.updateCharts(payload);
+        } catch (error) {
+            console.error('Error loading dashboard stats:', error);
+        }
     }
 }
 
@@ -278,4 +386,6 @@ document.addEventListener('DOMContentLoaded', () => {
     window.navigationManager = new NavigationManager();
     window.chartManager = new ChartManager();
     window.modalManager = new ModalManager();
+    window.dashboardStatsLoader = new DashboardStatsLoader();
+    window.dashboardStatsLoader.load();
 });

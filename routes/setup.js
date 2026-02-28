@@ -15,12 +15,13 @@ const documentsService = require('../services/documentsService.js');
 const RAGService = require('../services/ragService.js');
 const fs = require('fs').promises;
 const path = require('path');
-const { validateCustomFieldValue } = require('../services/serviceUtils');
+const { validateCustomFieldValue, shouldQueueForOcrOnAiError, classifyOcrQueueReasonFromAiError } = require('../services/serviceUtils');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const cookieParser = require('cookie-parser');
 const { authenticateJWT, isAuthenticated } = require('./auth.js');
 const customService = require('../services/customService.js');
+const mistralOcrService = require('../services/mistralOcrService');
 const config = require('../config/config.js');
 require('dotenv').config({ path: '../data/.env' });
 
@@ -2078,8 +2079,14 @@ async function processDocument(doc, existingTags, existingCorrespondentList, exi
     paperlessService.getDocument(doc.id)
   ]);
 
-  if (!content || !content.length >= 10) {
-    console.log(`[DEBUG] Document ${doc.id} has no content, skipping analysis`);
+  if (!content || content.length < 10) {
+    console.log(`[DEBUG] Document ${doc.id} has insufficient content (${content?.length || 0} chars, minimum: 10), skipping analysis`);
+    if (mistralOcrService.isEnabled()) {
+      const added = await documentModel.addToOcrQueue(doc.id, doc.title, 'short_content_lt_10');
+      if (added) {
+        console.log(`[OCR] Document ${doc.id} queued for Mistral OCR (short_content)`);
+      }
+    }
     return null;
   }
 
@@ -2117,6 +2124,13 @@ async function processDocument(doc, existingTags, existingCorrespondentList, exi
   }
   console.log('Repsonse from AI service:', analysis);
   if (analysis.error) {
+    if (mistralOcrService.isEnabled() && shouldQueueForOcrOnAiError(analysis.error)) {
+      const queueReason = classifyOcrQueueReasonFromAiError(analysis.error);
+      const added = await documentModel.addToOcrQueue(doc.id, doc.title, queueReason);
+      if (added) {
+        console.log(`[OCR] Document ${doc.id} queued for Mistral OCR (ai_failed: ${analysis.error})`);
+      }
+    }
     throw new Error(`[ERROR] Document analysis failed: ${analysis.error}`);
   }
   await documentModel.setProcessingStatus(doc.id, doc.title, 'complete');
@@ -2426,6 +2440,7 @@ router.get('/setup', async (req, res) => {
       TOKEN_LIMIT: process.env.TOKEN_LIMIT || 128000,
       RESPONSE_TOKENS: process.env.RESPONSE_TOKENS || 1000,
       TAGS: normalizeArray(process.env.TAGS),
+      IGNORE_TAGS: normalizeArray(process.env.IGNORE_TAGS),
       ADD_AI_PROCESSED_TAG: process.env.ADD_AI_PROCESSED_TAG || 'no',
       AI_PROCESSED_TAG_NAME: process.env.AI_PROCESSED_TAG_NAME || 'ai-processed',
       USE_PROMPT_TAGS: process.env.USE_PROMPT_TAGS || 'no',
@@ -2454,6 +2469,7 @@ router.get('/setup', async (req, res) => {
       }
 
       savedConfig.TAGS = normalizeArray(savedConfig.TAGS);
+      savedConfig.IGNORE_TAGS = normalizeArray(savedConfig.IGNORE_TAGS);
       savedConfig.PROMPT_TAGS = normalizeArray(savedConfig.PROMPT_TAGS);
 
       config = { ...config, ...savedConfig };
@@ -2461,6 +2477,7 @@ router.get('/setup', async (req, res) => {
 
     // Debug output
     console.log('Current config TAGS:', config.TAGS);
+    console.log('Current config IGNORE_TAGS:', config.IGNORE_TAGS);
     console.log('Current config PROMPT_TAGS:', config.PROMPT_TAGS);
 
     // Check if system is fully configured
@@ -3111,41 +3128,91 @@ router.post('/api/webhook/document', async (req, res) => {
  *               $ref: '#/components/schemas/Error'
  */
 router.get('/dashboard', async (req, res) => {
-  const tagCount = await paperlessService.getTagCount();
-  const correspondentCount = await paperlessService.getCorrespondentCount();
-  const documentCount = await paperlessService.getDocumentCount();
-  const processedDocumentCount = await documentModel.getProcessedDocumentsCount();
-  const metrics = await documentModel.getMetrics();
-  const processingTimeStats = await documentModel.getProcessingTimeStats();
-  const tokenDistribution = await documentModel.getTokenDistribution();
-  const documentTypes = await documentModel.getDocumentTypeStats();
-  
-  const averagePromptTokens = metrics.length > 0 ? Math.round(metrics.reduce((acc, cur) => acc + cur.promptTokens, 0) / metrics.length) : 0;
-  const averageCompletionTokens = metrics.length > 0 ? Math.round(metrics.reduce((acc, cur) => acc + cur.completionTokens, 0) / metrics.length) : 0;
-  const averageTotalTokens = metrics.length > 0 ? Math.round(metrics.reduce((acc, cur) => acc + cur.totalTokens, 0) / metrics.length) : 0;
-  const tokensOverall = metrics.length > 0 ? metrics.reduce((acc, cur) => acc + cur.totalTokens, 0) : 0;
-  
   const version = configFile.PAPERLESS_AI_VERSION || ' ';
-  
+
   res.render('dashboard', { 
     paperless_data: { 
-      tagCount, 
-      correspondentCount, 
-      documentCount, 
-      processedDocumentCount,
-      processingTimeStats,
-      tokenDistribution,
-      documentTypes
+      tagCount: 0,
+      correspondentCount: 0,
+      documentCount: 0,
+      processedDocumentCount: 0,
+      ocrNeededCount: 0,
+      failedCount: 0,
+      processingTimeStats: [],
+      tokenDistribution: [],
+      documentTypes: []
     }, 
     openai_data: { 
-      averagePromptTokens, 
-      averageCompletionTokens, 
-      averageTotalTokens, 
-      tokensOverall 
+      averagePromptTokens: 0,
+      averageCompletionTokens: 0,
+      averageTotalTokens: 0,
+      tokensOverall: 0
     }, 
     version,
     ragEnabled: process.env.RAG_SERVICE_ENABLED === 'true'
   });
+});
+
+router.get('/api/dashboard/stats', async (req, res) => {
+  try {
+    const [
+      tagCount,
+      correspondentCount,
+      documentCount,
+      rawProcessedDocumentCount,
+      ocrNeededCount,
+      ocrFailedCount,
+      processingFailedCount,
+      metrics,
+      processingTimeStats,
+      tokenDistribution,
+      documentTypes
+    ] = await Promise.all([
+      paperlessService.getTagCount(),
+      paperlessService.getCorrespondentCount(),
+      paperlessService.getEffectiveDocumentCount(),
+      documentModel.getProcessedDocumentsCount(),
+      documentModel.getOcrQueueCount(),
+      documentModel.getOcrFailedCount(),
+      documentModel.getFailedProcessingCount(),
+      documentModel.getMetrics(),
+      documentModel.getProcessingTimeStats(),
+      documentModel.getTokenDistribution(),
+      documentModel.getDocumentTypeStats()
+    ]);
+
+    const processedDocumentCount = Math.min(rawProcessedDocumentCount, documentCount);
+    const failedCount = ocrFailedCount + processingFailedCount;
+
+    const averagePromptTokens = metrics.length > 0 ? Math.round(metrics.reduce((acc, cur) => acc + cur.promptTokens, 0) / metrics.length) : 0;
+    const averageCompletionTokens = metrics.length > 0 ? Math.round(metrics.reduce((acc, cur) => acc + cur.completionTokens, 0) / metrics.length) : 0;
+    const averageTotalTokens = metrics.length > 0 ? Math.round(metrics.reduce((acc, cur) => acc + cur.totalTokens, 0) / metrics.length) : 0;
+    const tokensOverall = metrics.length > 0 ? metrics.reduce((acc, cur) => acc + cur.totalTokens, 0) : 0;
+
+    res.json({
+      success: true,
+      paperless_data: {
+        tagCount,
+        correspondentCount,
+        documentCount,
+        processedDocumentCount,
+        ocrNeededCount,
+        failedCount,
+        processingTimeStats,
+        tokenDistribution,
+        documentTypes
+      },
+      openai_data: {
+        averagePromptTokens,
+        averageCompletionTokens,
+        averageTotalTokens,
+        tokensOverall
+      }
+    });
+  } catch (error) {
+    console.error('[ERROR] loading dashboard stats:', error);
+    res.status(500).json({ success: false, error: 'Failed to load dashboard stats' });
+  }
 });
 
 /**
@@ -3226,6 +3293,7 @@ router.get('/settings', async (req, res) => {
     TOKEN_LIMIT: process.env.TOKEN_LIMIT || 128000,
     RESPONSE_TOKENS: process.env.RESPONSE_TOKENS || 1000,
     TAGS: normalizeArray(process.env.TAGS),
+    IGNORE_TAGS: normalizeArray(process.env.IGNORE_TAGS),
     ADD_AI_PROCESSED_TAG: process.env.ADD_AI_PROCESSED_TAG || 'no',
     AI_PROCESSED_TAG_NAME: process.env.AI_PROCESSED_TAG_NAME || 'ai-processed',
     USE_PROMPT_TAGS: process.env.USE_PROMPT_TAGS || 'no',
@@ -3259,6 +3327,7 @@ router.get('/settings', async (req, res) => {
     }
 
     savedConfig.TAGS = normalizeArray(savedConfig.TAGS);
+    savedConfig.IGNORE_TAGS = normalizeArray(savedConfig.IGNORE_TAGS);
     savedConfig.PROMPT_TAGS = normalizeArray(savedConfig.PROMPT_TAGS);
 
     config = { ...config, ...savedConfig };
@@ -3266,6 +3335,7 @@ router.get('/settings', async (req, res) => {
 
   // Debug-output
   console.log('Current config TAGS:', config.TAGS);
+  console.log('Current config IGNORE_TAGS:', config.IGNORE_TAGS);
   console.log('Current config PROMPT_TAGS:', config.PROMPT_TAGS);
   const version = configFile.PAPERLESS_AI_VERSION || ' ';
   res.render('settings', { 
@@ -4135,6 +4205,7 @@ router.post('/setup', express.json(), async (req, res) => {
       tokenLimit,
       responseTokens,
       tags,
+      ignoreTags,
       aiProcessedTag,
       aiTagName,
       usePromptTags,
@@ -4254,6 +4325,7 @@ router.post('/setup', express.json(), async (req, res) => {
       TOKEN_LIMIT: tokenLimit || 128000,
       RESPONSE_TOKENS: responseTokens || 1000,
       TAGS: normalizeArray(tags),
+      IGNORE_TAGS: normalizeArray(ignoreTags),
       ADD_AI_PROCESSED_TAG: aiProcessedTag || 'no',
       AI_PROCESSED_TAG_NAME: aiTagName || 'ai-processed',
       USE_PROMPT_TAGS: usePromptTags || 'no',
@@ -4543,6 +4615,7 @@ router.post('/settings', express.json(), async (req, res) => {
       tokenLimit,
       responseTokens,
       tags,
+      ignoreTags,
       aiProcessedTag,
       aiTagName,
       usePromptTags,
@@ -4587,6 +4660,7 @@ router.post('/settings', express.json(), async (req, res) => {
       TOKEN_LIMIT: process.env.TOKEN_LIMIT || 128000,
       RESPONSE_TOKENS: process.env.RESPONSE_TOKENS || 1000,
       TAGS: process.env.TAGS || '',
+      IGNORE_TAGS: process.env.IGNORE_TAGS || '',
       ADD_AI_PROCESSED_TAG: process.env.ADD_AI_PROCESSED_TAG || 'no',
       AI_PROCESSED_TAG_NAME: process.env.AI_PROCESSED_TAG_NAME || 'ai-processed',
       USE_PROMPT_TAGS: process.env.USE_PROMPT_TAGS || 'no',
@@ -4731,6 +4805,7 @@ router.post('/settings', express.json(), async (req, res) => {
     if (tokenLimit) updatedConfig.TOKEN_LIMIT = tokenLimit;
     if (responseTokens) updatedConfig.RESPONSE_TOKENS = responseTokens;
     if (tags !== undefined) updatedConfig.TAGS = normalizeArray(tags);
+    if (ignoreTags !== undefined) updatedConfig.IGNORE_TAGS = normalizeArray(ignoreTags);
     if (aiProcessedTag) updatedConfig.ADD_AI_PROCESSED_TAG = aiProcessedTag;
     if (aiTagName) updatedConfig.AI_PROCESSED_TAG_NAME = aiTagName;
     if (usePromptTags) updatedConfig.USE_PROMPT_TAGS = usePromptTags;
@@ -4949,8 +5024,6 @@ router.get('/dashboard/doc/:id', async (req, res) => {
   }
 });
 
-const mistralOcrService = require('../services/mistralOcrService');
-
 // ─── OCR Queue Routes ─────────────────────────────────────────────────────
 
 // Page: OCR Queue UI
@@ -5145,6 +5218,74 @@ router.post('/api/ocr/process-all', isAuthenticated, async (req, res) => {
   }
 
   res.end();
+});
+
+// API: Trigger AI-only analysis from existing OCR text (SSE)
+router.post('/api/ocr/analyze/:documentId', isAuthenticated, async (req, res) => {
+  const documentId = parseInt(req.params.documentId, 10);
+  if (isNaN(documentId)) {
+    return res.status(400).json({ success: false, error: 'Invalid document ID' });
+  }
+
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'X-Accel-Buffering': 'no',
+    'Connection': 'keep-alive'
+  });
+
+  const send = (data) => {
+    res.write(`data: ${JSON.stringify(data)}\n\n`);
+    if (res.flush) res.flush();
+  };
+
+  try {
+    const queueItem = await documentModel.getOcrQueueItem(documentId);
+    if (!queueItem) {
+      send({ step: 'error', message: 'Document not found in OCR queue.' });
+      return res.end();
+    }
+    if (!queueItem.ocr_text || !String(queueItem.ocr_text).trim()) {
+      send({ step: 'error', message: 'No OCR text available yet. Run OCR first.' });
+      return res.end();
+    }
+
+    await mistralOcrService.analyzeFromExistingOcrText(documentId, queueItem.ocr_text, (step, message, data) => {
+      send({ step, message, ...data });
+    });
+  } catch (error) {
+    send({ step: 'error', message: error.message });
+  }
+
+  res.end();
+});
+
+// API: Get OCR text for a queue item
+router.get('/api/ocr/queue/:documentId/text', isAuthenticated, async (req, res) => {
+  try {
+    const documentId = parseInt(req.params.documentId, 10);
+    if (isNaN(documentId)) {
+      return res.status(400).json({ success: false, error: 'Invalid document ID' });
+    }
+
+    const queueItem = await documentModel.getOcrQueueItem(documentId);
+    if (!queueItem) {
+      return res.status(404).json({ success: false, error: 'Document not found in OCR queue' });
+    }
+
+    return res.json({
+      success: true,
+      documentId,
+      title: queueItem.title || null,
+      status: queueItem.status,
+      reason: queueItem.reason,
+      hasOcrText: !!(queueItem.ocr_text && String(queueItem.ocr_text).trim()),
+      ocrText: queueItem.ocr_text || ''
+    });
+  } catch (error) {
+    console.error('[ERROR] GET /api/ocr/queue/:documentId/text:', error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
 });
 
 // API: Get OCR queue statistics

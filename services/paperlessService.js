@@ -13,6 +13,9 @@ class PaperlessService {
     this.customFieldCache = new Map();
     this.lastTagRefresh = 0;
     this._refreshPromise = null;
+    this._effectiveCountCache = null;
+    this._effectiveCountCacheTtlMs = 60 * 1000;
+    this._supportsTagsIdNone = null;
     // Dynamic cache lifetime from config (default: 5 minutes)
     // Lazy load to avoid circular dependency
     this._cacheTTL = null;
@@ -544,6 +547,23 @@ class PaperlessService {
     }
   }
 
+  async getDocumentCountByParams(params = {}) {
+    this.initialize();
+    try {
+      const response = await this.client.get('/documents/', {
+        params: {
+          count: true,
+          ...params
+        }
+      });
+
+      return Number(response?.data?.count || 0);
+    } catch (error) {
+      console.error('[ERROR] fetching filtered document count:', error.message);
+      throw error;
+    }
+  }
+
   async listCorrespondentsNames() {
     this.initialize();
     let allCorrespondents = [];
@@ -666,8 +686,62 @@ class PaperlessService {
       return [];
     }
   }
+
+  parseTagList(value) {
+    if (!value) return [];
+    if (Array.isArray(value)) {
+      return [...new Set(value.map(tag => `${tag}`.trim()).filter(Boolean))];
+    }
+    if (typeof value === 'string') {
+      return [...new Set(value.split(',').map(tag => tag.trim()).filter(Boolean))];
+    }
+    return [];
+  }
+
+  async resolveTagIdsByName(tagNames) {
+    const normalizedTagNames = this.parseTagList(tagNames);
+    if (normalizedTagNames.length === 0) {
+      return [];
+    }
+
+    await this.ensureTagCache();
+    const resolvedTagIds = new Set();
+
+    for (const tagName of normalizedTagNames) {
+      const tag = await this.findExistingTag(tagName);
+      if (tag && Number.isInteger(Number(tag.id))) {
+        resolvedTagIds.add(Number(tag.id));
+      }
+    }
+
+    return [...resolvedTagIds];
+  }
+
+  filterDocumentsByExcludedTagIds(documents, excludedTagIds) {
+    if (!Array.isArray(documents) || documents.length === 0 || excludedTagIds.length === 0) {
+      return documents;
+    }
+
+    const excludedTagSet = new Set(excludedTagIds.map(id => Number(id)).filter(Number.isInteger));
+    if (excludedTagSet.size === 0) {
+      return documents;
+    }
+
+    return documents.filter(document => {
+      if (!Array.isArray(document.tags) || document.tags.length === 0) {
+        return true;
+      }
+
+      const hasExcludedTag = document.tags.some(tag => {
+        const normalizedTagId = typeof tag === 'object' ? Number(tag?.id) : Number(tag);
+        return Number.isInteger(normalizedTagId) && excludedTagSet.has(normalizedTagId);
+      });
+
+      return !hasExcludedTag;
+    });
+  }
   
-  async getAllDocuments() {
+  async getAllDocuments(options = {}) {
     this.initialize();
     if (!this.client) {
       console.error('[DEBUG] Client not initialized');
@@ -678,32 +752,35 @@ class PaperlessService {
     let page = 1;
     let hasMore = true;
     const shouldFilterByTags = process.env.PROCESS_PREDEFINED_DOCUMENTS === 'yes';
-    let tagIds = [];
+    const includeTagNames = this.parseTagList(process.env.TAGS);
+    const excludeTagNames = this.parseTagList(process.env.IGNORE_TAGS);
+    let includeTagIds = [];
+    let excludeTagIds = [];
 
-    // Vorverarbeitung der Tags, wenn Filter aktiv ist
+    // Vorverarbeitung der Include-Tags, wenn Filter aktiv ist
     if (shouldFilterByTags) {
-      if (!process.env.TAGS) {
+      if (includeTagNames.length === 0) {
         console.warn('[DEBUG] PROCESS_PREDEFINED_DOCUMENTS is set to yes but no TAGS are defined');
         return [];
       }
-      
-      // Hole die Tag-IDs für die definierten Tags
-      const tagNames = process.env.TAGS.split(',').map(tag => tag.trim());
-      await this.ensureTagCache();
-      
-      for (const tagName of tagNames) {
-        const tag = await this.findExistingTag(tagName);
-        if (tag) {
-          tagIds.push(tag.id);
-        }
-      }
-      
-      if (tagIds.length === 0) {
+
+      includeTagIds = await this.resolveTagIdsByName(includeTagNames);
+
+      if (includeTagIds.length === 0) {
         console.warn('[DEBUG] None of the specified tags were found');
         return [];
       }
-      
-      console.log('[DEBUG] Filtering documents for tag IDs:', tagIds);
+
+      console.log('[DEBUG] Filtering documents for include tag IDs:', includeTagIds);
+    }
+
+    if (excludeTagNames.length > 0) {
+      excludeTagIds = await this.resolveTagIdsByName(excludeTagNames);
+      if (excludeTagIds.length === 0) {
+        console.warn('[DEBUG] IGNORE_TAGS configured but no matching tags were found');
+      } else {
+        console.log('[DEBUG] Excluding documents with tag IDs:', excludeTagIds);
+      }
     }
 
     while (hasMore) {
@@ -711,16 +788,12 @@ class PaperlessService {
         const params = {
           page,
           page_size: 100,
-          fields: 'id,title,created,created_date,added,tags,correspondent'
+          fields: options.fields || 'id,title,created,created_date,added,tags,correspondent'
         };
 
         // Füge Tag-Filter hinzu, wenn Tags definiert sind
-        if (shouldFilterByTags && tagIds.length > 0) {
-          // Füge jeden Tag-ID als separaten Parameter hinzu
-          tagIds.forEach(id => {
-            // Verwende tags__id__in für multiple Tag-Filterung
-            params.tags__id__in = tagIds.join(',');
-          });
+        if (shouldFilterByTags && includeTagIds.length > 0) {
+          params.tags__id__in = includeTagIds.join(',');
         }
 
         const response = await this.client.get('/documents/', { params });
@@ -751,9 +824,99 @@ class PaperlessService {
       }
     }
 
-    console.log(`[DEBUG] Finished fetching. Found ${documents.length} documents.`);
-    return documents;
+    const filteredDocuments = this.filterDocumentsByExcludedTagIds(documents, excludeTagIds);
+    if (excludeTagIds.length > 0) {
+      console.log(
+        `[DEBUG] Exclude filter removed ${documents.length - filteredDocuments.length} documents. ` +
+        `[DEBUG] Remaining: ${filteredDocuments.length}`
+      );
+    }
+
+    console.log(`[DEBUG] Finished fetching. Found ${filteredDocuments.length} documents after filtering.`);
+    return filteredDocuments;
 }
+
+  async getEffectiveDocumentCount() {
+    const shouldFilterByTags = process.env.PROCESS_PREDEFINED_DOCUMENTS === 'yes';
+    const includeTagNames = this.parseTagList(process.env.TAGS);
+    const excludeTagNames = this.parseTagList(process.env.IGNORE_TAGS);
+    const cacheKey = JSON.stringify({
+      shouldFilterByTags,
+      includeTagNames,
+      excludeTagNames
+    });
+
+    if (
+      this._effectiveCountCache &&
+      this._effectiveCountCache.key === cacheKey &&
+      this._effectiveCountCache.expiresAt > Date.now()
+    ) {
+      return this._effectiveCountCache.count;
+    }
+
+    let includeTagIds = [];
+    let excludeTagIds = [];
+
+    if (shouldFilterByTags) {
+      if (includeTagNames.length === 0) {
+        return 0;
+      }
+
+      includeTagIds = await this.resolveTagIdsByName(includeTagNames);
+      if (includeTagIds.length === 0) {
+        return 0;
+      }
+    }
+
+    if (excludeTagNames.length > 0) {
+      excludeTagIds = await this.resolveTagIdsByName(excludeTagNames);
+    }
+
+    const baseCountParams = {};
+    if (shouldFilterByTags && includeTagIds.length > 0) {
+      baseCountParams.tags__id__in = includeTagIds.join(',');
+    }
+
+    try {
+      let effectiveCount;
+
+      if (excludeTagIds.length > 0 && this._supportsTagsIdNone !== false) {
+        try {
+          effectiveCount = await this.getDocumentCountByParams({
+            ...baseCountParams,
+            tags__id__none: excludeTagIds.join(',')
+          });
+          this._supportsTagsIdNone = true;
+        } catch (error) {
+          if (error?.response?.status === 400) {
+            this._supportsTagsIdNone = false;
+          } else {
+            throw error;
+          }
+        }
+      }
+
+      if (typeof effectiveCount !== 'number') {
+        if (excludeTagIds.length === 0) {
+          effectiveCount = await this.getDocumentCountByParams(baseCountParams);
+        } else {
+          const processableDocuments = await this.getAllDocuments({ fields: 'id,tags' });
+          effectiveCount = processableDocuments.length;
+        }
+      }
+
+      this._effectiveCountCache = {
+        key: cacheKey,
+        count: effectiveCount,
+        expiresAt: Date.now() + this._effectiveCountCacheTtlMs
+      };
+
+      return effectiveCount;
+    } catch (error) {
+      console.error('[ERROR] fetching effective document count:', error.message);
+      return 0;
+    }
+  }
 
   async getAllDocumentIds() {
     /**

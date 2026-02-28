@@ -437,6 +437,33 @@
                                                 <input type="hidden" id="tags" name="tags" value="<%= Array.isArray(config.TAGS) ? config.TAGS.join(',') : '' %>">
                                             </div>
                                         </div>
+
+                                        <div class="form-group">
+                                            <label for="ignoreTagInput">Ignore Tags</label>
+                                            <div class="tag-input-container">
+                                                <input type="text"
+                                                    id="ignoreTagInput"
+                                                    class="modern-input"
+                                                    placeholder="Enter a tag to ignore and press Enter">
+                                                <button type="button"
+                                                        class="material-button add-ignore-tag-btn">
+                                                    <i class="fas fa-plus"></i>
+                                                    Add
+                                                </button>
+                                            </div>
+                                            <div id="ignoreTagsContainer" class="tags-container">
+                                                <% if (config.IGNORE_TAGS && Array.isArray(config.IGNORE_TAGS) && config.IGNORE_TAGS.length > 0) { %>
+                                                    <% config.IGNORE_TAGS.forEach(tag => { %>
+                                                        <div class="modern-tag fade-in">
+                                                            <span><%= tag %></span>
+                                                            <button type="button"><i class="fas fa-times"></i></button>
+                                                        </div>
+                                                    <% }); %>
+                                                <% } %>
+                                            </div>
+                                            <input type="hidden" id="ignoreTags" name="ignoreTags" value="<%= Array.isArray(config.IGNORE_TAGS) ? config.IGNORE_TAGS.join(',') : '' %>">
+                                            <p class="help-text">Documents with these tags are excluded from regular scans and dashboard totals.</p>
+                                        </div>
                                         
                                         <!-- AI Tag identification -->
                                         <hr/>

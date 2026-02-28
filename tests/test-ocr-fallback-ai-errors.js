@@ -9,7 +9,7 @@
  */
 
 const assert = require('assert');
-const { shouldQueueForOcrOnAiError } = require('../services/serviceUtils');
+const { shouldQueueForOcrOnAiError, classifyOcrQueueReasonFromAiError } = require('../services/serviceUtils');
 
 function run() {
   const positiveCases = [
@@ -35,6 +35,35 @@ function run() {
     const result = shouldQueueForOcrOnAiError(message);
     console.log(`✅ should queue: "${message}" -> ${result}`);
     assert.strictEqual(result, true, `Expected TRUE for message: ${message}`);
+  }
+
+  const reasonCases = [
+    {
+      message: 'Insufficient content for AI analysis',
+      expectedReason: 'ai_insufficient_content'
+    },
+    {
+      message: 'Invalid JSON response from API',
+      expectedReason: 'ai_invalid_json'
+    },
+    {
+      message: 'Invalid response structure: missing tags array or correspondent string',
+      expectedReason: 'ai_invalid_response_structure'
+    },
+    {
+      message: 'Invalid API response structure',
+      expectedReason: 'ai_invalid_api_response_structure'
+    },
+    {
+      message: 'Some unknown AI parsing error',
+      expectedReason: 'ai_failed_unknown'
+    }
+  ];
+
+  for (const { message, expectedReason } of reasonCases) {
+    const reason = classifyOcrQueueReasonFromAiError(message);
+    console.log(`✅ reason classify: "${message}" -> ${reason}`);
+    assert.strictEqual(reason, expectedReason, `Expected reason ${expectedReason} for message: ${message}`);
   }
 
   for (const message of negativeCases) {

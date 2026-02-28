@@ -835,5 +835,23 @@ async getCurrentProcessingStatus() {
       console.error('[ERROR] getting OCR queue count:', error);
       return 0;
     }
+  },
+
+  async getOcrFailedCount() {
+    try {
+      return db.prepare("SELECT COUNT(*) as count FROM ocr_queue WHERE status = 'failed'").get().count;
+    } catch (error) {
+      console.error('[ERROR] getting OCR failed count:', error);
+      return 0;
+    }
+  },
+
+  async getFailedProcessingCount() {
+    try {
+      return db.prepare("SELECT COUNT(*) as count FROM processing_status WHERE status = 'failed'").get().count;
+    } catch (error) {
+      console.error('[ERROR] getting processing failed count:', error);
+      return 0;
+    }
   }
 };

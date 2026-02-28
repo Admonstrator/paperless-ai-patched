@@ -98,6 +98,13 @@ class ChartManager {
 }
 
 class DashboardStatsLoader {
+    setLoadingState(isLoading) {
+        const indicator = document.getElementById('dashboardLazyLoadIndicator');
+        if (!indicator) return;
+
+        indicator.classList.toggle('hidden', !isLoading);
+    }
+
     formatNumber(value) {
         return Number(value || 0).toLocaleString();
     }
@@ -157,6 +164,7 @@ class DashboardStatsLoader {
     }
 
     async load() {
+        this.setLoadingState(true);
         try {
             const response = await fetch('/api/dashboard/stats');
             if (!response.ok) {
@@ -181,6 +189,8 @@ class DashboardStatsLoader {
             this.updateCharts(payload);
         } catch (error) {
             console.error('Error loading dashboard stats:', error);
+        } finally {
+            this.setLoadingState(false);
         }
     }
 }

@@ -203,6 +203,23 @@ const MIGRATIONS = [
         )
       `);
     }
+  },
+  {
+    version: 4,
+    description: 'Create failed_documents table for terminally failed processing items',
+    up: (database) => {
+      database.exec(`
+        CREATE TABLE IF NOT EXISTS failed_documents (
+          id INTEGER PRIMARY KEY,
+          document_id INTEGER UNIQUE,
+          title TEXT,
+          failed_reason TEXT,
+          source TEXT DEFAULT 'ai',
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+    }
   }
 ];
 
@@ -852,6 +869,76 @@ async getCurrentProcessingStatus() {
     } catch (error) {
       console.error('[ERROR] getting processing failed count:', error);
       return 0;
+    }
+  },
+
+  async addFailedDocument(documentId, title, failedReason = 'unknown_failure', source = 'ai') {
+    try {
+      const result = db.prepare(`
+        INSERT INTO failed_documents (document_id, title, failed_reason, source)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(document_id) DO UPDATE SET
+          title = excluded.title,
+          failed_reason = excluded.failed_reason,
+          source = excluded.source,
+          updated_at = CURRENT_TIMESTAMP
+      `).run(documentId, title, failedReason, source);
+      return result.changes > 0;
+    } catch (error) {
+      console.error('[ERROR] adding failed document:', error);
+      return false;
+    }
+  },
+
+  async isDocumentFailed(documentId) {
+    try {
+      const row = db.prepare('SELECT 1 FROM failed_documents WHERE document_id = ?').get(documentId);
+      return !!row;
+    } catch (error) {
+      console.error('[ERROR] checking failed document:', error);
+      return false;
+    }
+  },
+
+  async getFailedDocumentsPaginated({ search = '', limit = 10, offset = 0 }) {
+    try {
+      const searchPattern = search ? `%${search}%` : '%';
+      const docs = db.prepare(`
+        SELECT * FROM failed_documents
+        WHERE (title LIKE ? OR CAST(document_id AS TEXT) LIKE ? OR failed_reason LIKE ? OR source LIKE ?)
+        ORDER BY updated_at DESC
+        LIMIT ? OFFSET ?
+      `).all(searchPattern, searchPattern, searchPattern, searchPattern, limit, offset);
+
+      const countRow = db.prepare(`
+        SELECT COUNT(*) as count FROM failed_documents
+        WHERE (title LIKE ? OR CAST(document_id AS TEXT) LIKE ? OR failed_reason LIKE ? OR source LIKE ?)
+      `).get(searchPattern, searchPattern, searchPattern, searchPattern);
+
+      return { docs, total: countRow.count };
+    } catch (error) {
+      console.error('[ERROR] getting paginated failed documents:', error);
+      return { docs: [], total: 0 };
+    }
+  },
+
+  async resetFailedDocument(documentId) {
+    try {
+      const result = db.prepare('DELETE FROM failed_documents WHERE document_id = ?').run(documentId);
+      return result.changes > 0;
+    } catch (error) {
+      console.error('[ERROR] resetting failed document:', error);
+      return false;
+    }
+  },
+
+  async clearProcessingStatusByDocumentId(documentId) {
+    try {
+      const result = clearProcessingStatus.run(documentId);
+      return result.changes > 0;
+    } catch (error) {
+      console.error('[ERROR] clearing processing status for document:', error);
+      return false;
     }
   }
 };

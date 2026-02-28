@@ -133,6 +133,16 @@ class MistralOcrService {
       if (progressCallback) progressCallback(step, message, data);
     };
 
+    const queueItem = await documentModel.getOcrQueueItem(documentId);
+    const fallbackTitle = queueItem?.title || `Document ${documentId}`;
+    let terminalFailureRecorded = false;
+
+    const recordTerminalFailure = async (reason, source = 'ocr') => {
+      if (terminalFailureRecorded) return;
+      await documentModel.addFailedDocument(documentId, fallbackTitle, reason, source);
+      terminalFailureRecorded = true;
+    };
+
     await documentModel.updateOcrQueueStatus(documentId, 'processing');
 
     try {
@@ -178,8 +188,14 @@ class MistralOcrService {
           aiResult = await this._runAiAnalysis(documentId, ocrText);
           emit('ai', 'AI analysis complete.');
         } catch (aiErr) {
-          emit('ai', `AI analysis failed: ${aiErr.message}. OCR text is still available.`);
+          await recordTerminalFailure('ai_failed_after_ocr', 'ai');
+          await documentModel.updateOcrQueueStatus(documentId, 'failed', ocrText);
+          throw new Error(`AI analysis failed after OCR: ${aiErr.message}`);
         }
+      }
+
+      if (!autoAnalyze || aiResult) {
+        await documentModel.resetFailedDocument(documentId);
       }
 
       emit('done', 'Processing finished successfully.');
@@ -187,6 +203,7 @@ class MistralOcrService {
 
     } catch (error) {
       await documentModel.updateOcrQueueStatus(documentId, 'failed');
+      await recordTerminalFailure('ocr_failed', 'ocr');
       emit('error', error.message);
       throw error;
     }
@@ -213,10 +230,14 @@ class MistralOcrService {
     emit('ai', `Starting AI analysis for document ${documentId} using stored OCR text…`);
     try {
       const aiResult = await this._runAiAnalysis(documentId, ocrText);
+      await documentModel.resetFailedDocument(documentId);
       emit('ai', 'AI analysis complete.');
       emit('done', 'AI-only processing finished successfully.');
       return aiResult;
     } catch (error) {
+      const queueItem = await documentModel.getOcrQueueItem(documentId);
+      const fallbackTitle = queueItem?.title || `Document ${documentId}`;
+      await documentModel.addFailedDocument(documentId, fallbackTitle, 'ai_failed_after_ocr', 'ai');
       emit('error', `AI analysis failed: ${error.message}`);
       throw error;
     }

@@ -2063,6 +2063,13 @@ try {
 async function processDocument(doc, existingTags, existingCorrespondentList, existingDocumentTypesList, ownUserId, customPrompt = null) {
   const isProcessed = await documentModel.isDocumentProcessed(doc.id);
   if (isProcessed) return null;
+
+  const isFailed = await documentModel.isDocumentFailed(doc.id);
+  if (isFailed) {
+    console.log(`[DEBUG] Document ${doc.id} is marked as terminally failed, skipping until reset`);
+    return null;
+  }
+
   await documentModel.setProcessingStatus(doc.id, doc.title, 'processing');
 
   const documentEditable = await paperlessService.getPermissionOfDocument(doc.id);
@@ -2086,6 +2093,9 @@ async function processDocument(doc, existingTags, existingCorrespondentList, exi
       if (added) {
         console.log(`[OCR] Document ${doc.id} queued for Mistral OCR (short_content)`);
       }
+    } else {
+      await documentModel.setProcessingStatus(doc.id, doc.title, 'failed');
+      await documentModel.addFailedDocument(doc.id, doc.title, 'insufficient_content_lt_10', 'ai');
     }
     return null;
   }
@@ -2124,12 +2134,22 @@ async function processDocument(doc, existingTags, existingCorrespondentList, exi
   }
   console.log('Repsonse from AI service:', analysis);
   if (analysis.error) {
+    let queuedForOcr = false;
     if (mistralOcrService.isEnabled() && shouldQueueForOcrOnAiError(analysis.error)) {
       const queueReason = classifyOcrQueueReasonFromAiError(analysis.error);
       const added = await documentModel.addToOcrQueue(doc.id, doc.title, queueReason);
       if (added) {
         console.log(`[OCR] Document ${doc.id} queued for Mistral OCR (ai_failed: ${analysis.error})`);
       }
+      queuedForOcr = true;
+    }
+
+    if (!mistralOcrService.isEnabled()) {
+      await documentModel.setProcessingStatus(doc.id, doc.title, 'failed');
+      await documentModel.addFailedDocument(doc.id, doc.title, 'ai_failed_ocr_disabled', 'ai');
+    } else if (!queuedForOcr) {
+      await documentModel.setProcessingStatus(doc.id, doc.title, 'failed');
+      await documentModel.addFailedDocument(doc.id, doc.title, 'ai_failed_without_ocr_fallback', 'ai');
     }
     throw new Error(`[ERROR] Document analysis failed: ${analysis.error}`);
   }
@@ -5292,17 +5312,70 @@ router.get('/api/ocr/queue/:documentId/text', isAuthenticated, async (req, res) 
 router.get('/api/ocr/stats', isAuthenticated, async (req, res) => {
   try {
     const allItems = await documentModel.getOcrQueue();
+    const failedDocs = await documentModel.getFailedDocumentsPaginated({ limit: 1, offset: 0 });
     const stats = {
       pending: allItems.filter(i => i.status === 'pending').length,
       processing: allItems.filter(i => i.status === 'processing').length,
       done: allItems.filter(i => i.status === 'done').length,
       failed: allItems.filter(i => i.status === 'failed').length,
+      terminalFailed: failedDocs.total || 0,
       total: allItems.length,
       ocrEnabled: mistralOcrService.isEnabled()
     };
     return res.json({ success: true, stats });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// API: Get paginated terminally failed documents queue
+router.get('/api/failed/queue', isAuthenticated, async (req, res) => {
+  try {
+    const start = parseInt(req.query.start || '0', 10);
+    const length = parseInt(req.query.length || '25', 10);
+    const search = req.query.search || '';
+
+    const { docs, total } = await documentModel.getFailedDocumentsPaginated({
+      search,
+      limit: length,
+      offset: start
+    });
+
+    const paperlessUrl = (process.env.PAPERLESS_API_URL || '').replace('/api', '');
+
+    return res.json({
+      success: true,
+      data: docs,
+      recordsTotal: total,
+      recordsFiltered: total,
+      paperlessUrl
+    });
+  } catch (error) {
+    console.error('[ERROR] GET /api/failed/queue:', error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// API: Reset terminal failure state for a document
+router.post('/api/failed/reset/:documentId', isAuthenticated, async (req, res) => {
+  try {
+    const documentId = parseInt(req.params.documentId, 10);
+    if (isNaN(documentId)) {
+      return res.status(400).json({ success: false, error: 'Invalid document ID' });
+    }
+
+    const reset = await documentModel.resetFailedDocument(documentId);
+    await documentModel.clearProcessingStatusByDocumentId(documentId);
+
+    return res.json({
+      success: reset,
+      message: reset
+        ? `Document ${documentId} reset. It can be scanned again.`
+        : `Document ${documentId} was not in failed queue.`
+    });
+  } catch (error) {
+    console.error('[ERROR] POST /api/failed/reset/:documentId:', error);
+    return res.status(500).json({ success: false, error: error.message });
   }
 });
 

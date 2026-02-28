@@ -13,6 +13,9 @@ class PaperlessService {
     this.customFieldCache = new Map();
     this.lastTagRefresh = 0;
     this._refreshPromise = null;
+    this._effectiveCountCache = null;
+    this._effectiveCountCacheTtlMs = 60 * 1000;
+    this._supportsTagsIdNone = null;
     // Dynamic cache lifetime from config (default: 5 minutes)
     // Lazy load to avoid circular dependency
     this._cacheTTL = null;
@@ -544,6 +547,23 @@ class PaperlessService {
     }
   }
 
+  async getDocumentCountByParams(params = {}) {
+    this.initialize();
+    try {
+      const response = await this.client.get('/documents/', {
+        params: {
+          count: true,
+          ...params
+        }
+      });
+
+      return Number(response?.data?.count || 0);
+    } catch (error) {
+      console.error('[ERROR] fetching filtered document count:', error.message);
+      throw error;
+    }
+  }
+
   async listCorrespondentsNames() {
     this.initialize();
     let allCorrespondents = [];
@@ -817,8 +837,85 @@ class PaperlessService {
 }
 
   async getEffectiveDocumentCount() {
-    const processableDocuments = await this.getAllDocuments({ fields: 'id,tags' });
-    return processableDocuments.length;
+    const shouldFilterByTags = process.env.PROCESS_PREDEFINED_DOCUMENTS === 'yes';
+    const includeTagNames = this.parseTagList(process.env.TAGS);
+    const excludeTagNames = this.parseTagList(process.env.IGNORE_TAGS);
+    const cacheKey = JSON.stringify({
+      shouldFilterByTags,
+      includeTagNames,
+      excludeTagNames
+    });
+
+    if (
+      this._effectiveCountCache &&
+      this._effectiveCountCache.key === cacheKey &&
+      this._effectiveCountCache.expiresAt > Date.now()
+    ) {
+      return this._effectiveCountCache.count;
+    }
+
+    let includeTagIds = [];
+    let excludeTagIds = [];
+
+    if (shouldFilterByTags) {
+      if (includeTagNames.length === 0) {
+        return 0;
+      }
+
+      includeTagIds = await this.resolveTagIdsByName(includeTagNames);
+      if (includeTagIds.length === 0) {
+        return 0;
+      }
+    }
+
+    if (excludeTagNames.length > 0) {
+      excludeTagIds = await this.resolveTagIdsByName(excludeTagNames);
+    }
+
+    const baseCountParams = {};
+    if (shouldFilterByTags && includeTagIds.length > 0) {
+      baseCountParams.tags__id__in = includeTagIds.join(',');
+    }
+
+    try {
+      let effectiveCount;
+
+      if (excludeTagIds.length > 0 && this._supportsTagsIdNone !== false) {
+        try {
+          effectiveCount = await this.getDocumentCountByParams({
+            ...baseCountParams,
+            tags__id__none: excludeTagIds.join(',')
+          });
+          this._supportsTagsIdNone = true;
+        } catch (error) {
+          if (error?.response?.status === 400) {
+            this._supportsTagsIdNone = false;
+          } else {
+            throw error;
+          }
+        }
+      }
+
+      if (typeof effectiveCount !== 'number') {
+        if (excludeTagIds.length === 0) {
+          effectiveCount = await this.getDocumentCountByParams(baseCountParams);
+        } else {
+          const processableDocuments = await this.getAllDocuments({ fields: 'id,tags' });
+          effectiveCount = processableDocuments.length;
+        }
+      }
+
+      this._effectiveCountCache = {
+        key: cacheKey,
+        count: effectiveCount,
+        expiresAt: Date.now() + this._effectiveCountCacheTtlMs
+      };
+
+      return effectiveCount;
+    } catch (error) {
+      console.error('[ERROR] fetching effective document count:', error.message);
+      return 0;
+    }
   }
 
   async getAllDocumentIds() {

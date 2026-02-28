@@ -3127,54 +3127,91 @@ router.post('/api/webhook/document', async (req, res) => {
  *               $ref: '#/components/schemas/Error'
  */
 router.get('/dashboard', async (req, res) => {
-  const [
-    tagCount,
-    correspondentCount,
-    documentCount,
-    rawProcessedDocumentCount,
-    metrics,
-    processingTimeStats,
-    tokenDistribution,
-    documentTypes
-  ] = await Promise.all([
-    paperlessService.getTagCount(),
-    paperlessService.getCorrespondentCount(),
-    paperlessService.getEffectiveDocumentCount(),
-    documentModel.getProcessedDocumentsCount(),
-    documentModel.getMetrics(),
-    documentModel.getProcessingTimeStats(),
-    documentModel.getTokenDistribution(),
-    documentModel.getDocumentTypeStats()
-  ]);
-
-  const processedDocumentCount = Math.min(rawProcessedDocumentCount, documentCount);
-  
-  const averagePromptTokens = metrics.length > 0 ? Math.round(metrics.reduce((acc, cur) => acc + cur.promptTokens, 0) / metrics.length) : 0;
-  const averageCompletionTokens = metrics.length > 0 ? Math.round(metrics.reduce((acc, cur) => acc + cur.completionTokens, 0) / metrics.length) : 0;
-  const averageTotalTokens = metrics.length > 0 ? Math.round(metrics.reduce((acc, cur) => acc + cur.totalTokens, 0) / metrics.length) : 0;
-  const tokensOverall = metrics.length > 0 ? metrics.reduce((acc, cur) => acc + cur.totalTokens, 0) : 0;
-  
   const version = configFile.PAPERLESS_AI_VERSION || ' ';
-  
+
   res.render('dashboard', { 
     paperless_data: { 
-      tagCount, 
-      correspondentCount, 
-      documentCount, 
-      processedDocumentCount,
-      processingTimeStats,
-      tokenDistribution,
-      documentTypes
+      tagCount: 0,
+      correspondentCount: 0,
+      documentCount: 0,
+      processedDocumentCount: 0,
+      ocrNeededCount: 0,
+      failedCount: 0,
+      processingTimeStats: [],
+      tokenDistribution: [],
+      documentTypes: []
     }, 
     openai_data: { 
-      averagePromptTokens, 
-      averageCompletionTokens, 
-      averageTotalTokens, 
-      tokensOverall 
+      averagePromptTokens: 0,
+      averageCompletionTokens: 0,
+      averageTotalTokens: 0,
+      tokensOverall: 0
     }, 
     version,
     ragEnabled: process.env.RAG_SERVICE_ENABLED === 'true'
   });
+});
+
+router.get('/api/dashboard/stats', async (req, res) => {
+  try {
+    const [
+      tagCount,
+      correspondentCount,
+      documentCount,
+      rawProcessedDocumentCount,
+      ocrNeededCount,
+      ocrFailedCount,
+      processingFailedCount,
+      metrics,
+      processingTimeStats,
+      tokenDistribution,
+      documentTypes
+    ] = await Promise.all([
+      paperlessService.getTagCount(),
+      paperlessService.getCorrespondentCount(),
+      paperlessService.getEffectiveDocumentCount(),
+      documentModel.getProcessedDocumentsCount(),
+      documentModel.getOcrQueueCount(),
+      documentModel.getOcrFailedCount(),
+      documentModel.getFailedProcessingCount(),
+      documentModel.getMetrics(),
+      documentModel.getProcessingTimeStats(),
+      documentModel.getTokenDistribution(),
+      documentModel.getDocumentTypeStats()
+    ]);
+
+    const processedDocumentCount = Math.min(rawProcessedDocumentCount, documentCount);
+    const failedCount = ocrFailedCount + processingFailedCount;
+
+    const averagePromptTokens = metrics.length > 0 ? Math.round(metrics.reduce((acc, cur) => acc + cur.promptTokens, 0) / metrics.length) : 0;
+    const averageCompletionTokens = metrics.length > 0 ? Math.round(metrics.reduce((acc, cur) => acc + cur.completionTokens, 0) / metrics.length) : 0;
+    const averageTotalTokens = metrics.length > 0 ? Math.round(metrics.reduce((acc, cur) => acc + cur.totalTokens, 0) / metrics.length) : 0;
+    const tokensOverall = metrics.length > 0 ? metrics.reduce((acc, cur) => acc + cur.totalTokens, 0) : 0;
+
+    res.json({
+      success: true,
+      paperless_data: {
+        tagCount,
+        correspondentCount,
+        documentCount,
+        processedDocumentCount,
+        ocrNeededCount,
+        failedCount,
+        processingTimeStats,
+        tokenDistribution,
+        documentTypes
+      },
+      openai_data: {
+        averagePromptTokens,
+        averageCompletionTokens,
+        averageTotalTokens,
+        tokensOverall
+      }
+    });
+  } catch (error) {
+    console.error('[ERROR] loading dashboard stats:', error);
+    res.status(500).json({ success: false, error: 'Failed to load dashboard stats' });
+  }
 });
 
 /**

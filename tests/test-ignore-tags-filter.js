@@ -11,12 +11,29 @@ function createMockClient(documents) {
         .map(id => Number(id))
         .filter(Number.isInteger);
 
+      const excludeTagIds = String(options.params?.tags__id__none || '')
+        .split(',')
+        .map(id => id.trim())
+        .filter(Boolean)
+        .map(id => Number(id))
+        .filter(Number.isInteger);
+
       let filteredDocuments = documents;
       if (includeTagIds.length > 0) {
         const includeSet = new Set(includeTagIds);
         filteredDocuments = documents.filter(doc =>
           Array.isArray(doc.tags) && doc.tags.some(tagId => includeSet.has(Number(tagId)))
         );
+      }
+
+      if (excludeTagIds.length > 0) {
+        const excludeSet = new Set(excludeTagIds);
+        filteredDocuments = filteredDocuments.filter(doc => {
+          if (!Array.isArray(doc.tags) || doc.tags.length === 0) {
+            return true;
+          }
+          return !doc.tags.some(tagId => excludeSet.has(Number(tagId)));
+        });
       }
 
       if (options.params?.count) {

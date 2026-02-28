@@ -141,6 +141,15 @@
                 ? `<button class="px-3 py-1 bg-blue-500 text-white rounded-lg text-xs hover:bg-blue-600 transition-colors process-btn" data-id="${item.document_id}" title="Send to Mistral OCR"><i class="fas fa-play"></i> Process</button>`
                 : '';
 
+            const hasOcrText = !!(item.ocr_text && String(item.ocr_text).trim());
+            const analyzeBtn = (item.status === 'done' && hasOcrText)
+                ? `<button class="px-3 py-1 bg-violet-500 text-white rounded-lg text-xs hover:bg-violet-600 transition-colors analyze-btn" data-id="${item.document_id}" title="Start AI analysis using existing OCR text"><i class="fas fa-robot"></i> Jetzt AI analysieren</button>`
+                : '';
+
+            const infoBtn = hasOcrText
+                ? `<button class="px-3 py-1 bg-gray-100 text-gray-700 rounded-lg text-xs hover:bg-gray-200 transition-colors info-btn" data-id="${item.document_id}" title="Show OCR output"><i class="fas fa-circle-info"></i></button>`
+                : '';
+
             const removeBtn = item.status !== 'processing'
                 ? `<button class="px-3 py-1 bg-red-100 text-red-600 rounded-lg text-xs hover:bg-red-200 transition-colors remove-btn" data-id="${item.document_id}" title="Remove from queue"><i class="fas fa-trash"></i></button>`
                 : '';
@@ -154,6 +163,8 @@
                 <td class="py-3 px-4">
                     <div class="flex gap-2">
                         ${processBtn}
+                        ${analyzeBtn}
+                        ${infoBtn}
                         ${removeBtn}
                     </div>
                 </td>
@@ -164,6 +175,16 @@
         tableBody.querySelectorAll('.process-btn').forEach(btn => {
             btn.addEventListener('click', function () {
                 processSingle(parseInt(this.dataset.id, 10));
+            });
+        });
+        tableBody.querySelectorAll('.analyze-btn').forEach(btn => {
+            btn.addEventListener('click', function () {
+                analyzeSingle(parseInt(this.dataset.id, 10));
+            });
+        });
+        tableBody.querySelectorAll('.info-btn').forEach(btn => {
+            btn.addEventListener('click', function () {
+                showOcrInfo(parseInt(this.dataset.id, 10));
             });
         });
         tableBody.querySelectorAll('.remove-btn').forEach(btn => {
@@ -280,6 +301,48 @@
                 loadStats();
             }
         });
+    }
+
+    // ── AI only (existing OCR text) ───────────────────────────────────────
+    function analyzeSingle(documentId) {
+        openOverlay(`AI Analysis for Document #${documentId}…`);
+        fetchSSE(`/api/ocr/analyze/${documentId}`, {}, function (done) {
+            if (done) {
+                loadQueue();
+                loadStats();
+            }
+        });
+    }
+
+    // ── OCR output info ───────────────────────────────────────────────────
+    async function showOcrInfo(documentId) {
+        openOverlay(`OCR Output for Document #${documentId}`);
+        setProgress(100);
+        try {
+            const resp = await fetch(`/api/ocr/queue/${documentId}/text`);
+            const data = await resp.json();
+            if (!data.success) {
+                throw new Error(data.error || 'Could not load OCR output');
+            }
+
+            if (!data.hasOcrText) {
+                appendLog('error', 'No OCR text available for this document.');
+                finalizeOverlay(true);
+                return;
+            }
+
+            const infoHeader = `Status: ${data.status || 'unknown'} | Reason: ${data.reason || 'unknown'}`;
+            appendLog('done', infoHeader);
+            appendLog('progress', '────────────────────────────────────────');
+
+            const text = String(data.ocrText || '');
+            const preview = text.length > 12000 ? `${text.slice(0, 12000)}\n\n[... truncated ...]` : text;
+            appendLog('progress', preview);
+            finalizeOverlay();
+        } catch (error) {
+            appendLog('error', error.message);
+            finalizeOverlay(true);
+        }
     }
 
     // ── SSE via fetch (POST) ───────────────────────────────────────────────

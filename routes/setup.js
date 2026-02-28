@@ -5220,6 +5220,74 @@ router.post('/api/ocr/process-all', isAuthenticated, async (req, res) => {
   res.end();
 });
 
+// API: Trigger AI-only analysis from existing OCR text (SSE)
+router.post('/api/ocr/analyze/:documentId', isAuthenticated, async (req, res) => {
+  const documentId = parseInt(req.params.documentId, 10);
+  if (isNaN(documentId)) {
+    return res.status(400).json({ success: false, error: 'Invalid document ID' });
+  }
+
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'X-Accel-Buffering': 'no',
+    'Connection': 'keep-alive'
+  });
+
+  const send = (data) => {
+    res.write(`data: ${JSON.stringify(data)}\n\n`);
+    if (res.flush) res.flush();
+  };
+
+  try {
+    const queueItem = await documentModel.getOcrQueueItem(documentId);
+    if (!queueItem) {
+      send({ step: 'error', message: 'Document not found in OCR queue.' });
+      return res.end();
+    }
+    if (!queueItem.ocr_text || !String(queueItem.ocr_text).trim()) {
+      send({ step: 'error', message: 'No OCR text available yet. Run OCR first.' });
+      return res.end();
+    }
+
+    await mistralOcrService.analyzeFromExistingOcrText(documentId, queueItem.ocr_text, (step, message, data) => {
+      send({ step, message, ...data });
+    });
+  } catch (error) {
+    send({ step: 'error', message: error.message });
+  }
+
+  res.end();
+});
+
+// API: Get OCR text for a queue item
+router.get('/api/ocr/queue/:documentId/text', isAuthenticated, async (req, res) => {
+  try {
+    const documentId = parseInt(req.params.documentId, 10);
+    if (isNaN(documentId)) {
+      return res.status(400).json({ success: false, error: 'Invalid document ID' });
+    }
+
+    const queueItem = await documentModel.getOcrQueueItem(documentId);
+    if (!queueItem) {
+      return res.status(404).json({ success: false, error: 'Document not found in OCR queue' });
+    }
+
+    return res.json({
+      success: true,
+      documentId,
+      title: queueItem.title || null,
+      status: queueItem.status,
+      reason: queueItem.reason,
+      hasOcrText: !!(queueItem.ocr_text && String(queueItem.ocr_text).trim()),
+      ocrText: queueItem.ocr_text || ''
+    });
+  } catch (error) {
+    console.error('[ERROR] GET /api/ocr/queue/:documentId/text:', error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // API: Get OCR queue statistics
 router.get('/api/ocr/stats', isAuthenticated, async (req, res) => {
   try {

@@ -193,6 +193,36 @@ class MistralOcrService {
   }
 
   /**
+   * Run AI analysis only, using existing OCR text.
+   * Does not trigger any OCR download/API calls.
+   *
+   * @param {number} documentId
+   * @param {string} ocrText
+   * @param {Function} [progressCallback] - (step, message, data?) => void
+   * @returns {Promise<object>} AI analysis result
+   */
+  async analyzeFromExistingOcrText(documentId, ocrText, progressCallback = null) {
+    const emit = (step, message, data = {}) => {
+      if (progressCallback) progressCallback(step, message, data);
+    };
+
+    if (typeof ocrText !== 'string' || !ocrText.trim()) {
+      throw new Error('No OCR text available for AI analysis');
+    }
+
+    emit('ai', `Starting AI analysis for document ${documentId} using stored OCR text…`);
+    try {
+      const aiResult = await this._runAiAnalysis(documentId, ocrText);
+      emit('ai', 'AI analysis complete.');
+      emit('done', 'AI-only processing finished successfully.');
+      return aiResult;
+    } catch (error) {
+      emit('error', `AI analysis failed: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
    * Run AI analysis on a document using OCR text (instead of Paperless content).
    * Mirrors the processDocument / buildUpdateData / saveDocumentChanges flow
    * from server.js but accepts pre-extracted text.

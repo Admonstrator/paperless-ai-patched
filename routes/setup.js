@@ -25,6 +25,11 @@ const mistralOcrService = require('../services/mistralOcrService');
 const config = require('../config/config.js');
 require('dotenv').config({ path: '../data/.env' });
 
+function isChatEnabled() {
+  const ragEnabled = process.env.RAG_SERVICE_ENABLED === 'true';
+  return ragEnabled;
+}
+
 /**
  * Rate limiter for cache clearing operations
  * Prevents abuse of cache invalidation endpoints by limiting requests to 10 per 15 minutes per IP
@@ -598,7 +603,7 @@ router.get('/playground', protectApiRoute, async (req, res) => {
       paperlessUrl,
       version: configFile.PAPERLESS_AI_VERSION || ' ',
       ragEnabled: process.env.RAG_SERVICE_ENABLED === 'true',
-      chatEnabled: process.env.RAG_SERVICE_ENABLED === 'true'
+      chatEnabled: isChatEnabled()
     });
   } catch (error) {
     console.error('[ERRO] loading documents view:', error);
@@ -746,7 +751,7 @@ router.get('/chat', async (req, res) => {
       const {open} = req.query;
       const documents = await paperlessService.getDocuments();
       const version = configFile.PAPERLESS_AI_VERSION || ' ';
-      res.render('chat', { documents, open, version, ragEnabled: process.env.RAG_SERVICE_ENABLED === 'true', chatEnabled: process.env.RAG_SERVICE_ENABLED === 'true' });
+      res.render('chat', { documents, open, version, ragEnabled: process.env.RAG_SERVICE_ENABLED === 'true', chatEnabled: isChatEnabled() });
   } catch (error) {
     console.error('[ERRO] loading documents:', error);
     res.status(500).send('Error loading documents');
@@ -1084,7 +1089,7 @@ router.get('/history', async (req, res) => {
     res.render('history', {
       version: configFile.PAPERLESS_AI_VERSION,
       ragEnabled: process.env.RAG_SERVICE_ENABLED === 'true',
-      chatEnabled: process.env.RAG_SERVICE_ENABLED === 'true',
+      chatEnabled: isChatEnabled(),
       filters: {
         allTags: [],  // Will be loaded by JavaScript via /api/history/load-progress
         allCorrespondents: []  // Will be populated when DataTable loads
@@ -2689,7 +2694,7 @@ router.get('/manual', async (req, res) => {
     success: null,
     version,
     ragEnabled: process.env.RAG_SERVICE_ENABLED === 'true',
-    chatEnabled: process.env.RAG_SERVICE_ENABLED === 'true',
+    chatEnabled: isChatEnabled(),
     paperlessUrl: process.env.PAPERLESS_API_URL,
     paperlessToken: process.env.PAPERLESS_API_TOKEN,
     config: {}
@@ -3173,7 +3178,7 @@ router.get('/dashboard', async (req, res) => {
     }, 
     version,
     ragEnabled: process.env.RAG_SERVICE_ENABLED === 'true',
-    chatEnabled: process.env.RAG_SERVICE_ENABLED === 'true'
+    chatEnabled: isChatEnabled()
   });
 });
 
@@ -3365,7 +3370,7 @@ router.get('/settings', async (req, res) => {
   res.render('settings', { 
     version,
     ragEnabled: process.env.RAG_SERVICE_ENABLED === 'true',
-    chatEnabled: process.env.RAG_SERVICE_ENABLED === 'true',
+    chatEnabled: isChatEnabled(),
     config,
     success: isConfigured ? 'The application is already configured. You can update the configuration below.' : undefined,
     settingsError: showErrorCheckSettings ? 'Please check your settings. Something is not working correctly.' : undefined
@@ -5057,7 +5062,7 @@ router.get('/ocr', protectApiRoute, async (req, res) => {
     return res.render('ocr', {
       version: configFile.PAPERLESS_AI_VERSION || ' ',
       ragEnabled: process.env.RAG_SERVICE_ENABLED === 'true',
-      chatEnabled: process.env.RAG_SERVICE_ENABLED === 'true',
+      chatEnabled: isChatEnabled(),
       ocrEnabled: configFile.mistralOcr?.enabled === 'yes'
     });
   } catch (error) {
@@ -5072,7 +5077,7 @@ router.get('/failed', protectApiRoute, async (req, res) => {
     return res.render('failed', {
       version: configFile.PAPERLESS_AI_VERSION || ' ',
       ragEnabled: process.env.RAG_SERVICE_ENABLED === 'true',
-      chatEnabled: process.env.RAG_SERVICE_ENABLED === 'true'
+      chatEnabled: isChatEnabled()
     });
   } catch (error) {
     console.error('[ERROR] Failed page:', error);
@@ -5104,7 +5109,7 @@ router.get('/about', protectApiRoute, async (req, res) => {
       nodeEnv: process.env.NODE_ENV || 'production',
       aiProvider: configFile.aiProvider || process.env.AI_PROVIDER || 'openai',
       ragEnabled: process.env.RAG_SERVICE_ENABLED === 'true',
-      chatEnabled: process.env.RAG_SERVICE_ENABLED === 'true',
+      chatEnabled: isChatEnabled(),
       ocrEnabled: configFile.mistralOcr?.enabled === 'yes',
       serverTimeUtc: new Date().toISOString(),
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
@@ -5114,12 +5119,29 @@ router.get('/about', protectApiRoute, async (req, res) => {
     return res.render('about', {
       version: configFile.PAPERLESS_AI_VERSION || ' ',
       ragEnabled: process.env.RAG_SERVICE_ENABLED === 'true',
-      chatEnabled: process.env.RAG_SERVICE_ENABLED === 'true',
+      chatEnabled: isChatEnabled(),
       supportInfo
     });
   } catch (error) {
     console.error('[ERROR] About page:', error);
-    res.status(500).json({ success: false, error: error.message });
+    return res.status(500).render('about', {
+      version: configFile.PAPERLESS_AI_VERSION || ' ',
+      ragEnabled: process.env.RAG_SERVICE_ENABLED === 'true',
+      chatEnabled: isChatEnabled(),
+      supportInfo: {
+        appVersion: configFile.PAPERLESS_AI_VERSION || 'unknown',
+        nodeVersion: process.version,
+        platform: `${process.platform} (${process.arch})`,
+        nodeEnv: process.env.NODE_ENV || 'production',
+        aiProvider: configFile.aiProvider || process.env.AI_PROVIDER || 'openai',
+        ragEnabled: process.env.RAG_SERVICE_ENABLED === 'true',
+        chatEnabled: isChatEnabled(),
+        ocrEnabled: configFile.mistralOcr?.enabled === 'yes',
+        serverTimeUtc: new Date().toISOString(),
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+        uptime: 'unavailable'
+      }
+    });
   }
 });
 

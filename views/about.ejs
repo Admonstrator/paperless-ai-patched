@@ -6,15 +6,15 @@
     <title>About - Paperless-AI next</title>
     <script src="/vendor/tailwind/tailwindcss-3.4.16.js"></script>
     <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
-    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="/css/dashboard.css">
 </head>
 <body class="h-full">
-    <button id="themeToggle" class="theme-toggle">
-        <i class="fas fa-moon dark:fas fa-sun"></i>
+    <button id="themeToggle" class="theme-toggle" aria-label="Toggle theme">
+        <i id="themeToggleIcon" class="fas fa-moon"></i>
     </button>
 
     <div class="layout-container">
-        <button id="mobileMenuButton" class="mobile-menu-button">
+        <button id="mobileMenuButton" class="mobile-menu-button" aria-label="Open navigation menu">
             <i class="fas fa-bars"></i>
         </button>
         <div id="sidebarOverlay" class="sidebar-overlay"></div>
@@ -26,23 +26,7 @@
             </div>
 
             <nav class="sidebar-nav">
-                <ul>
-                    <li><a href="/dashboard" class="sidebar-link"><i class="fas fa-home"></i><span>Dashboard</span></a></li>
-                    <li><a href="/manual" class="sidebar-link"><i class="fas fa-file-alt"></i><span>Manual</span></a></li>
-                    <% if (chatEnabled) { %>
-                    <li><a href="/chat" class="sidebar-link"><i class="fa-solid fa-comment"></i><span>Chat</span></a></li>
-                    <% } %>
-                    <% if (ragEnabled) { %>
-                    <li><a href="/rag" class="sidebar-link"><i class="fa-solid fa-comment"></i><span>RAG Chat</span></a></li>
-                    <% } %>
-                    <li><a href="/playground" class="sidebar-link"><i class="fa-solid fa-flask-vial"></i><span>Playground</span></a></li>
-                    <li><a href="/history" class="sidebar-link"><i class="fa-solid fa-clock-rotate-left"></i><span>History</span></a></li>
-                    <li><a href="/ocr" class="sidebar-link"><i class="fa-solid fa-eye"></i><span>OCR Queue</span><span id="sidebarOcrBadge" class="ml-2 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800 hidden">0</span></a></li>
-                    <li><a href="/failed" class="sidebar-link"><i class="fa-solid fa-ban"></i><span>Permanently Failed</span><span id="sidebarFailedBadge" class="ml-2 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-100 text-red-700 hidden">0</span></a></li>
-                    <li><a href="/about" class="sidebar-link active"><i class="fa-solid fa-circle-info"></i><span>About</span></a></li>
-                    <li><a href="/settings" class="sidebar-link"><i class="fas fa-cog"></i><span>Settings</span></a></li>
-                    <li><a href="/logout" class="sidebar-link"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></a></li>
-                </ul>
+                <%- include('partials/sidebar-nav', { chatEnabled, ragEnabled }) %>
             </nav>
         </aside>
 
@@ -156,13 +140,22 @@
         });
 
         const themeToggle = document.getElementById('themeToggle');
+        const themeToggleIcon = document.getElementById('themeToggleIcon');
         const html = document.documentElement;
         const savedTheme = localStorage.getItem('theme') || 'light';
         html.setAttribute('data-theme', savedTheme);
+
+        function updateThemeIcon(theme) {
+            themeToggleIcon.className = theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+        }
+
+        updateThemeIcon(savedTheme);
+
         themeToggle.addEventListener('click', () => {
             const newTheme = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
             html.setAttribute('data-theme', newTheme);
             localStorage.setItem('theme', newTheme);
+            updateThemeIcon(newTheme);
         });
     </script>
     <script src="/js/sidebar-badges.js"></script>

@@ -16,7 +16,7 @@ Rate limiting previously protected only a few cache-clear/reset endpoints. Most 
   - Added `apiKey` configuration fallback chain: `API_KEY || PAPERLESS_AI_API_KEY`.
   - Added global limiter config:
     - `GLOBAL_RATE_LIMIT_WINDOW_MS` (default `900000`)
-    - `GLOBAL_RATE_LIMIT_MAX` (default `120`)
+    - `GLOBAL_RATE_LIMIT_MAX` (default `1000`)
 - `routes/auth.js`
   - Switched API key auth checks to `config.apiKey` for consistency.
 - `routes/setup.js`

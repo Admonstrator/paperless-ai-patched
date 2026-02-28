@@ -64,7 +64,7 @@ These settings are configured via environment variables in your `docker-compose.
 | Variable | Default | Description |
 |---|---|---|
 | `TAG_CACHE_TTL_SECONDS` | `300` | How long to cache the tag list from Paperless-ngx (seconds) |
-| `GLOBAL_RATE_LIMIT_MAX` | `120` | Max requests per 15-minute window per user |
+| `GLOBAL_RATE_LIMIT_MAX` | `1000` | Max requests per 15-minute window per user |
 | `GLOBAL_RATE_LIMIT_WINDOW_MS` | `900000` | Rate limit window in milliseconds |
 | `API_KEY` | _(empty)_ | Static API key for external integrations |
 

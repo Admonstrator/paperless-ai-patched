@@ -1,15 +1,15 @@
 <div align="center">
 
-<img src="./logo.png" alt="Paperless-AI Next Logo" style="border-radius: 10px; margin: 20px 0;">
+<img src="./logo.png" alt="Paperless-AI Next Logo" weight="200" style="border-radius: 10px; margin: 20px 0;">
 
 # 📄 Paperless-AI Next
 
 **An integration fork of Paperless-AI – picking up where the original left off.**
 
-[![Latest Release](https://img.shields.io/github/v/release/admonstrator/paperless-ai-next?style=for-the-badge&logo=github)](https://github.com/admonstrator/paperless-ai-next/releases/latest)
-[![Docker Pulls](https://img.shields.io/docker/pulls/admonstrator/paperless-ai-next?style=for-the-badge&logo=docker)](https://hub.docker.com/r/admonstrator/paperless-ai-next)
+[![Latest Release](https://img.shields.io/github/v/release/admonstrator/paperless-ai-next?style=for-the-badge&logo=github&color=blue)](https://github.com/admonstrator/paperless-ai-next/releases/latest)
+[![Docker Pulls](https://img.shields.io/badge/docker%20pulls-0-orange?style=for-the-badge&logo=docker)](https://hub.docker.com/r/admonstrator/paperless-ai-next)
 [![License](https://img.shields.io/github/license/admonstrator/paperless-ai-next?style=for-the-badge)](LICENSE)
-[![Stars](https://img.shields.io/github/stars/admonstrator/paperless-ai-next?style=for-the-badge&logo=github)](https://github.com/admonstrator/paperless-ai-next/stargazers)
+[![Stars](https://img.shields.io/github/stars/admonstrator/paperless-ai-next?style=for-the-badge)](https://github.com/admonstrator/paperless-ai-next/stargazers)
 [![Docs](https://img.shields.io/badge/docs-admonstrator.github.io-blue?style=for-the-badge&logo=readthedocs)](https://admonstrator.github.io/paperless-ai-next/)
 
 </div>
@@ -22,7 +22,8 @@
 
 This fork collects pending upstream PRs, applies security patches, and tests improvements. Since the upstream project is no longer actively maintained, it has grown into the most up-to-date version available.
 
-> ⚠️ **Upstream Credit** – All original work belongs to [clusterzx](https://github.com/clusterzx)
+> ⚠️ **Upstream Credit** – All original work belongs to [clusterzx](https://github.com/clusterzx)  
+> 📦 **Current Version** – `v2026-02-27-03`
 
 📖 **[Full documentation →](https://admonstrator.github.io/paperless-ai-next/)**
 
@@ -32,7 +33,7 @@ This fork collects pending upstream PRs, applies security patches, and tests imp
 
 ### Docker Compose (Recommended)
 
-**Lite version** – AI tagging only (~500–700 MB):
+**Lite version** – AI tagging & OCR only (~500–700 MB):
 
 ```yaml
 services:
@@ -83,7 +84,7 @@ Then open [http://localhost:3000](http://localhost:3000) to complete setup.
 
 | | |
 |---|---|
-| 📖 Full documentation | [admonstrator.github.io/paperless-ai-next](https://admonstrator.github.io/paperless-ai-next/) |
+| 📖 Full documentation | [paperless-ai-next.admon.me](https://paperless-ai-next.admon.me/) |
 | 🐛 Report issues | [GitHub Issues](https://github.com/admonstrator/paperless-ai-next/issues) |
 | 📜 License | MIT – original work by [clusterzx](https://github.com/clusterzx) |
 
@@ -103,5 +104,11 @@ Also consider supporting the **original author**: [![Patreon](https://img.shield
 **Made with ❤️ by the community, for the community**
 
 ⭐ If you find this useful, please star the repository!
+
+</div>
+
+<div align="center">
+
+_Last updated: 2026-02-28_
 
 </div>

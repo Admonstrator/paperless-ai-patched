@@ -278,7 +278,7 @@ const cacheClearLimiter = rateLimit({
 - **API Key Bypass**: Trusted automated clients with API keys can operate without restrictions
 
 **Security Scanning**:
-- ✅ Addresses GitHub Code Scanning Alert [#143](https://github.com/admonstrator/paperless-ai-patched/security/code-scanning/143)
+- ✅ Addresses GitHub Code Scanning Alert [#143](https://github.com/admonstrator/paperless-ai-next/security/code-scanning/143)
 - ✅ Implements authorization + rate limiting pattern
 - ✅ Follows OWASP API Security guidelines
 
@@ -648,9 +648,9 @@ CACHE_BACKGROUND_REFRESH=yes  # Non-blocking refresh
 - **PR-772**: Infinite retry fix (fixed retry loop that caused extra cache refreshes)
 
 ### Documentation
-- [COPILOT.md](../../COPILOT.md#tag-caching-system) - Tag caching architecture
-- [config/config.js](../../config/config.js) - Configuration reference
-- [services/paperlessService.js](../../services/paperlessService.js) - Service implementation
+- [COPILOT.md](https://github.com/Admonstrator/paperless-ai-next/blob/main/COPILOT.md#tag-caching-system) - Tag caching architecture
+- [config/config.js](https://github.com/Admonstrator/paperless-ai-next/blob/main/config/config.js) - Configuration reference
+- [services/paperlessService.js](https://github.com/Admonstrator/paperless-ai-next/blob/main/services/paperlessService.js) - Service implementation
 
 ### Design Patterns Used
 - **Singleton Pattern**: PaperlessService as single cache owner

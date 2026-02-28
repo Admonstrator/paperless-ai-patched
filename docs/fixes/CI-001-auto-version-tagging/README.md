@@ -306,7 +306,7 @@ Also tagged as latest: true
 - Platforms: linux/amd64, linux/arm64
 - Features: Full AI tagging, no RAG
 
-docker pull admonstrator/paperless-ai-patched:v3.0.9-12
+docker pull admonstrator/paperless-ai-next:v3.0.9-12
 ```
 
 **Git Tags**:

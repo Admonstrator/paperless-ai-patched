@@ -134,13 +134,13 @@ GitHub Actions workflow supports:
 
 **Default behavior**:
 ```bash
-docker pull admonstrator/paperless-ai-patched:latest
+docker pull admonstrator/paperless-ai-next:latest
 # → Gets Lite image (~700 MB)
 ```
 
 **Full image**:
 ```bash
-docker pull admonstrator/paperless-ai-patched:latest-full
+docker pull admonstrator/paperless-ai-next:latest-full
 # → Gets Full image with RAG (~2.7 GB)
 ```
 

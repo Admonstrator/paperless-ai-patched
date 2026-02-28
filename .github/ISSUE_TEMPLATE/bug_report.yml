@@ -4,7 +4,7 @@ title: "[Bug]: "
 labels: ["bug", "triage"]
 assignees:
   - ""
-projects: ["admonstrator/paperless-ai-patched"]
+projects: ["admonstrator/paperless-ai-next"]
 
 body:
   - type: markdown

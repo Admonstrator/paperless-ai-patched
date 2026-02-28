@@ -8,6 +8,11 @@ on:
         required: false
         default: false
         type: boolean
+      build_arm64:
+        description: 'Also build ARM64 (slower, more expensive)'
+        required: false
+        default: false
+        type: boolean
       build_full_image:
         description: 'Also build Full image (with RAG/PyTorch, ~2.5GB)'
         required: false
@@ -132,9 +137,9 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          platforms: linux/amd64,linux/arm64
-          cache-from: type=registry,ref=admonstrator/paperless-ai-next:buildcache
-          cache-to: type=registry,ref=admonstrator/paperless-ai-next:buildcache,mode=max
+          platforms: ${{ inputs.build_arm64 && 'linux/amd64,linux/arm64' || 'linux/amd64' }}
+          cache-from: type=registry,ref=admonstrator/paperless-ai-next:buildcache-lite
+          cache-to: type=registry,ref=admonstrator/paperless-ai-next:buildcache-lite,mode=min
         timeout-minutes: 45
 
   # Job 2: Build and Push Full Image (optional)
@@ -178,9 +183,9 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          platforms: linux/amd64,linux/arm64
-          cache-from: type=registry,ref=admonstrator/paperless-ai-next:buildcache
-          cache-to: type=registry,ref=admonstrator/paperless-ai-next:buildcache,mode=max
+          platforms: ${{ inputs.build_arm64 && 'linux/amd64,linux/arm64' || 'linux/amd64' }}
+          cache-from: type=registry,ref=admonstrator/paperless-ai-next:buildcache-full
+          cache-to: type=registry,ref=admonstrator/paperless-ai-next:buildcache-full,mode=min
         timeout-minutes: 60
 
   # Job 3: Summary
@@ -198,11 +203,16 @@ jobs:
           echo "**Version Tag:** \`${{ needs.generate-version.outputs.version_tag }}\`" >> $GITHUB_STEP_SUMMARY
           echo "**Base Version:** \`${{ needs.generate-version.outputs.base_version }}\`" >> $GITHUB_STEP_SUMMARY
           echo "**Also tagged as latest:** ${{ inputs.also_tag_latest || github.event_name == 'push' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**ARM64 enabled:** ${{ inputs.build_arm64 }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
           echo "#### ✅ Lite Image (Default)" >> $GITHUB_STEP_SUMMARY
           echo "- **Size:** ~500-700 MB" >> $GITHUB_STEP_SUMMARY
-          echo "- **Platforms:** linux/amd64, linux/arm64" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ inputs.build_arm64 }}" = "true" ]; then
+            echo "- **Platforms:** linux/amd64, linux/arm64" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- **Platforms:** linux/amd64" >> $GITHUB_STEP_SUMMARY
+          fi
           echo "- **Features:** Full AI tagging, no RAG" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
@@ -213,7 +223,11 @@ jobs:
           if [ "${{ inputs.build_full_image }}" = "true" ]; then
             echo "#### ✅ Full Image (with RAG)" >> $GITHUB_STEP_SUMMARY
             echo "- **Size:** ~2.5-2.7 GB" >> $GITHUB_STEP_SUMMARY
-            echo "- **Platforms:** linux/amd64, linux/arm64" >> $GITHUB_STEP_SUMMARY
+            if [ "${{ inputs.build_arm64 }}" = "true" ]; then
+              echo "- **Platforms:** linux/amd64, linux/arm64" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "- **Platforms:** linux/amd64" >> $GITHUB_STEP_SUMMARY
+            fi
             echo "- **Features:** AI tagging + RAG semantic search" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY

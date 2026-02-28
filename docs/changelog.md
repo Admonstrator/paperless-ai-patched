@@ -41,6 +41,7 @@ All improvements and fixes included in this fork, compared to [clusterzx/paperle
 | [UI-003](fixes/UI-003-history-info-modal/README.md) | History entries now show a detail modal with tag changes, token usage, and a Rescan button | 2026-02-27 |
 | [UI-004](fixes/UI-004-history-restore-doctype-language/README.md) | History modal: restore original metadata, including document type and language | 2026-02-27 |
 | [UI-005](fixes/UI-005-mistral-ocr-queue/README.md) | New Mistral OCR queue for documents that were poorly scanned | 2026-02-28 |
+| [UI-006](fixes/UI-006-ignore-tags-processing/README.md) | Added ignore-tags filtering for regular scans and adjusted dashboard totals accordingly | 2026-02-28 |
 
 ---
 

@@ -95,6 +95,7 @@ module.exports = {
   globalRateLimitWindowMs: parseInt(process.env.GLOBAL_RATE_LIMIT_WINDOW_MS || '900000', 10),
   globalRateLimitMax: parseInt(process.env.GLOBAL_RATE_LIMIT_MAX || '120', 10),
   predefinedMode: process.env.PROCESS_PREDEFINED_DOCUMENTS,
+  ignoreTags: process.env.IGNORE_TAGS || '',
   tokenLimit: process.env.TOKEN_LIMIT || 128000,
   responseTokens: process.env.RESPONSE_TOKENS || 1000,
   addAIProcessedTag: process.env.ADD_AI_PROCESSED_TAG || 'no',

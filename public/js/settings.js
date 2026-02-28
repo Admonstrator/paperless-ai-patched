@@ -447,6 +447,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const themeManager = new ThemeManager();
     const formManager = new FormManager();
     const tagsManager = new TagsManager('tagInput','tagsContainer','tags');
+    const ignoreTagsManager = new TagsManager('ignoreTagInput','ignoreTagsContainer','ignoreTags');
     const promptTagsManager = new TagsManager('promptTagInput','promptTagsContainer','promptTags');
     const promptManager = new PromptManager();
 

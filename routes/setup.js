@@ -2426,6 +2426,7 @@ router.get('/setup', async (req, res) => {
       TOKEN_LIMIT: process.env.TOKEN_LIMIT || 128000,
       RESPONSE_TOKENS: process.env.RESPONSE_TOKENS || 1000,
       TAGS: normalizeArray(process.env.TAGS),
+      IGNORE_TAGS: normalizeArray(process.env.IGNORE_TAGS),
       ADD_AI_PROCESSED_TAG: process.env.ADD_AI_PROCESSED_TAG || 'no',
       AI_PROCESSED_TAG_NAME: process.env.AI_PROCESSED_TAG_NAME || 'ai-processed',
       USE_PROMPT_TAGS: process.env.USE_PROMPT_TAGS || 'no',
@@ -2454,6 +2455,7 @@ router.get('/setup', async (req, res) => {
       }
 
       savedConfig.TAGS = normalizeArray(savedConfig.TAGS);
+      savedConfig.IGNORE_TAGS = normalizeArray(savedConfig.IGNORE_TAGS);
       savedConfig.PROMPT_TAGS = normalizeArray(savedConfig.PROMPT_TAGS);
 
       config = { ...config, ...savedConfig };
@@ -2461,6 +2463,7 @@ router.get('/setup', async (req, res) => {
 
     // Debug output
     console.log('Current config TAGS:', config.TAGS);
+    console.log('Current config IGNORE_TAGS:', config.IGNORE_TAGS);
     console.log('Current config PROMPT_TAGS:', config.PROMPT_TAGS);
 
     // Check if system is fully configured
@@ -3111,14 +3114,27 @@ router.post('/api/webhook/document', async (req, res) => {
  *               $ref: '#/components/schemas/Error'
  */
 router.get('/dashboard', async (req, res) => {
-  const tagCount = await paperlessService.getTagCount();
-  const correspondentCount = await paperlessService.getCorrespondentCount();
-  const documentCount = await paperlessService.getDocumentCount();
-  const processedDocumentCount = await documentModel.getProcessedDocumentsCount();
-  const metrics = await documentModel.getMetrics();
-  const processingTimeStats = await documentModel.getProcessingTimeStats();
-  const tokenDistribution = await documentModel.getTokenDistribution();
-  const documentTypes = await documentModel.getDocumentTypeStats();
+  const [
+    tagCount,
+    correspondentCount,
+    documentCount,
+    rawProcessedDocumentCount,
+    metrics,
+    processingTimeStats,
+    tokenDistribution,
+    documentTypes
+  ] = await Promise.all([
+    paperlessService.getTagCount(),
+    paperlessService.getCorrespondentCount(),
+    paperlessService.getEffectiveDocumentCount(),
+    documentModel.getProcessedDocumentsCount(),
+    documentModel.getMetrics(),
+    documentModel.getProcessingTimeStats(),
+    documentModel.getTokenDistribution(),
+    documentModel.getDocumentTypeStats()
+  ]);
+
+  const processedDocumentCount = Math.min(rawProcessedDocumentCount, documentCount);
   
   const averagePromptTokens = metrics.length > 0 ? Math.round(metrics.reduce((acc, cur) => acc + cur.promptTokens, 0) / metrics.length) : 0;
   const averageCompletionTokens = metrics.length > 0 ? Math.round(metrics.reduce((acc, cur) => acc + cur.completionTokens, 0) / metrics.length) : 0;
@@ -3226,6 +3242,7 @@ router.get('/settings', async (req, res) => {
     TOKEN_LIMIT: process.env.TOKEN_LIMIT || 128000,
     RESPONSE_TOKENS: process.env.RESPONSE_TOKENS || 1000,
     TAGS: normalizeArray(process.env.TAGS),
+    IGNORE_TAGS: normalizeArray(process.env.IGNORE_TAGS),
     ADD_AI_PROCESSED_TAG: process.env.ADD_AI_PROCESSED_TAG || 'no',
     AI_PROCESSED_TAG_NAME: process.env.AI_PROCESSED_TAG_NAME || 'ai-processed',
     USE_PROMPT_TAGS: process.env.USE_PROMPT_TAGS || 'no',
@@ -3259,6 +3276,7 @@ router.get('/settings', async (req, res) => {
     }
 
     savedConfig.TAGS = normalizeArray(savedConfig.TAGS);
+    savedConfig.IGNORE_TAGS = normalizeArray(savedConfig.IGNORE_TAGS);
     savedConfig.PROMPT_TAGS = normalizeArray(savedConfig.PROMPT_TAGS);
 
     config = { ...config, ...savedConfig };
@@ -3266,6 +3284,7 @@ router.get('/settings', async (req, res) => {
 
   // Debug-output
   console.log('Current config TAGS:', config.TAGS);
+  console.log('Current config IGNORE_TAGS:', config.IGNORE_TAGS);
   console.log('Current config PROMPT_TAGS:', config.PROMPT_TAGS);
   const version = configFile.PAPERLESS_AI_VERSION || ' ';
   res.render('settings', { 
@@ -4135,6 +4154,7 @@ router.post('/setup', express.json(), async (req, res) => {
       tokenLimit,
       responseTokens,
       tags,
+      ignoreTags,
       aiProcessedTag,
       aiTagName,
       usePromptTags,
@@ -4254,6 +4274,7 @@ router.post('/setup', express.json(), async (req, res) => {
       TOKEN_LIMIT: tokenLimit || 128000,
       RESPONSE_TOKENS: responseTokens || 1000,
       TAGS: normalizeArray(tags),
+      IGNORE_TAGS: normalizeArray(ignoreTags),
       ADD_AI_PROCESSED_TAG: aiProcessedTag || 'no',
       AI_PROCESSED_TAG_NAME: aiTagName || 'ai-processed',
       USE_PROMPT_TAGS: usePromptTags || 'no',
@@ -4543,6 +4564,7 @@ router.post('/settings', express.json(), async (req, res) => {
       tokenLimit,
       responseTokens,
       tags,
+      ignoreTags,
       aiProcessedTag,
       aiTagName,
       usePromptTags,
@@ -4587,6 +4609,7 @@ router.post('/settings', express.json(), async (req, res) => {
       TOKEN_LIMIT: process.env.TOKEN_LIMIT || 128000,
       RESPONSE_TOKENS: process.env.RESPONSE_TOKENS || 1000,
       TAGS: process.env.TAGS || '',
+      IGNORE_TAGS: process.env.IGNORE_TAGS || '',
       ADD_AI_PROCESSED_TAG: process.env.ADD_AI_PROCESSED_TAG || 'no',
       AI_PROCESSED_TAG_NAME: process.env.AI_PROCESSED_TAG_NAME || 'ai-processed',
       USE_PROMPT_TAGS: process.env.USE_PROMPT_TAGS || 'no',
@@ -4731,6 +4754,7 @@ router.post('/settings', express.json(), async (req, res) => {
     if (tokenLimit) updatedConfig.TOKEN_LIMIT = tokenLimit;
     if (responseTokens) updatedConfig.RESPONSE_TOKENS = responseTokens;
     if (tags !== undefined) updatedConfig.TAGS = normalizeArray(tags);
+    if (ignoreTags !== undefined) updatedConfig.IGNORE_TAGS = normalizeArray(ignoreTags);
     if (aiProcessedTag) updatedConfig.ADD_AI_PROCESSED_TAG = aiProcessedTag;
     if (aiTagName) updatedConfig.AI_PROCESSED_TAG_NAME = aiTagName;
     if (usePromptTags) updatedConfig.USE_PROMPT_TAGS = usePromptTags;

@@ -309,15 +309,20 @@ class TabManager {
 
 // Tags Management
 class TagsManager {
-    constructor() {
-        this.tagInput = document.getElementById('tagInput');
-        this.tagsContainer = document.getElementById('tagsContainer');
-        this.tagsHiddenInput = document.getElementById('tags');
-        this.addTagButton = document.querySelector('.add-tag-btn');
+    constructor(tagInputId = 'tagInput', tagsContainerId = 'tagsContainer', tagsHiddenInputId = 'tags', addButtonSelector = '.add-tag-btn') {
+        this.tagInput = document.getElementById(tagInputId);
+        this.tagsContainer = document.getElementById(tagsContainerId);
+        this.tagsHiddenInput = document.getElementById(tagsHiddenInputId);
+        this.addTagButton = document.querySelector(addButtonSelector);
+
+        if (!this.tagInput || !this.tagsContainer || !this.tagsHiddenInput || !this.addTagButton) {
+            return;
+        }
+
         this.initialize();
         
         // Initialize existing tags with click handlers
-        document.querySelectorAll('.modern-tag button').forEach(button => {
+        this.tagsContainer.querySelectorAll('.modern-tag button').forEach(button => {
             button.addEventListener('click', async () => {
                 const result = await Swal.fire({
                     title: 'Remove Tag',
@@ -343,6 +348,8 @@ class TagsManager {
 
     initialize() {
         // Add event listeners
+        if (!this.addTagButton || !this.tagInput) return;
+
         this.addTagButton.addEventListener('click', () => this.addTag());
         this.tagInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
@@ -719,7 +726,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const tabManager = new TabManager();
     const themeManager = new ThemeManager();
     const formManager = new FormManager();
-    const tagsManager = new TagsManager();
+    const tagsManager = new TagsManager('tagInput', 'tagsContainer', 'tags', '.add-tag-btn');
+    const ignoreTagsManager = new TagsManager('ignoreTagInput', 'ignoreTagsContainer', 'ignoreTags', '.add-ignore-tag-btn');
     const promptTagsManager = new PromptTagsManager();
     const promptManager = new PromptManager();
     const passwordManager = new PasswordManager();

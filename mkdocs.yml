@@ -87,6 +87,7 @@ nav:
     - UI-003 – History info modal: fixes/UI-003-history-info-modal/README.md
     - UI-004 – Restore original metadata: fixes/UI-004-history-restore-doctype-language/README.md
     - UI-005 – Mistral OCR queue: fixes/UI-005-mistral-ocr-queue/README.md
+    - UI-006 – Ignore tags for processing: fixes/UI-006-ignore-tags-processing/README.md
   - Infrastructure:
     - DOCKER-001 – Optimized images: fixes/DOCKER-001-optimize-images/README.md
     - DOCKER-002 – Node.js 24 LTS: fixes/DOCKER-002-upgrade-nodejs-24-lts/README.md

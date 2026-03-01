@@ -800,6 +800,22 @@ class TooltipManager {
 }
 
 class SettingsHintManager {
+    getHintTriggerClasses() {
+        return [
+            'inline-flex',
+            'items-center',
+            'justify-center',
+            'ml-2',
+            'text-blue-700',
+            'hover:text-blue-900',
+            'focus:outline-none',
+            'focus:ring-2',
+            'focus:ring-blue-600',
+            'rounded-full',
+            'transition-colors'
+        ];
+    }
+
     constructor() {
         this.initialize();
     }
@@ -826,7 +842,7 @@ class SettingsHintManager {
 
             const trigger = document.createElement('button');
             trigger.type = 'button';
-            trigger.className = 'setting-hint-trigger inline-flex items-center justify-center ml-2 text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full transition-colors';
+            trigger.className = `setting-hint-trigger ${this.getHintTriggerClasses().join(' ')}`;
             trigger.setAttribute('aria-label', 'Show setting hint');
             trigger.style.width = '1.125rem';
             trigger.style.height = '1.125rem';
@@ -868,18 +884,24 @@ class SettingsHintManager {
             return;
         }
 
-        tagCacheTTLHelp.classList.add(
-            'inline-flex',
-            'items-center',
-            'justify-center',
-            'text-gray-400',
-            'hover:text-gray-600',
-            'focus:outline-none',
-            'focus:ring-2',
-            'focus:ring-blue-500',
-            'rounded-full',
-            'transition-colors'
-        );
+        const urlHelp = document.getElementById('urlHelp');
+        if (urlHelp) {
+            urlHelp.classList.remove('text-gray-400', 'hover:text-gray-600');
+            urlHelp.classList.add(...this.getHintTriggerClasses());
+            urlHelp.style.width = '1.125rem';
+            urlHelp.style.height = '1.125rem';
+            urlHelp.style.minWidth = '1.125rem';
+            urlHelp.style.minHeight = '1.125rem';
+
+            const urlHelpIcon = urlHelp.querySelector('i');
+            if (urlHelpIcon) {
+                urlHelpIcon.style.fontSize = '0.875rem';
+                urlHelpIcon.style.lineHeight = '1';
+            }
+        }
+
+        tagCacheTTLHelp.classList.remove('text-gray-400', 'hover:text-gray-600');
+        tagCacheTTLHelp.classList.add(...this.getHintTriggerClasses());
         tagCacheTTLHelp.style.width = '1.125rem';
         tagCacheTTLHelp.style.height = '1.125rem';
         tagCacheTTLHelp.style.minWidth = '1.125rem';

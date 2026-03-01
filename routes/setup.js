@@ -600,7 +600,7 @@ router.get('/playground', protectApiRoute, async (req, res) => {
       chatEnabled: isChatEnabled()
     });
   } catch (error) {
-    console.error('[ERRO] loading documents view:', error);
+    console.error('[ERROR] loading documents view:', error);
     res.status(500).send('Error loading documents');
   }
 });

@@ -25,6 +25,8 @@ rag_config.conf
 indexed.conf
 indexing_complete.flag
 RAGZ_README.md
+dist/
+.astro/
 
 # Local development files
 .local/
@@ -44,6 +46,3 @@ surya_models.py
 .vscode/
 # AI context files (auto-generated)
 COPILOT.md
-# MkDocs build output
-site/
-.venv-docs/

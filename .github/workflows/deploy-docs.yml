@@ -5,8 +5,12 @@ on:
     branches:
       - main
     paths:
-      - "docs/**"
-      - "mkdocs.yml"
+      - "src/content/docs/**"
+      - "src/content/config.ts"
+      - "astro.config.mjs"
+      - "public/**"
+      - "package.json"
+      - "package-lock.json"
       - ".github/workflows/deploy-docs.yml"
   workflow_dispatch:
 
@@ -24,29 +28,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          fetch-depth: 0   # needed for git-revision-date-localized-plugin
+          node-version: "24"
+          cache: npm
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install MkDocs dependencies
-        run: pip install -r docs/requirements.txt
+      - name: Install dependencies
+        run: npm ci
 
       - name: Build docs
-        run: mkdocs build --strict
-
-      - name: Include custom domain
-        run: |
-          if [ -f CNAME ]; then
-            cp CNAME site/CNAME
-          fi
+        run: npm run docs:build
 
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: site
+          path: dist
 
   deploy:
     needs: build

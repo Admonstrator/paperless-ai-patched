@@ -1,0 +1,75 @@
+.next-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  padding: 0.15rem 0.55rem;
+  font-size: 0.78em;
+  font-weight: 650;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  border: 1px solid color-mix(in oklab, var(--sl-color-accent-high), transparent 35%);
+  color: var(--sl-color-accent-high);
+  background: color-mix(in oklab, var(--sl-color-accent-low), transparent 82%);
+}
+
+.badges-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  margin: 0.6rem 0 1rem;
+}
+
+.badges-row img {
+  display: inline-block;
+  margin: 0;
+}
+
+.sl-markdown-content a:not(.card):not(.sl-link-button) {
+  color: inherit;
+  text-decoration-color: var(--sl-color-gray-3);
+}
+
+.sl-markdown-content a:not(.card):not(.sl-link-button):hover {
+  color: var(--sl-color-white);
+  text-decoration-color: currentColor;
+}
+
+.sidebar-content :is(a, summary, a span, summary span) {
+  font-weight: 400 !important;
+}
+
+.sidebar-content a[aria-current='page'],
+.sidebar-content a[aria-current='page']:hover,
+.sidebar-content a[aria-current='page']:focus,
+.sidebar-content a[aria-current='page'] span {
+  font-weight: 400 !important;
+}
+
+.sidebar-content details details > summary .group-label .large {
+  font-size: var(--sl-text-sm) !important;
+  font-weight: 400 !important;
+  color: var(--sl-color-gray-2) !important;
+}
+
+.sidebar-content details details > summary:hover .group-label .large,
+.sidebar-content details details > summary:focus-visible .group-label .large {
+  color: var(--sl-color-white) !important;
+}
+
+.sl-markdown-content table:not(:where(.not-content *)) {
+  display: table;
+  width: 100%;
+  min-width: 100%;
+  table-layout: auto;
+  overflow: visible;
+}
+
+.sl-markdown-content :is(th, td):not(:where(.not-content *)) {
+  min-width: 12ch;
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: normal;
+}

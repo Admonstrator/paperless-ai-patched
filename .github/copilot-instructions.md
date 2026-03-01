@@ -94,6 +94,11 @@ sqlite3 data/documents.db "SELECT * FROM processed_documents LIMIT 5;"
 
 ## Code Conventions
 
+### Language Requirement (MANDATORY)
+- English only across the project.
+- All source code comments, commit messages, pull requests, issue templates, documentation, UI labels, and user-facing text must be written in English.
+- Do not introduce German or mixed-language content in any repository file.
+
 ### Error Handling
 - Always log to both `htmlLogger` and `txtLogger` for user-facing operations
 - Use try-catch in all async routes
@@ -135,8 +140,8 @@ res.flush();
 ## Fix Documentation & Workflow
 
 ### Documentation Pattern
-All integrated fixes live in `docs/fixes/` with pattern: `{PR|PERF|SEC|DOCKER|CI}-NNN-name/README.md`.
-`Included_Fixes/` is a symlink → `docs/fixes/`, so both paths resolve to the same files.
+All integrated fixes live in `src/content/docs/fixes/` with pattern: `NEXT-NNN-short-name/index.md`.
+Use `src/content/docs/fixes/NEXT-000-template/index.md` as the canonical template for new entries.
 
 ### Change Workflow (IMPORTANT)
 **Every change MUST follow this process:**
@@ -144,9 +149,9 @@ All integrated fixes live in `docs/fixes/` with pattern: `{PR|PERF|SEC|DOCKER|CI
 1. **Create Feature Branch**
    ```bash
    # Pattern: {type}-{number}-{short-description}
-   git checkout -b PERF-002-optimize-rag-queries
-   git checkout -b PR-800-fix-ollama-timeout
-   git checkout -b SEC-002-validate-api-inputs
+   git checkout -b docs-001-next-template
+   git checkout -b next-123-improve-history-modal
+   git checkout -b next-124-add-new-feature-docs
    ```
 
 2. **Implement Changes**
@@ -156,9 +161,9 @@ All integrated fixes live in `docs/fixes/` with pattern: `{PR|PERF|SEC|DOCKER|CI
 
 3. **Document the fix**
 
-   Create `docs/fixes/{TYPE}-{NNN}-{name}/README.md` (also accessible as `Included_Fixes/{TYPE}-{NNN}-{name}/README.md` via symlink):
+   Create `src/content/docs/fixes/NEXT-{NNN}-{name}/index.md`:
    ```bash
-   mkdir -p docs/fixes/{TYPE}-{NNN}-{name}/
+   mkdir -p src/content/docs/fixes/NEXT-{NNN}-{name}/
    ```
 
    Structure:
@@ -169,41 +174,35 @@ All integrated fixes live in `docs/fixes/` with pattern: `{PR|PERF|SEC|DOCKER|CI
    - **Upstream Status**: Link to upstream PR if applicable
 
    See existing fixes for reference:
-   - `docs/fixes/PR-772-infinite-retry-fix/README.md`
+   - `src/content/docs/fixes/NEXT-000-template/index.md`
 
-4. **Update `docs/fixes/README.md`**
-   - Add entry to appropriate table (PRs, Performance, Security, etc.)
+4. **Update `src/content/docs/fixes/index.md`**
+   - Add entry to the overview table
    - Include fix ID, title, status (✅ Applied), and integration date
 
-5. **Update `docs/changelog.md`**
+5. **Update `src/content/docs/changelog.md`**
    - Add a row to the appropriate table section
-   - Format: `| [FIX-ID](fixes/{TYPE}-{NNN}-{name}/README.md) | Description | Date |`
-   - **Also add the new fix to `mkdocs.yml` nav** under the matching Fixes sub-section
+   - Format: `| FIX-ID (fixes/NEXT-{NNN}-{name}/) | Description | Date |`
+   - Keep Starlight sidebar/autogeneration consistent with folder structure under `src/content/docs/fixes/`
    - **The root `README.md` does NOT contain a fixes table** — it links to the Docs site
 
 6. **Commit Documentation**
    ```bash
-   git add docs/
-   git commit -m "docs: document {TYPE}-{NNN} fix"
+   git add src/content/docs/
+   git commit -m "docs: document NEXT-{NNN} fix"
    ```
 
 7. **Create Pull Request**
-   - Title: `[{TYPE}-{NNN}] Short description`
+   - Title: `[NEXT-{NNN}] Short description`
    - Link to upstream PR if applicable
    - Reference any related issues
 
 ### Fix Type Prefixes
-- `PR-XXX` - Upstream pull request integration
-- `PERF-XXX` - Performance optimization
-- `SEC-XXX` - Security fix
-- `DOCKER-XXX` - Docker/containerization improvement
-- `CI-XXX` - CI/CD workflow enhancement
-- `DEP-XXX` - Dependency update/removal
-- `UI-XXX` - UI/UX improvement
+- `NEXT-XXX` - Standardized ID format for all new fix and feature documentation entries
 
 ### Example Fix Documentation Structure
 ```markdown
-# {TYPE}-{NNN}: Short Title
+# NEXT-{NNN}: Short Title
 
 ## Background
 Explain the problem, bug, or optimization opportunity.
@@ -227,39 +226,37 @@ node tests/test-new-feature.js
 
 ## Upstream Status
 - [ ] Not submitted
-- [ ] PR opened: [#XXX](link)
+- [ ] PR opened: [#XXX](https://github.com/clusterzx/paperless-ai/pull/XXX)
 - [x] Merged upstream
 - [ ] Upstream declined (reason)
 ```
 
 ## Documentation Site
 
-This project uses **MkDocs + Material for MkDocs** for user-facing documentation, deployed to GitHub Pages via `.github/workflows/deploy-docs.yml`.
+This project uses **Astro + Starlight** for user-facing documentation, deployed to GitHub Pages via `.github/workflows/deploy-docs.yml`.
 
 ### Structure
-- `docs/index.md` – Landing page (About + Features)
-- `docs/getting-started/` – Installation, First Setup, Configuration
-- `docs/features/` – Auto-tagging, AI Chat, Manual Tagging, OCR Queue, History
-- `docs/fixes/` – One subdirectory per fix (`{TYPE}-NNN-name/README.md`), plus `README.md` overview table
-  - `Included_Fixes/` in the repo root is a symlink to this directory
-- `docs/how-it-works.md` – Simple "How it works" overview
-- `docs/changelog.md` – Compact table of all fixes, links to `docs/fixes/` pages
-- `docs/contributing.md` – Contribution guide
-- `docs/security.md` – Security policy and fixed vulnerabilities
-- `mkdocs.yml` – Site config (nav, theme, plugins)
-- `docs/requirements.txt` – Docs-only Python deps (separate from app `requirements.txt`)
+- `src/content/docs/index.mdx` – Landing page (About + Features)
+- `src/content/docs/getting-started/` – Installation, First Setup, Configuration
+- `src/content/docs/features/` – Auto-tagging, AI Chat, Manual Tagging, OCR Queue, History
+- `src/content/docs/fixes/` – One subdirectory per fix (`NEXT-NNN-name/index.md`) plus `index.md` overview table
+- `src/content/docs/how-it-works.md` – Simple "How it works" overview
+- `src/content/docs/changelog.md` – Compact table of all fixes, links to `src/content/docs/fixes/` pages
+- `src/content/docs/contributing.md` – Contribution guide
+- `src/content/docs/security.md` – Security policy and fixed vulnerabilities
+- `astro.config.mjs` – Starlight site config (sidebar, integrations, branding)
 
 ### Local Preview
 ```bash
-pip install -r docs/requirements.txt
-mkdocs serve        # → http://localhost:8000
-mkdocs build --strict  # CI check
+npm ci
+npm run docs:dev        # → http://localhost:4321
+npm run docs:build      # CI check
 ```
 
 ### Single Source of Truth Rules
-- `docs/fixes/*/README.md` = authoritative fix record (also accessible via `Included_Fixes/*` symlink)
-- `docs/fixes/README.md` = the fixes overview table
-- `docs/changelog.md` = compact user-facing overview with links to fix pages
+- `src/content/docs/fixes/*/index.md` = authoritative fix record
+- `src/content/docs/fixes/index.md` = the fixes overview table
+- `src/content/docs/changelog.md` = compact user-facing overview with links to fix pages
 - Root `README.md` = minimal (~80 lines): badges, Quick Start Docker Compose, link to Docs site
 
-> For comprehensive architecture details, API reference and configuration options see the live Docs site at `https://admonstrator.github.io/paperless-ai-next/` or run `mkdocs serve` locally.
+> For comprehensive architecture details, API reference and configuration options see the live Docs site at `https://paperless-ai-next.admon.me/` or run `npm run docs:dev` locally.

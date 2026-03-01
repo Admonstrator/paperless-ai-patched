@@ -4,7 +4,10 @@
   "description": "AI based Tag, correspondent and meta data generation",
   "main": "server.js",
   "scripts": {
-    "test": "nodemon server.js"
+    "test": "nodemon server.js",
+    "docs:dev": "astro dev --host",
+    "docs:build": "astro build",
+    "docs:preview": "astro preview --host"
   },
   "keywords": [
     "paperless-ngx",
@@ -16,7 +19,7 @@
   "nodemonConfig": {
     "ignore": [
       "test/*",
-      "docs/*",
+      "src/content/docs/*",
       "node_modules/*",
       ".git/*",
       "*.log",
@@ -66,11 +69,14 @@
     "tippy.js": "^6.3.7"
   },
   "devDependencies": {
+    "@astrojs/starlight": "^0.37.6",
     "@eslint/js": "^9.22.0",
+    "astro": "^5.18.0",
     "eslint": "^9.22.0",
     "eslint-config-prettier": "^10.1.1",
     "eslint-plugin-jsdoc": "^50.6.3",
     "globals": "^16.0.0",
+    "mermaid": "^11.12.3",
     "prettier": "^3.5.3"
   },
   "pnpm": {

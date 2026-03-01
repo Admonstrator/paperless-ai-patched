@@ -23,9 +23,14 @@ const { max } = require('date-fns');
 const { validateCustomFieldValue, shouldQueueForOcrOnAiError, classifyOcrQueueReasonFromAiError } = require('./services/serviceUtils');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./swagger');
+const dataDir = path.join(process.cwd(), 'data');
+const openApiDir = path.join(dataDir, 'OPENAPI');
+const openApiPath = path.join(openApiDir, 'openapi.json');
+const dataLogsDir = path.join(process.cwd(), 'data', 'logs');
 
 const htmlLogger = new Logger({
   logFile: 'logs.html',
+  logDir: dataLogsDir,
   format: 'html',
   timestamp: true,
   maxFileSize: 1024 * 1024 * 10
@@ -33,6 +38,7 @@ const htmlLogger = new Logger({
 
 const txtLogger = new Logger({
   logFile: 'logs.txt',
+  logDir: dataLogsDir,
   format: 'txt',
   timestamp: true,
   maxFileSize: 1024 * 1024 * 10
@@ -172,7 +178,6 @@ app.use('/api-docs', isAuthenticated, swaggerUi.serve, swaggerUi.setup(swaggerSp
  *               $ref: '#/components/schemas/Error'
  */
 app.get('/api-docs/openapi.json', isAuthenticated, (req, res) => {
-  const openApiPath = path.join(process.cwd(), 'OPENAPI', 'openapi.json');
   res.setHeader('Content-Type', 'application/json');
   
   // Try to serve the static file first
@@ -211,7 +216,6 @@ app.set('views', path.join(__dirname, 'views'));
 
 // Initialize data directory
 async function initializeDataDirectory() {
-  const dataDir = path.join(process.cwd(), 'data');
   try {
     await fs.access(dataDir);
   } catch {
@@ -222,8 +226,6 @@ async function initializeDataDirectory() {
 
 // Save OpenAPI specification to file
 async function saveOpenApiSpec() {
-  const openApiDir = path.join(process.cwd(), 'OPENAPI');
-  const openApiPath = path.join(openApiDir, 'openapi.json');
   try {
     // Ensure the directory exists
     try {

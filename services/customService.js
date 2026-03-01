@@ -11,6 +11,7 @@ const paperlessService = require('./paperlessService');
 const fs = require('fs').promises;
 const path = require('path');
 const RestrictionPromptService = require('./restrictionPromptService');
+const responseLogPath = path.join('/app', 'data', 'logs', 'response.txt');
 
 class CustomOpenAIService {
   constructor() {
@@ -225,13 +226,16 @@ class CustomOpenAIService {
       let parsedResponse;
       try {
         parsedResponse = JSON.parse(jsonContent);
-        //write to file and append to the file (txt)
-        fs.appendFile('./logs/response.txt', jsonContent, (err) => {
-          if (err) throw err;
-        });
       } catch (error) {
         console.error('Failed to parse JSON response:', error);
         throw new Error('Invalid JSON response from API');
+      }
+
+      try {
+        await fs.mkdir(path.dirname(responseLogPath), { recursive: true });
+        await fs.appendFile(responseLogPath, `${jsonContent}\n`);
+      } catch (logError) {
+        console.warn('Failed to write AI response log:', logError.message);
       }
 
       // Validate response structure
@@ -391,6 +395,18 @@ class CustomOpenAIService {
       }
 
       const model = config.custom.model;
+      const maxContextTokens = Number(config.tokenLimit) || 128000;
+      const desiredCompletionTokens = Number(config.responseTokens) || 1000;
+      const promptTokens = await calculateTokens(prompt, model);
+      const availableCompletionTokens = Math.max(1, maxContextTokens - promptTokens - 64);
+      const maxCompletionTokens = Math.max(1, Math.min(desiredCompletionTokens, availableCompletionTokens));
+
+      if (maxCompletionTokens < desiredCompletionTokens) {
+        console.log(
+          `[DEBUG] Clamped max_tokens for custom generateText from ${desiredCompletionTokens} to ${maxCompletionTokens} ` +
+          `(context limit: ${maxContextTokens}, prompt tokens: ${promptTokens})`
+        );
+      }
 
       const response = await this.client.chat.completions.create({
         model: model,
@@ -401,7 +417,7 @@ class CustomOpenAIService {
           }
         ],
         temperature: 0.7,
-        max_tokens: 128000
+        max_tokens: maxCompletionTokens
       });
 
       if (!response?.choices?.[0]?.message?.content) {

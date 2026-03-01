@@ -11,6 +11,7 @@ const paperlessService = require('./paperlessService');
 const fs = require('fs').promises;
 const path = require('path');
 const RestrictionPromptService = require('./restrictionPromptService');
+const responseLogPath = path.join('/app', 'data', 'logs', 'response.txt');
 
 class AzureOpenAIService {
   constructor() {
@@ -209,13 +210,16 @@ class AzureOpenAIService {
       let parsedResponse;
       try {
         parsedResponse = JSON.parse(jsonContent);
-        //write to file and append to the file (txt)
-        fs.appendFile('./logs/response.txt', jsonContent, (err) => {
-          if (err) throw err;
-        });
       } catch (error) {
         console.error('Failed to parse JSON response:', error);
         throw new Error('Invalid JSON response from API');
+      }
+
+      try {
+        await fs.mkdir(path.dirname(responseLogPath), { recursive: true });
+        await fs.appendFile(responseLogPath, `${jsonContent}\n`);
+      } catch (logError) {
+        console.warn('Failed to write AI response log:', logError.message);
       }
 
       if (!parsedResponse || !Array.isArray(parsedResponse.tags) || typeof parsedResponse.correspondent !== 'string') {

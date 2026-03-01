@@ -2262,9 +2262,12 @@ async function buildUpdateData(analysis, doc) {
     const processedFieldIds = new Set();
 
     // First, add any new/updated fields
-    for (const key in customFields) {
-      const customField = customFields[key];
-      
+    for (const customField of Object.values(customFields)) {
+      if (!customField || typeof customField !== 'object') {
+        console.log('[DEBUG] Skipping null/invalid custom field entry');
+        continue;
+      }
+
       if (!customField.field_name || (customField.value === null || customField.value === undefined || String(customField.value).trim() === '')) {
         console.log(`[DEBUG] Skipping empty/invalid custom field`);
         continue;

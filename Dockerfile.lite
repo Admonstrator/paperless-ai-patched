@@ -29,17 +29,20 @@ RUN --mount=type=cache,target=/root/.npm \
     npm ci --only=production
 
 # Copy only necessary application files
-COPY server.js ecosystem.config.js ./
-COPY config ./config/
-COPY models ./models/
-COPY routes ./routes/
-COPY services ./services/
-COPY views ./views/
-COPY public ./public/
-COPY schemas.js swagger.js ./
+COPY --chown=node:node server.js ecosystem.config.js ./
+COPY --chown=node:node config ./config/
+COPY --chown=node:node models ./models/
+COPY --chown=node:node routes ./routes/
+COPY --chown=node:node services ./services/
+COPY --chown=node:node views ./views/
+COPY --chown=node:node public ./public/
+COPY --chown=node:node schemas.js swagger.js ./
 
 # Configure persistent data volume
 VOLUME ["/app/data"]
+
+# Run with same non-root user as full image for interchangeable behavior
+USER node
 
 # Configure application port
 EXPOSE ${PAPERLESS_AI_PORT:-3000}

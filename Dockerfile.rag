@@ -2,6 +2,9 @@ FROM python:3.10-slim
 
 WORKDIR /app
 
+# Disable Chroma telemetry to avoid outbound Posthog calls in restricted networks
+ENV ANONYMIZED_TELEMETRY=False
+
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     build-essential \

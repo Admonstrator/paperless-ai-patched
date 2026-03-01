@@ -99,8 +99,8 @@
                         <h3 class="card-title">Document Processing Status</h3>
                         <div class="flex items-center">
                             <div class="w-1/2 relative">
-                                <canvas id="documentChart" height="200"></canvas>
-                                <div id="documentChartSkeleton" data-dashboard-chart-skeleton class="absolute inset-0 bg-white/85 dark:bg-slate-900/85 flex items-center justify-center rounded" aria-hidden="false">
+                                <canvas id="documentChart" height="200" class="hidden" data-dashboard-chart aria-hidden="true"></canvas>
+                                <div id="documentChartSkeleton" data-dashboard-chart-skeleton class="h-[200px] w-full flex items-center justify-center" aria-hidden="false">
                                     <div class="w-32 h-32 rounded-full border-8 border-gray-200 border-t-gray-300 animate-pulse"></div>
                                 </div>
                             </div>
@@ -320,18 +320,18 @@
                     <!-- Token Distribution Chart -->
                     <div class="material-card">
                         <h3 class="card-title">Token Usage Distribution</h3>
-                        <div class="chart-container relative">
-                            <canvas id="tokenDistribution"></canvas>
-                            <div id="tokenDistributionSkeleton" data-dashboard-chart-skeleton class="absolute inset-0 animate-pulse rounded bg-gray-200/90" aria-hidden="false"></div>
+                        <div class="chart-container">
+                            <canvas id="tokenDistribution" class="hidden" data-dashboard-chart aria-hidden="true"></canvas>
+                            <div id="tokenDistributionSkeleton" data-dashboard-chart-skeleton class="h-[200px] w-full animate-pulse rounded bg-gray-200" aria-hidden="false"></div>
                         </div>
                     </div>
                 
                     <!-- Document Types Chart -->
                     <div class="material-card">
                         <h3 class="card-title">Document Type Distribution</h3>
-                        <div class="chart-container relative">
-                            <canvas id="documentTypes"></canvas>
-                            <div id="documentTypesSkeleton" data-dashboard-chart-skeleton class="absolute inset-0 bg-white/85 dark:bg-slate-900/85 flex items-center justify-center rounded" aria-hidden="false">
+                        <div class="chart-container">
+                            <canvas id="documentTypes" class="hidden" data-dashboard-chart aria-hidden="true"></canvas>
+                            <div id="documentTypesSkeleton" data-dashboard-chart-skeleton class="h-[200px] w-full flex items-center justify-center" aria-hidden="false">
                                 <div class="w-24 h-24 rounded-full border-8 border-gray-200 border-t-gray-300 animate-pulse"></div>
                             </div>
                         </div>

@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="./logo.png" alt="Paperless-AI next Logo" weight="200" style="border-radius: 10px; margin: 20px 0;">
+<img src="./logo.png" alt="Paperless-AI next logo with the text Paperless-AI next, shown as a clean modern project mark at the top of the page, conveying a welcoming and professional tone" weight="200" style="border-radius: 10px; margin: 20px 0;">
 
 # 📄 Paperless-AI next
 
@@ -20,14 +20,16 @@ If you find this tool helpful, consider supporting its development:
 
 [![GitHub Sponsors](https://img.shields.io/badge/GitHub-Sponsors-EA4AAA?style=for-the-badge&logo=github)](https://github.com/sponsors/admonstrator) [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/admon) [![Ko-fi](https://img.shields.io/badge/Ko--fi-FF5E5B?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/admon) [![PayPal](https://img.shields.io/badge/PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white)](https://paypal.me/aaronviehl)
 
-Also consider supporting the **original author**: [![Patreon](https://img.shields.io/badge/Patreon-F96854?style=flat&logo=patreon&logoColor=white)](https://www.patreon.com/c/clusterzx)
+Also consider supporting the **original author**: 
+
+[![Patreon](https://img.shields.io/badge/Patreon-F96854?style=for-the-badge&logo=patreon&logoColor=white)](https://www.patreon.com/c/clusterzx)
 </div>
 
 ---
 
 ## 📖 About
 
-**Paperless-AI** is an AI-powered extension for [Paperless-ngx](https://github.com/paperless-ngx/paperless-ngx) that brings automatic document classification, smart tagging, and semantic search using OpenAI-compatible APIs and Ollama.
+**Paperless-AI next** is an AI-powered extension for [Paperless-ngx](https://github.com/paperless-ngx/paperless-ngx) that brings automatic document classification, smart tagging, and semantic search using OpenAI-compatible APIs and Ollama.
 
 This fork collects pending upstream PRs, applies security patches, and tests improvements. Since the upstream project is no longer actively maintained, it has grown into the most up-to-date version available.
 
@@ -75,6 +77,8 @@ See the complete fix list in the documentation:
 ## 🚀 Quick Start
 
 ### Docker Compose (Recommended)
+
+Please check the docker variables [here](https://paperless-ai-next.admon.me/getting-started/configuration/#docker-environment-variables) for more configuration options.
 
 **Lite version** – AI tagging & OCR only (~500–700 MB):
 

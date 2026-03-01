@@ -1,6 +1,6 @@
 # How It Works
 
-You don't need to understand any of this to use Paperless-AI. But if you're curious what's happening under the hood, here's the short version.
+You don't need to understand any of this to use Paperless-AI next. But if you're curious what's happening under the hood, here's the short version.
 
 ---
 

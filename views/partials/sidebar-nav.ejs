@@ -2,19 +2,46 @@
     <li><a href="/dashboard" class="sidebar-link"><i class="fas fa-home"></i><span>Dashboard</span></a></li>
     <li><a href="/manual" class="sidebar-link"><i class="fas fa-file-alt"></i><span>Manual</span></a></li>
     <% if (chatEnabled) { %>
-    <li><a href="/chat" class="sidebar-link"><i class="fa-solid fa-comment"></i><span>Chat</span></a></li>
-    <% } %>
-    <% if (ragEnabled) { %>
-    <li><a href="/rag" class="sidebar-link"><i class="fa-solid fa-comment"></i><span>RAG Chat</span></a></li>
-    <% } %>
-    <li><a href="/playground" class="sidebar-link"><i class="fa-solid fa-flask-vial"></i><span>Playground</span></a></li>
-    <li><a href="/history" class="sidebar-link"><i class="fa-solid fa-clock-rotate-left"></i><span>History</span></a></li>
-    <li><a href="/ocr" class="sidebar-link"><i class="fa-solid fa-eye"></i><span>OCR Queue</span><span id="sidebarOcrBadge" class="ml-2 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800 hidden">0</span></a></li>
-    <li><a href="/failed" class="sidebar-link"><i class="fa-solid fa-ban"></i><span>Permanently Failed</span><span id="sidebarFailedBadge" class="ml-2 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-100 text-red-700 hidden">0</span></a></li>
-    <li><a href="/about" class="sidebar-link"><i class="fa-solid fa-circle-info"></i><span>About</span></a></li>
-    <li><a href="/settings" class="sidebar-link"><i class="fas fa-cog"></i><span>Settings</span></a></li>
-    <li><a href="/logout" class="sidebar-link"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></a></li>
+        <li><a href="/chat" class="sidebar-link"><i class="fa-solid fa-comment"></i><span>Chat</span></a></li>
+        <% } %>
+            <% if (ragEnabled) { %>
+                <li><a href="/rag" class="sidebar-link"><i class="fa-solid fa-comment"></i><span>RAG Chat</span></a>
+                </li>
+                <% } %>
+                    <li><a href="/playground" class="sidebar-link"><i
+                                class="fa-solid fa-flask-vial"></i><span>Playground</span></a></li>
+                    <li><a href="/history" class="sidebar-link"><i
+                                class="fa-solid fa-clock-rotate-left"></i><span>History</span></a></li>
+                    <li><a href="/ocr" class="sidebar-link"><i class="fa-solid fa-eye"></i><span>OCR Queue</span><span
+                                id="sidebarOcrBadge"
+                                class="ml-2 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800 hidden">0</span></a>
+                    </li>
+                    <li><a href="/failed" class="sidebar-link"><i class="fa-solid fa-ban"></i><span>Permanently
+                                Failed</span><span id="sidebarFailedBadge"
+                                class="ml-2 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-100 text-red-700 hidden">0</span></a>
+                    </li>
+                    <li><a href="/about" class="sidebar-link"><i
+                                class="fa-solid fa-circle-info"></i><span>About</span></a></li>
+                    <li><a href="/settings" class="sidebar-link"><i class="fas fa-cog"></i><span>Settings</span></a>
+                    </li>
+                    <li><a href="/logout" class="sidebar-link"><i
+                                class="fa-solid fa-right-from-bracket"></i><span>Logout</span></a></li>
 </ul>
+<a href="https://github.com/admonstrator/paperless-ai-next" class="github-button"
+    style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);">
+    <span class="star-button">
+        <svg class="star-icon" height="16" width="16" viewBox="0 0 16 16">
+            <path
+                d="M8 .25a.75.75 0 01.673.418l1.882 3.815 4.21.612a.75.75 0 01.416 1.279l-3.046 2.97.719 4.192a.75.75 0 01-1.088.791L8 12.347l-3.766 1.98a.75.75 0 01-1.088-.79l.72-4.194L.818 6.374a.75.75 0 01.416-1.28l4.21-.611L7.327.668A.75.75 0 018 .25z">
+            </path>
+        </svg>
+        Star
+    </span>
+    <span id="starCount" class="star-count">1.2k</span>
+</a>
+<p style="position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%); font-size: 10px; color: #555; text-align: center;">
+    Please support me on GitHub
+</p>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const currentPath = window.location.pathname;

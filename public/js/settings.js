@@ -505,30 +505,17 @@ For the language:
     }
 }
 
-// Initialize everything when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
+function initializeCoreSettings() {
     const themeManager = new ThemeManager();
     const settingsTabsManager = new SettingsTabsManager();
     const formManager = new FormManager();
-    const tagsManager = new TagsManager('tagInput','tagsContainer','tags');
-    const ignoreTagsManager = new TagsManager('ignoreTagInput','ignoreTagsContainer','ignoreTags');
-    const promptTagsManager = new TagsManager('promptTagInput','promptTagsContainer','promptTags');
+    const tagsManager = new TagsManager('tagInput', 'tagsContainer', 'tags');
+    const ignoreTagsManager = new TagsManager('ignoreTagInput', 'ignoreTagsContainer', 'ignoreTags');
+    const promptTagsManager = new TagsManager('promptTagInput', 'promptTagsContainer', 'promptTags');
     const promptManager = new PromptManager();
+}
 
-    // Initialize textarea newlines
-    const systemPromptTextarea = document.getElementById('systemPrompt');
-    if (systemPromptTextarea) {
-        systemPromptTextarea.value = systemPromptTextarea.value.replace(/\\n/g, '\n');
-    }
-});
-
-// Form Submission Handler
-document.addEventListener('DOMContentLoaded', (event) => {
-    const systemPromptTextarea = document.getElementById('systemPrompt');
-    if (systemPromptTextarea) {
-        systemPromptTextarea.value = systemPromptTextarea.value.replace(/\\n/g, '\n');
-    }
-
+function initializeFormHandlers() {
     // Clear Tag Cache Button Handler
     const clearTagCacheBtn = document.getElementById('clearTagCacheBtn');
     if (clearTagCacheBtn) {
@@ -652,7 +639,14 @@ document.addEventListener('DOMContentLoaded', (event) => {
             submitBtn.innerHTML = originalBtnText;
         }
     });
-});
+}
+
+function normalizeSystemPromptNewlines() {
+    const systemPromptTextarea = document.getElementById('systemPrompt');
+    if (systemPromptTextarea) {
+        systemPromptTextarea.value = systemPromptTextarea.value.replace(/\\n/g, '\n');
+    }
+}
 
 class URLValidator {
     constructor() {
@@ -726,37 +720,85 @@ class URLValidator {
     }
 }
 
+const TOOLTIP_CARD_STYLES = 'background:#ffffff;color:#111827;border:1px solid #d1d5db;border-radius:8px;';
+const REGISTERED_TOOLTIP_INSTANCES = [];
+let tooltipResizeListenerAttached = false;
+
+function getSettingsTooltipPlacement() {
+    return window.innerWidth < 768 ? 'bottom' : 'right';
+}
+
+function createReadableTooltipContent(innerHtml, padding = '10px 12px') {
+    return `<div style="${TOOLTIP_CARD_STYLES}padding:${padding};line-height:1.45;">${innerHtml}</div>`;
+}
+
+function getReadableTooltipOptions(overrides = {}) {
+    return {
+        allowHTML: true,
+        placement: getSettingsTooltipPlacement(),
+        interactive: true,
+        theme: 'light-border',
+        touch: 'hold',
+        appendTo: () => document.body,
+        ...overrides
+    };
+}
+
+function normalizeTooltipInstances(instances) {
+    if (!instances) {
+        return [];
+    }
+
+    if (Array.isArray(instances)) {
+        return instances.filter((instance) => instance && typeof instance.setProps === 'function');
+    }
+
+    return typeof instances.setProps === 'function' ? [instances] : [];
+}
+
+function refreshAllTooltipPlacements() {
+    const placement = getSettingsTooltipPlacement();
+    REGISTERED_TOOLTIP_INSTANCES.forEach((instance) => {
+        instance.setProps({ placement });
+    });
+}
+
+function registerTooltipInstances(instances) {
+    const normalizedInstances = normalizeTooltipInstances(instances);
+    if (normalizedInstances.length === 0) {
+        return;
+    }
+
+    normalizedInstances.forEach((instance) => {
+        if (!REGISTERED_TOOLTIP_INSTANCES.includes(instance)) {
+            REGISTERED_TOOLTIP_INSTANCES.push(instance);
+        }
+    });
+
+    if (!tooltipResizeListenerAttached) {
+        window.addEventListener('resize', refreshAllTooltipPlacements);
+        tooltipResizeListenerAttached = true;
+    }
+}
+
 // Tooltip System
 class TooltipManager {
     constructor() {
         this.initialize();
     }
 
-    getTooltipPlacement() {
-        return window.innerWidth < 768 ? 'bottom' : 'right';
-    }
-
     initialize() {
-        this.tooltipInstance = tippy('#urlHelp', {
+        this.tooltipInstance = tippy('#urlHelp', getReadableTooltipOptions({
             content: this.getTooltipContent(),
-            allowHTML: true,
-            placement: this.getTooltipPlacement(),
-            interactive: true,
-            theme: 'light-border',
             maxWidth: 450,
-            touch: 'hold',
             trigger: 'mouseenter click',
             zIndex: 40,
-        });
-
-        window.addEventListener('resize', () => {
-            this.tooltipInstance[0].setProps({ placement: this.getTooltipPlacement() });
-        });
+        }));
+        registerTooltipInstances(this.tooltipInstance);
     }
 
     getTooltipContent() {
-        return `
-            <div style="background:#ffffff;color:#111827;padding:12px;border-radius:8px;line-height:1.45;">
+        return createReadableTooltipContent(`
                 <h3 style="font-size:16px;font-weight:700;margin-bottom:8px;">API URL Configuration</h3>
                 
                 <div style="margin-bottom:10px;">
@@ -794,8 +836,7 @@ class TooltipManager {
                 </div>
 
                 <p style="font-size:12px;font-style:italic;margin-top:8px;">The /api endpoint will be added automatically.</p>
-            </div>
-        `;
+        `, '12px');
     }
 }
 
@@ -861,18 +902,13 @@ class SettingsHintManager {
         });
 
         if (tooltipTargets.length > 0) {
-            tippy(tooltipTargets, {
-                allowHTML: true,
-                placement: window.innerWidth < 768 ? 'bottom' : 'right',
-                interactive: true,
-                theme: 'light-border',
+            const hintTooltipInstances = tippy(tooltipTargets, getReadableTooltipOptions({
                 maxWidth: 360,
-                touch: 'hold',
-                appendTo: () => document.body,
                 content(reference) {
-                    return `<div style="background:#ffffff;color:#111827;border:1px solid #d1d5db;border-radius:8px;padding:8px 10px;line-height:1.45;">${reference.dataset.hintContent || ''}</div>`;
+                    return createReadableTooltipContent(reference.dataset.hintContent || '', '8px 10px');
                 }
-            });
+            }));
+            registerTooltipInstances(hintTooltipInstances);
         }
 
         this.initializeTagCacheHint();
@@ -913,15 +949,9 @@ class SettingsHintManager {
             tagCacheIcon.style.lineHeight = '1';
         }
 
-        tippy(tagCacheTTLHelp, {
-            allowHTML: true,
-            placement: window.innerWidth < 768 ? 'bottom' : 'right',
-            interactive: true,
-            theme: 'light-border',
+        const tagCacheTooltipInstance = tippy(tagCacheTTLHelp, getReadableTooltipOptions({
             maxWidth: 420,
-            touch: 'hold',
-            content: `
-                <div style="background:#ffffff;color:#111827;border:1px solid #d1d5db;border-radius:8px;padding:10px 12px;line-height:1.45;">
+            content: createReadableTooltipContent(`
                     <p style="margin-bottom:8px;">Controls how long tags are cached before refreshing from Paperless-ngx.</p>
                     <ul style="padding-left:18px; margin:0 0 8px 0;">
                         <li><strong>60-180s:</strong> fresher data, more API calls</li>
@@ -929,22 +959,21 @@ class SettingsHintManager {
                         <li><strong>600-3600s:</strong> fewer API calls, slower visibility of new tags</li>
                     </ul>
                     <p style="font-size:12px;">Good cache settings can reduce Paperless tag API calls significantly during batch processing.</p>
-                </div>
-            `
-        });
+            `)
+        }));
+        registerTooltipInstances(tagCacheTooltipInstance);
     }
 }
 
-// Initialize all components
-document.addEventListener('DOMContentLoaded', () => {
+function initializeTooltipAndValidation() {
     const urlValidator = new URLValidator();
     const tooltipManager = new TooltipManager();
     const settingsHintManager = new SettingsHintManager();
-});
+}
 
 
 // Custom Fields Management
-document.addEventListener('DOMContentLoaded', function() {
+function initializeCustomFieldsManagement() {
     // External API settings toggle
     const externalApiEnabled = document.getElementById('externalApiEnabled');
     const externalApiSettings = document.getElementById('externalApiSettings');
@@ -1008,6 +1037,14 @@ document.addEventListener('DOMContentLoaded', function() {
         attributes: true,
         attributeFilter: ['data-theme']
     });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    normalizeSystemPromptNewlines();
+    initializeCoreSettings();
+    initializeFormHandlers();
+    initializeTooltipAndValidation();
+    initializeCustomFieldsManagement();
 });
 
 function updateThemeClasses(isDark) {

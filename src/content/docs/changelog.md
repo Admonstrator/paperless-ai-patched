@@ -46,6 +46,7 @@ All improvements and fixes included in this fork, compared to [clusterzx/paperle
 | [NEXT-016](fixes/next-016-mistral-ocr-queue/) | New Mistral OCR queue for documents that were poorly scanned | 2026-02-28 |
 | [NEXT-017](fixes/next-017-ignore-tags-processing/) | Added ignore-tags filtering for regular scans and adjusted dashboard totals accordingly | 2026-02-28 |
 | [NEXT-018](fixes/next-018-terminal-failed-queue/) | Added permanently failed queue with manual reset after AI/OCR hard failures | 2026-02-28 |
+| [NEXT-019](fixes/next-019-settings-tabs-env-editor/) | Reworked settings into System/AI/OCR/Troubleshooting tabs with runtime ENV hints and extended config coverage | 2026-03-01 |
 
 ---
 

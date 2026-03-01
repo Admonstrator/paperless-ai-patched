@@ -30,6 +30,14 @@ function isChatEnabled() {
   return ragEnabled;
 }
 
+const SETTINGS_SECRET_FIELDS = [
+  'PAPERLESS_API_TOKEN',
+  'OPENAI_API_KEY',
+  'CUSTOM_API_KEY',
+  'AZURE_API_KEY',
+  'MISTRAL_API_KEY'
+];
+
 /**
  * Rate limiter for cache clearing operations
  * Prevents abuse of cache invalidation endpoints by limiting requests to 10 per 15 minutes per IP
@@ -2344,6 +2352,10 @@ async function saveDocumentChanges(docId, updateData, analysis, originalData) {
  *               type: object
  *               properties:
  *                 success:
+ *                   type: boolean
+ *                   description: Indicates whether regeneration succeeded
+ *                   example: true
+ *                 newKey:
  *                   type: string
  *                   description: The newly generated API key
  *                   example: "3f7a8d6e2c1b5a9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c7b6a5"
@@ -2390,7 +2402,7 @@ router.post('/api/key-regenerate', async (req, res) => {
     process.env.API_KEY = apiKey;
 
     // Sende die Antwort zurück
-    res.json({ success: apiKey });
+    res.json({ success: true, newKey: apiKey });
     console.log('API key regenerated:', apiKey);
   } catch (error) {
     console.error('API key regeneration error:', error);
@@ -3346,7 +3358,26 @@ router.get('/settings', async (req, res) => {
     EXTERNAL_API_HEADERS: process.env.EXTERNAL_API_HEADERS || '{}',
     EXTERNAL_API_BODY: process.env.EXTERNAL_API_BODY || '{}',
     EXTERNAL_API_TIMEOUT: process.env.EXTERNAL_API_TIMEOUT || '5000',
-    EXTERNAL_API_TRANSFORM: process.env.EXTERNAL_API_TRANSFORM || ''
+    EXTERNAL_API_TRANSFORM: process.env.EXTERNAL_API_TRANSFORM || '',
+    EXTERNAL_API_ALLOW_PRIVATE_IPS: process.env.EXTERNAL_API_ALLOW_PRIVATE_IPS || 'no',
+    TAG_CACHE_TTL_SECONDS: process.env.TAG_CACHE_TTL_SECONDS || '300',
+    ACTIVATE_TAGGING: process.env.ACTIVATE_TAGGING || 'yes',
+    ACTIVATE_CORRESPONDENTS: process.env.ACTIVATE_CORRESPONDENTS || 'yes',
+    ACTIVATE_DOCUMENT_TYPE: process.env.ACTIVATE_DOCUMENT_TYPE || 'yes',
+    ACTIVATE_TITLE: process.env.ACTIVATE_TITLE || 'yes',
+    ACTIVATE_CUSTOM_FIELDS: process.env.ACTIVATE_CUSTOM_FIELDS || 'yes',
+    CUSTOM_FIELDS: process.env.CUSTOM_FIELDS || '{"custom_fields":[]}',
+    DISABLE_AUTOMATIC_PROCESSING: process.env.DISABLE_AUTOMATIC_PROCESSING || 'no',
+    RAG_SERVICE_ENABLED: process.env.RAG_SERVICE_ENABLED || 'true',
+    RAG_SERVICE_URL: process.env.RAG_SERVICE_URL || 'http://localhost:8000',
+    MISTRAL_OCR_ENABLED: process.env.MISTRAL_OCR_ENABLED || 'no',
+    MISTRAL_API_KEY: process.env.MISTRAL_API_KEY || '',
+    MISTRAL_OCR_MODEL: process.env.MISTRAL_OCR_MODEL || 'mistral-ocr-latest',
+    GLOBAL_RATE_LIMIT_WINDOW_MS: process.env.GLOBAL_RATE_LIMIT_WINDOW_MS || '900000',
+    GLOBAL_RATE_LIMIT_MAX: process.env.GLOBAL_RATE_LIMIT_MAX || '1000',
+    TRUST_PROXY: typeof process.env.TRUST_PROXY === 'undefined' ? '' : process.env.TRUST_PROXY,
+    MIN_CONTENT_LENGTH: process.env.MIN_CONTENT_LENGTH || '10',
+    PAPERLESS_AI_PORT: process.env.PAPERLESS_AI_PORT || '3000'
   };
   
   if (isConfigured) {
@@ -3366,12 +3397,20 @@ router.get('/settings', async (req, res) => {
   console.log('Current config TAGS:', config.TAGS);
   console.log('Current config IGNORE_TAGS:', config.IGNORE_TAGS);
   console.log('Current config PROMPT_TAGS:', config.PROMPT_TAGS);
+
+  const configuredSecrets = {};
+  SETTINGS_SECRET_FIELDS.forEach((key) => {
+    configuredSecrets[key] = Boolean(config[key]);
+    config[key] = '';
+  });
+
   const version = configFile.PAPERLESS_AI_VERSION || ' ';
   res.render('settings', { 
     version,
     ragEnabled: process.env.RAG_SERVICE_ENABLED === 'true',
     chatEnabled: isChatEnabled(),
     config,
+    configuredSecrets,
     success: isConfigured ? 'The application is already configured. You can update the configuration below.' : undefined,
     settingsError: showErrorCheckSettings ? 'Please check your settings. Something is not working correctly.' : undefined
   });
@@ -4666,7 +4705,18 @@ router.post('/settings', express.json(), async (req, res) => {
       azureApiKey,
       azureDeploymentName,
       azureApiVersion,
-      tagCacheTTL  // Tag cache configuration
+      tagCacheTTL,
+      mistralOcrEnabled,
+      mistralApiKey,
+      mistralOcrModel,
+      ragServiceEnabled,
+      ragServiceUrl,
+      globalRateLimitWindowMs,
+      globalRateLimitMax,
+      trustProxy,
+      minContentLength,
+      paperlessAiPort,
+      externalApiAllowPrivateIps
     } = req.body;
 
     //replace equal char in system prompt
@@ -4721,8 +4771,32 @@ router.post('/settings', express.json(), async (req, res) => {
       EXTERNAL_API_BODY: process.env.EXTERNAL_API_BODY || '{}',
       EXTERNAL_API_TIMEOUT: process.env.EXTERNAL_API_TIMEOUT || '5000',
       EXTERNAL_API_TRANSFORM: process.env.EXTERNAL_API_TRANSFORM || '',
-      TAG_CACHE_TTL_SECONDS: process.env.TAG_CACHE_TTL_SECONDS || '300'
+      EXTERNAL_API_ALLOW_PRIVATE_IPS: process.env.EXTERNAL_API_ALLOW_PRIVATE_IPS || 'no',
+      TAG_CACHE_TTL_SECONDS: process.env.TAG_CACHE_TTL_SECONDS || '300',
+      RAG_SERVICE_ENABLED: process.env.RAG_SERVICE_ENABLED || 'true',
+      RAG_SERVICE_URL: process.env.RAG_SERVICE_URL || 'http://localhost:8000',
+      MISTRAL_OCR_ENABLED: process.env.MISTRAL_OCR_ENABLED || 'no',
+      MISTRAL_API_KEY: process.env.MISTRAL_API_KEY || '',
+      MISTRAL_OCR_MODEL: process.env.MISTRAL_OCR_MODEL || 'mistral-ocr-latest',
+      GLOBAL_RATE_LIMIT_WINDOW_MS: process.env.GLOBAL_RATE_LIMIT_WINDOW_MS || '900000',
+      GLOBAL_RATE_LIMIT_MAX: process.env.GLOBAL_RATE_LIMIT_MAX || '1000',
+      TRUST_PROXY: typeof process.env.TRUST_PROXY === 'undefined' ? '' : process.env.TRUST_PROXY,
+      MIN_CONTENT_LENGTH: process.env.MIN_CONTENT_LENGTH || '10',
+      PAPERLESS_AI_PORT: process.env.PAPERLESS_AI_PORT || '3000'
     };
+
+    const hasValue = (value) => typeof value === 'string' && value.trim() !== '';
+
+    const hasPaperlessTokenInput = hasValue(paperlessToken);
+    const effectivePaperlessToken = hasPaperlessTokenInput ? paperlessToken.trim() : currentConfig.PAPERLESS_API_TOKEN;
+    const hasOpenAiKeyInput = hasValue(openaiKey);
+    const effectiveOpenAiKey = hasOpenAiKeyInput ? openaiKey.trim() : currentConfig.OPENAI_API_KEY;
+    const hasCustomApiKeyInput = hasValue(customApiKey);
+    const effectiveCustomApiKey = hasCustomApiKeyInput ? customApiKey.trim() : currentConfig.CUSTOM_API_KEY;
+    const hasAzureApiKeyInput = hasValue(azureApiKey);
+    const effectiveAzureApiKey = hasAzureApiKeyInput ? azureApiKey.trim() : currentConfig.AZURE_API_KEY;
+    const hasMistralApiKeyInput = hasValue(mistralApiKey);
+    const effectiveMistralApiKey = hasMistralApiKeyInput ? mistralApiKey.trim() : currentConfig.MISTRAL_API_KEY;
 
     // Process custom fields
     let processedCustomFields = [];
@@ -4772,9 +4846,8 @@ router.post('/settings', express.json(), async (req, res) => {
     const externalApiTimeout = req.body.externalApiTimeout || '5000';
     const externalApiTransform = req.body.externalApiTransform || '';
 
-    if (paperlessUrl !== currentConfig.PAPERLESS_API_URL?.replace('/api', '') || 
-        paperlessToken !== currentConfig.PAPERLESS_API_TOKEN) {
-      const isPaperlessValid = await setupService.validatePaperlessConfig(paperlessUrl, paperlessToken);
+    if (paperlessUrl !== currentConfig.PAPERLESS_API_URL?.replace('/api', '') || hasPaperlessTokenInput) {
+      const isPaperlessValid = await setupService.validatePaperlessConfig(paperlessUrl, effectivePaperlessToken);
       if (!isPaperlessValid) {
         return res.status(400).json({ 
           error: 'Paperless-ngx connection failed. Please check URL and Token.'
@@ -4785,21 +4858,29 @@ router.post('/settings', express.json(), async (req, res) => {
     const updatedConfig = {};
 
     if (paperlessUrl) updatedConfig.PAPERLESS_API_URL = paperlessUrl + '/api';
-    if (paperlessToken) updatedConfig.PAPERLESS_API_TOKEN = paperlessToken;
+    if (hasPaperlessTokenInput) updatedConfig.PAPERLESS_API_TOKEN = effectivePaperlessToken;
     if (paperlessUsername) updatedConfig.PAPERLESS_USERNAME = paperlessUsername;
 
     // Handle AI provider configuration
     if (aiProvider) {
       updatedConfig.AI_PROVIDER = aiProvider;
       
-      if (aiProvider === 'openai' && openaiKey) {
-        const isOpenAIValid = await setupService.validateOpenAIConfig(openaiKey);
+      if (aiProvider === 'openai') {
+        if (!effectiveOpenAiKey) {
+          return res.status(400).json({
+            error: 'OpenAI API key is required when OpenAI provider is selected.'
+          });
+        }
+
+        const isOpenAIValid = await setupService.validateOpenAIConfig(effectiveOpenAiKey);
         if (!isOpenAIValid) {
           return res.status(400).json({ 
             error: 'OpenAI API Key is not valid. Please check the key.'
           });
         }
-        updatedConfig.OPENAI_API_KEY = openaiKey;
+        if (hasOpenAiKeyInput) {
+          updatedConfig.OPENAI_API_KEY = effectiveOpenAiKey;
+        }
         if (openaiModel) updatedConfig.OPENAI_MODEL = openaiModel;
       } 
       else if (aiProvider === 'ollama' && (ollamaUrl || ollamaModel)) {
@@ -4814,15 +4895,34 @@ router.post('/settings', express.json(), async (req, res) => {
         }
         if (ollamaUrl) updatedConfig.OLLAMA_API_URL = ollamaUrl;
         if (ollamaModel) updatedConfig.OLLAMA_MODEL = ollamaModel;
+      } else if (aiProvider === 'custom') {
+        const effectiveCustomBaseUrl = customBaseUrl || currentConfig.CUSTOM_BASE_URL;
+        const effectiveCustomModel = customModel || currentConfig.CUSTOM_MODEL;
+        const isCustomValid = await setupService.validateCustomConfig(
+          effectiveCustomBaseUrl,
+          effectiveCustomApiKey,
+          effectiveCustomModel
+        );
+        if (!isCustomValid) {
+          return res.status(400).json({
+            error: 'Custom provider connection failed. Please check URL, API key and model.'
+          });
+        }
+        if (hasCustomApiKeyInput) updatedConfig.CUSTOM_API_KEY = effectiveCustomApiKey;
+        if (customBaseUrl) updatedConfig.CUSTOM_BASE_URL = customBaseUrl;
+        if (customModel) updatedConfig.CUSTOM_MODEL = customModel;
       } else if (aiProvider === 'azure') {
-        const isAzureValid = await setupService.validateAzureConfig(azureApiKey, azureEndpoint, azureDeploymentName, azureApiVersion);
+        const effectiveAzureEndpoint = azureEndpoint || currentConfig.AZURE_ENDPOINT;
+        const effectiveAzureDeployment = azureDeploymentName || currentConfig.AZURE_DEPLOYMENT_NAME;
+        const effectiveAzureApiVersion = azureApiVersion || currentConfig.AZURE_API_VERSION;
+        const isAzureValid = await setupService.validateAzureConfig(effectiveAzureApiKey, effectiveAzureEndpoint, effectiveAzureDeployment, effectiveAzureApiVersion);
         if (!isAzureValid) {
           return res.status(400).json({
             error: 'Azure connection failed. Please check URL, API Key, Deployment Name and API Version.'
           });
         }
         if(azureEndpoint) updatedConfig.AZURE_ENDPOINT = azureEndpoint;
-        if(azureApiKey) updatedConfig.AZURE_API_KEY = azureApiKey;
+        if(hasAzureApiKeyInput) updatedConfig.AZURE_API_KEY = effectiveAzureApiKey;
         if(azureDeploymentName) updatedConfig.AZURE_DEPLOYMENT_NAME = azureDeploymentName;
         if(azureApiVersion) updatedConfig.AZURE_API_VERSION = azureApiVersion;
       }
@@ -4841,21 +4941,7 @@ router.post('/settings', express.json(), async (req, res) => {
     if (usePromptTags) updatedConfig.USE_PROMPT_TAGS = usePromptTags;
     if (promptTags) updatedConfig.PROMPT_TAGS = normalizeArray(promptTags);
     if (useExistingData) updatedConfig.USE_EXISTING_DATA = useExistingData;
-    if (customApiKey) updatedConfig.CUSTOM_API_KEY = customApiKey;
-    if (customBaseUrl) updatedConfig.CUSTOM_BASE_URL = customBaseUrl;
-    if (customModel) updatedConfig.CUSTOM_MODEL = customModel;
     if (disableAutomaticProcessing) updatedConfig.DISABLE_AUTOMATIC_PROCESSING = disableAutomaticProcessing;
-
-    // Update tag cache TTL (validate range: 60-3600 seconds)
-    if (tagCacheTTL !== undefined) {
-      const ttl = parseInt(tagCacheTTL, 10);
-      if (!isNaN(ttl) && ttl >= 60 && ttl <= 3600) {
-        updatedConfig.TAG_CACHE_TTL_SECONDS = ttl.toString();
-      } else {
-        console.warn(`[WARN] Invalid TAG_CACHE_TTL_SECONDS value: ${tagCacheTTL}. Using default: 300`);
-        updatedConfig.TAG_CACHE_TTL_SECONDS = '300';
-      }
-    }
 
     // Update custom fields
     if (processedCustomFields.length > 0 || customFields) {
@@ -4884,6 +4970,18 @@ router.post('/settings', express.json(), async (req, res) => {
       updatedConfig.EXTERNAL_API_BODY = externalApiBody || '{}';
       updatedConfig.EXTERNAL_API_TIMEOUT = externalApiTimeout || '5000';
       updatedConfig.EXTERNAL_API_TRANSFORM = externalApiTransform || '';
+      updatedConfig.EXTERNAL_API_ALLOW_PRIVATE_IPS = externalApiAllowPrivateIps || 'no';
+
+      if (mistralOcrEnabled) updatedConfig.MISTRAL_OCR_ENABLED = mistralOcrEnabled;
+      if (hasMistralApiKeyInput) updatedConfig.MISTRAL_API_KEY = effectiveMistralApiKey;
+      if (mistralOcrModel) updatedConfig.MISTRAL_OCR_MODEL = mistralOcrModel;
+      if (ragServiceEnabled) updatedConfig.RAG_SERVICE_ENABLED = ragServiceEnabled;
+      if (ragServiceUrl) updatedConfig.RAG_SERVICE_URL = ragServiceUrl;
+      if (globalRateLimitWindowMs) updatedConfig.GLOBAL_RATE_LIMIT_WINDOW_MS = globalRateLimitWindowMs;
+      if (globalRateLimitMax) updatedConfig.GLOBAL_RATE_LIMIT_MAX = globalRateLimitMax;
+      if (typeof trustProxy === 'string') updatedConfig.TRUST_PROXY = trustProxy.trim();
+      if (minContentLength) updatedConfig.MIN_CONTENT_LENGTH = minContentLength;
+      if (paperlessAiPort) updatedConfig.PAPERLESS_AI_PORT = paperlessAiPort;
 
     // Update tag cache TTL (validate range: 60-3600 seconds)
     if (tagCacheTTL !== undefined) {
@@ -5104,6 +5202,7 @@ router.get('/about', protectApiRoute, async (req, res) => {
 
     const supportInfo = {
       appVersion: configFile.PAPERLESS_AI_VERSION || 'unknown',
+      commitSha: process.env.PAPERLESS_AI_COMMIT_SHA || 'unknown',
       nodeVersion: process.version,
       platform: `${process.platform} (${process.arch})`,
       nodeEnv: process.env.NODE_ENV || 'production',
@@ -5130,6 +5229,7 @@ router.get('/about', protectApiRoute, async (req, res) => {
       chatEnabled: isChatEnabled(),
       supportInfo: {
         appVersion: configFile.PAPERLESS_AI_VERSION || 'unknown',
+        commitSha: process.env.PAPERLESS_AI_COMMIT_SHA || 'unknown',
         nodeVersion: process.version,
         platform: `${process.platform} (${process.arch})`,
         nodeEnv: process.env.NODE_ENV || 'production',

@@ -46,6 +46,7 @@ Each subdirectory represents an integrated fix with:
 | [NEXT-016](next-016-mistral-ocr-queue/) | Mistral OCR queue for low-quality scans | ✅ Applied | 2026-02-28 |
 | [NEXT-017](next-017-ignore-tags-processing/) | Ignore tags for processing exclusion and statistics cleanup | ✅ Applied | 2026-02-28 |
 | [NEXT-018](next-018-terminal-failed-queue/) | Permanently failed queue with reset flow for AI/OCR failures | ✅ Applied | 2026-02-28 |
+| [NEXT-019](next-019-settings-tabs-env-editor/) | Settings UI rework with tabs, hints, and runtime ENV coverage | ✅ Applied | 2026-03-01 |
 
 ## 🚀 How to Use
 

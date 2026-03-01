@@ -49,6 +49,8 @@ RUN --mount=type=cache,target=/root/.npm \
 # Stage 3: Final runtime stage
 FROM node:24-slim
 
+ARG PAPERLESS_AI_COMMIT_SHA=unknown
+
 WORKDIR /app
 
 # Install only runtime dependencies
@@ -100,7 +102,10 @@ HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:${PAPERLESS_AI_PORT:-3000}/health || exit 1
 
 # Set production environment
-ENV NODE_ENV=production
+ENV NODE_ENV=production \
+    PAPERLESS_AI_COMMIT_SHA=${PAPERLESS_AI_COMMIT_SHA}
+
+LABEL org.opencontainers.image.revision=${PAPERLESS_AI_COMMIT_SHA}
 
 # Start both Node.js and Python services using our script
 CMD ["./start-services.sh"]

@@ -401,6 +401,10 @@ class PlaygroundAnalyzer {
         this.analysisPrompt = document.getElementById('analysisPrompt');
         this.analyzeButton = document.getElementById('analyzeButton');
         this.documentsGrid = document.getElementById('documentsGrid');
+        this.initialLoadingBlock = document.getElementById('playgroundInitialLoading');
+        this.initialLoadingStatus = document.getElementById('playgroundInitialLoadingStatus');
+        this.analysisOverlay = document.getElementById('playgroundAnalysisOverlay');
+        this.analysisOverlayStatus = document.getElementById('playgroundAnalysisStatus');
         this.isAnalyzing = false;
         this.promptRating = new PromptRatingSystem(); // Initialize rating system here
 
@@ -410,6 +414,124 @@ class PlaygroundAnalyzer {
     initialize() {
         this.analyzeButton.addEventListener('click', () => this.startAnalysis());
         this.setupStyles();
+        this.initializeThumbnailLoadingState();
+    }
+
+    initializeThumbnailLoadingState() {
+        if (!this.documentsGrid || !this.initialLoadingBlock) return;
+
+        const images = Array.from(this.documentsGrid.querySelectorAll('.playground-thumb[data-thumb-src]'));
+        if (images.length === 0) {
+            this.initialLoadingBlock.classList.add('hidden');
+            this.initialLoadingBlock.setAttribute('aria-busy', 'false');
+            return;
+        }
+
+        const total = images.length;
+        let loaded = 0;
+        let failed = 0;
+        const concurrency = Math.min(6, total);
+
+        const updateInitialStatus = () => {
+            if (!this.initialLoadingStatus) return;
+            const finished = loaded + failed;
+            if (finished >= total) {
+                this.initialLoadingStatus.textContent = `Loaded ${loaded}/${total} thumbnails.`;
+                return;
+            }
+            this.initialLoadingStatus.textContent = `Loading thumbnails ${finished}/${total}...`;
+        };
+
+        const revealThumbnail = (image, success = true) => {
+            const skeleton = image.parentElement?.querySelector('[data-thumb-skeleton]');
+            if (skeleton) {
+                skeleton.classList.add('hidden');
+            }
+
+            if (success) {
+                image.classList.add('is-ready');
+            }
+        };
+
+        const loadThumbnail = (image) => {
+            return new Promise((resolve) => {
+                const source = image.dataset.thumbSrc;
+                if (!source) {
+                    failed += 1;
+                    revealThumbnail(image, false);
+                    updateInitialStatus();
+                    resolve();
+                    return;
+                }
+
+                const onLoad = () => {
+                    loaded += 1;
+                    revealThumbnail(image, true);
+                    updateInitialStatus();
+                    resolve();
+                };
+
+                const onError = () => {
+                    failed += 1;
+                    revealThumbnail(image, false);
+                    updateInitialStatus();
+                    resolve();
+                };
+
+                image.addEventListener('load', onLoad, { once: true });
+                image.addEventListener('error', onError, { once: true });
+                image.src = source;
+            });
+        };
+
+        const runWorkers = async () => {
+            let nextIndex = 0;
+
+            const workers = Array.from({ length: concurrency }, async () => {
+                while (nextIndex < images.length) {
+                    const currentIndex = nextIndex;
+                    nextIndex += 1;
+                    await loadThumbnail(images[currentIndex]);
+                }
+            });
+
+            await Promise.all(workers);
+        };
+
+        updateInitialStatus();
+        window.requestAnimationFrame(() => {
+            runWorkers().finally(() => {
+                this.initialLoadingBlock.setAttribute('aria-busy', 'false');
+                setTimeout(() => {
+                    this.initialLoadingBlock.classList.add('hidden');
+                }, 200);
+            });
+        });
+
+        setTimeout(() => {
+            if ((loaded + failed) < total && this.initialLoadingStatus) {
+                this.initialLoadingStatus.textContent = `Still loading ${loaded + failed}/${total} thumbnails...`;
+            }
+        }, 4000);
+
+        setTimeout(() => {
+            if ((loaded + failed) < total) {
+                this.initialLoadingBlock.setAttribute('aria-busy', 'false');
+                this.initialLoadingBlock.classList.add('hidden');
+            }
+        }, 20000);
+
+    }
+
+    setAnalysisLoadingState(isLoading, statusText = 'Analyzing documents...') {
+        if (!this.analysisOverlay) return;
+
+        this.analysisOverlay.classList.toggle('hidden', !isLoading);
+        this.analysisOverlay.setAttribute('aria-busy', isLoading ? 'true' : 'false');
+
+        if (this.analysisOverlayStatus) {
+            this.analysisOverlayStatus.textContent = statusText;
+        }
     }
 
     setupStyles() {
@@ -546,11 +668,13 @@ class PlaygroundAnalyzer {
     
         this.isAnalyzing = true;
         this.analyzeButton.disabled = true;
+        this.setAnalysisLoadingState(true, 'Starting analysis...');
         this.showMessage('Starting document analysis...', 'info');
     
         try {
             const documents = Array.from(this.documentsGrid.children);
             for (const [index, docCard] of documents.entries()) {
+                this.setAnalysisLoadingState(true, `Analyzing document ${index + 1} of ${documents.length}...`);
                 this.showMessage(`Analyzing document ${index + 1} of ${documents.length}...`, 'info');
                 
                 docCard.scrollIntoView({ 
@@ -581,6 +705,7 @@ class PlaygroundAnalyzer {
         } finally {
             this.isAnalyzing = false;
             this.analyzeButton.disabled = false;
+            this.setAnalysisLoadingState(false);
         }
     }
 

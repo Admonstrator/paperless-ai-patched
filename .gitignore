@@ -46,3 +46,4 @@ surya_models.py
 .vscode/
 # AI context files (auto-generated)
 COPILOT.md
+.DS_Store

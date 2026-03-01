@@ -100,9 +100,45 @@ class ChartManager {
 class DashboardStatsLoader {
     constructor() {
         this.minimumLoadingTimeMs = 400;
+        this.requestTimeoutMs = 15000;
+        this.loadingBlock = document.getElementById('dashboardLoadingBlock');
+    }
+
+    getFallbackStats() {
+        const dashboardData = window.dashboardData || {};
+        return {
+            paperless_data: {
+                documentCount: Number(dashboardData.documentCount || 0),
+                processedDocumentCount: Number(dashboardData.processedCount || 0),
+                ocrNeededCount: Number(dashboardData.ocrNeededCount || 0),
+                failedCount: Number(dashboardData.failedCount || 0),
+                tagCount: Number(dashboardData.tagCount || 0),
+                correspondentCount: Number(dashboardData.correspondentCount || 0),
+                tokenDistribution: Array.isArray(dashboardData.tokenDistribution) ? dashboardData.tokenDistribution : [],
+                documentTypes: Array.isArray(dashboardData.documentTypes) ? dashboardData.documentTypes : []
+            },
+            openai_data: {
+                averagePromptTokens: Number(dashboardData.averagePromptTokens || 0),
+                averageCompletionTokens: Number(dashboardData.averageCompletionTokens || 0),
+                averageTotalTokens: Number(dashboardData.averageTotalTokens || 0),
+                tokensOverall: Number(dashboardData.tokensOverall || 0)
+            }
+        };
     }
 
     setLoadingState(isLoading) {
+        if (this.loadingBlock) {
+            this.loadingBlock.classList.toggle('hidden', !isLoading);
+            this.loadingBlock.setAttribute('aria-busy', isLoading ? 'true' : 'false');
+        }
+
+        const chartSkeletonElements = document.querySelectorAll('[data-dashboard-chart-skeleton]');
+        chartSkeletonElements.forEach((skeletonElement) => {
+            skeletonElement.classList.toggle('hidden', !isLoading);
+            skeletonElement.setAttribute('aria-hidden', isLoading ? 'false' : 'true');
+            skeletonElement.setAttribute('aria-busy', isLoading ? 'true' : 'false');
+        });
+
         const valueElements = document.querySelectorAll('[data-dashboard-value]');
         valueElements.forEach((valueElement) => {
             valueElement.classList.toggle('hidden', isLoading);
@@ -138,15 +174,21 @@ class DashboardStatsLoader {
 
         const tokenChart = window.dashboardCharts?.tokenDistribution;
         if (tokenChart) {
-            tokenChart.data.labels = stats.paperless_data.tokenDistribution.map(dist => dist.range);
-            tokenChart.data.datasets[0].data = stats.paperless_data.tokenDistribution.map(dist => dist.count);
+            const distribution = Array.isArray(stats.paperless_data.tokenDistribution)
+                ? stats.paperless_data.tokenDistribution
+                : [];
+            tokenChart.data.labels = distribution.map(dist => dist.range);
+            tokenChart.data.datasets[0].data = distribution.map(dist => dist.count);
             tokenChart.update();
         }
 
         const typesChart = window.dashboardCharts?.documentTypes;
         if (typesChart) {
-            typesChart.data.labels = stats.paperless_data.documentTypes.map(type => type.type);
-            typesChart.data.datasets[0].data = stats.paperless_data.documentTypes.map(type => type.count);
+            const documentTypes = Array.isArray(stats.paperless_data.documentTypes)
+                ? stats.paperless_data.documentTypes
+                : [];
+            typesChart.data.labels = documentTypes.map(type => type.type);
+            typesChart.data.datasets[0].data = documentTypes.map(type => type.count);
             typesChart.update();
         }
     }
@@ -177,8 +219,16 @@ class DashboardStatsLoader {
     async load() {
         const loadingStartedAt = Date.now();
         this.setLoadingState(true);
+        const fallbackStats = this.getFallbackStats();
         try {
-            const response = await fetch('/api/dashboard/stats');
+            const abortController = new AbortController();
+            const timeoutId = setTimeout(() => abortController.abort(), this.requestTimeoutMs);
+
+            const response = await fetch('/api/dashboard/stats', {
+                signal: abortController.signal
+            });
+            clearTimeout(timeoutId);
+
             if (!response.ok) {
                 throw new Error('Failed to load dashboard stats');
             }
@@ -201,6 +251,9 @@ class DashboardStatsLoader {
             this.updateCharts(payload);
         } catch (error) {
             console.error('Error loading dashboard stats:', error);
+
+            this.updateCards(fallbackStats);
+            this.updateCharts(fallbackStats);
         } finally {
             const elapsedMs = Date.now() - loadingStartedAt;
             if (elapsedMs < this.minimumLoadingTimeMs) {

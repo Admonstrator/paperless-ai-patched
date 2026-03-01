@@ -76,6 +76,48 @@
     border-color: var(--stats-border);
 }
 
+.theme-info-surface {
+    background-color: var(--token-usage-bg);
+    border: 1px solid var(--stats-border);
+    color: var(--text-primary);
+}
+
+.theme-pill-info {
+    background-color: var(--token-usage-bg);
+    border: 1px solid var(--stats-border);
+    color: var(--text-primary);
+}
+
+.theme-alert-success,
+.theme-alert-error {
+    border-width: 1px;
+    border-style: solid;
+}
+
+.theme-alert-success {
+    background-color: #ecfdf5;
+    border-color: #d1fae5;
+    color: #065f46;
+}
+
+.theme-alert-error {
+    background-color: #fef2f2;
+    border-color: #fecaca;
+    color: #991b1b;
+}
+
+[data-theme="dark"] .theme-alert-success {
+    background-color: rgba(6, 95, 70, 0.2);
+    border-color: rgba(6, 95, 70, 0.3);
+    color: #34d399;
+}
+
+[data-theme="dark"] .theme-alert-error {
+    background-color: rgba(127, 29, 29, 0.3);
+    border-color: rgba(248, 113, 113, 0.35);
+    color: #fca5a5;
+}
+
 
 /* Base chart container sizing */
 .material-card .chart-container {

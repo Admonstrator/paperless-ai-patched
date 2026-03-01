@@ -28,6 +28,41 @@ class ThemeManager {
     }
 }
 
+class SettingsTabsManager {
+    constructor() {
+        this.buttons = Array.from(document.querySelectorAll('.settings-tab-button'));
+        this.contents = Array.from(document.querySelectorAll('.settings-tab-content'));
+        this.initialize();
+    }
+
+    initialize() {
+        if (this.buttons.length === 0 || this.contents.length === 0) {
+            return;
+        }
+
+        this.buttons.forEach((button) => {
+            button.addEventListener('click', () => {
+                const tabId = button.dataset.tab;
+                this.activateTab(tabId);
+            });
+        });
+    }
+
+    activateTab(tabId) {
+        this.buttons.forEach((button) => {
+            const isActive = button.dataset.tab === tabId;
+            button.classList.toggle('active', isActive);
+            button.classList.toggle('border-blue-500', isActive);
+            button.classList.toggle('border-transparent', !isActive);
+        });
+
+        this.contents.forEach((content) => {
+            const isActive = content.id === tabId;
+            content.classList.toggle('hidden', !isActive);
+        });
+    }
+}
+
 class FormManager {
     constructor() {
         this.form = document.getElementById('setupForm');
@@ -48,17 +83,17 @@ class FormManager {
         this.toggleTagsInput();
         this.handleDisableAutomaticProcessing();
         
-        this.aiProvider.addEventListener('change', () => this.toggleProviderSettings());
-        this.tokenLimit.addEventListener('input', () => this.validateTokenLimit()); 
-        this.responseTokens.addEventListener('input', () => this.validateResponseTokens()); 
-        this.showTags.addEventListener('change', () => this.toggleTagsInput());
-        this.aiProcessedTag.addEventListener('change', () => this.toggleAiTagInput());
-        this.usePromptTags.addEventListener('change', () => this.togglePromptTagsInput());
-        this.disableAutomaticProcessing.addEventListener('change', () => this.handleDisableAutomaticProcessing());
+        if (this.aiProvider) this.aiProvider.addEventListener('change', () => this.toggleProviderSettings());
+        if (this.tokenLimit) this.tokenLimit.addEventListener('input', () => this.validateTokenLimit()); 
+        if (this.responseTokens) this.responseTokens.addEventListener('input', () => this.validateResponseTokens()); 
+        if (this.showTags) this.showTags.addEventListener('change', () => this.toggleTagsInput());
+        if (this.aiProcessedTag) this.aiProcessedTag.addEventListener('change', () => this.toggleAiTagInput());
+        if (this.usePromptTags) this.usePromptTags.addEventListener('change', () => this.togglePromptTagsInput());
+        if (this.disableAutomaticProcessing) this.disableAutomaticProcessing.addEventListener('change', () => this.handleDisableAutomaticProcessing());
         
         this.initializePasswordToggles();
 
-        if (this.usePromptTags.value === 'yes') {
+        if (this.usePromptTags && this.usePromptTags.value === 'yes') {
             this.disablePromptElements();
         }
         
@@ -85,6 +120,10 @@ class FormManager {
     }
 
     handleDisableAutomaticProcessing() {
+        if (!this.form || !this.disableAutomaticProcessing) {
+            return;
+        }
+
         // Create a hidden input if it doesn't exist
         let hiddenInput = document.getElementById('disableAutomaticProcessingValue');
         if (!hiddenInput) {
@@ -100,6 +139,10 @@ class FormManager {
     }
 
     toggleProviderSettings() {
+        if (!this.aiProvider) {
+            return;
+        }
+
         const provider = this.aiProvider.value;
         const openaiSettings = document.getElementById('openaiSettings');
         const ollamaSettings = document.getElementById('ollamaSettings');
@@ -133,6 +176,10 @@ class FormManager {
         const externalApiTransformationTemplate = document.getElementById('externalApiTransformationTemplate');
         
         
+        if (!openaiSettings || !ollamaSettings || !customSettings || !azureSettings) {
+            return;
+        }
+
         // Hide all settings sections first
         openaiSettings.classList.add('hidden');
         ollamaSettings.classList.add('hidden');
@@ -155,7 +202,6 @@ class FormManager {
         switch (provider) {
             case 'openai':
                 openaiSettings.classList.remove('hidden');
-                openaiKey.required = true;
                 break;
             case 'ollama':
                 ollamaSettings.classList.remove('hidden');
@@ -165,12 +211,10 @@ class FormManager {
             case 'custom':
                 customSettings.classList.remove('hidden');
                 customBaseUrl.required = true;
-                customApiKey.required = true;
                 customModel.required = true;
                 break;
             case 'azure':
                 azureSettings.classList.remove('hidden');
-                azureApiKey.required = true;
                 azureEndpoint.required = true;
                 azureDeploymentName.required = true;
                 azureApiVersion.required = true;
@@ -180,18 +224,27 @@ class FormManager {
 
     // Rest of the class methods remain the same
     toggleTagsInput() {
+        if (!this.showTags) {
+            return;
+        }
+
         const showTags = this.showTags.value;
         const tagsInputSection = document.getElementById('tagsInputSection');
+        const tagsInput = document.getElementById('tags');
         
         if (showTags === 'yes') {
             tagsInputSection.classList.remove('hidden');
         } else {
-            document.getElementById('tags').value = '';
+            if (tagsInput) tagsInput.value = '';
             tagsInputSection.classList.add('hidden');
         }
     }
 
     toggleAiTagInput() {
+        if (!this.aiProcessedTag) {
+            return;
+        }
+
         const showAiTag = this.aiProcessedTag.value;
         const aiTagNameSection = document.getElementById('aiTagNameSection');
         
@@ -203,6 +256,10 @@ class FormManager {
     }
 
     togglePromptTagsInput() {
+        if (!this.usePromptTags) {
+            return;
+        }
+
         const usePromptTags = this.usePromptTags.value;
         const promptTagsSection = document.getElementById('promptTagsSection');
         
@@ -216,6 +273,9 @@ class FormManager {
     }
 
     disablePromptElements() {
+        if (!this.systemPrompt || !this.systemPromptBtn) {
+            return;
+        }
         this.systemPrompt.disabled = true;
         this.systemPromptBtn.disabled = true;
         this.systemPrompt.classList.add('opacity-50', 'cursor-not-allowed');
@@ -223,6 +283,9 @@ class FormManager {
     }
 
     enablePromptElements() {
+        if (!this.systemPrompt || !this.systemPromptBtn) {
+            return;
+        }
         this.systemPrompt.disabled = false;
         this.systemPromptBtn.disabled = false;
         this.systemPrompt.classList.remove('opacity-50', 'cursor-not-allowed');
@@ -442,48 +505,17 @@ For the language:
     }
 }
 
-// Initialize everything when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
+function initializeCoreSettings() {
     const themeManager = new ThemeManager();
+    const settingsTabsManager = new SettingsTabsManager();
     const formManager = new FormManager();
-    const tagsManager = new TagsManager('tagInput','tagsContainer','tags');
-    const ignoreTagsManager = new TagsManager('ignoreTagInput','ignoreTagsContainer','ignoreTags');
-    const promptTagsManager = new TagsManager('promptTagInput','promptTagsContainer','promptTags');
+    const tagsManager = new TagsManager('tagInput', 'tagsContainer', 'tags');
+    const ignoreTagsManager = new TagsManager('ignoreTagInput', 'ignoreTagsContainer', 'ignoreTags');
+    const promptTagsManager = new TagsManager('promptTagInput', 'promptTagsContainer', 'promptTags');
     const promptManager = new PromptManager();
+}
 
-    // Initialize textarea newlines
-    const systemPromptTextarea = document.getElementById('systemPrompt');
-    systemPromptTextarea.value = systemPromptTextarea.value.replace(/\\n/g, '\n');
-});
-
-// Form Submission Handler
-document.addEventListener('DOMContentLoaded', (event) => {
-    const systemPromptTextarea = document.getElementById('systemPrompt');
-    systemPromptTextarea.value = systemPromptTextarea.value.replace(/\\n/g, '\n');
-
-    // Tag Cache TTL Help Tooltip
-    const tagCacheTTLHelp = document.getElementById('tagCacheTTLHelp');
-    if (tagCacheTTLHelp) {
-        tagCacheTTLHelp.addEventListener('click', () => {
-            Swal.fire({
-                icon: 'info',
-                title: 'Tag Cache Lifetime',
-                html: `
-                    <div class="text-left space-y-2">
-                        <p>Controls how long tags are cached before refreshing from Paperless-ngx.</p>
-                        <ul class="list-disc pl-5 space-y-1">
-                            <li><strong>Lower values (60-180s):</strong> More API calls, always fresh data</li>
-                            <li><strong>Recommended (300s/5min):</strong> Balanced performance and freshness</li>
-                            <li><strong>Higher values (600-3600s):</strong> Fewer API calls, slight delay for new tags</li>
-                        </ul>
-                        <p class="text-sm text-gray-500 mt-2">During batch processing, a good cache can reduce API calls by ~95%.</p>
-                    </div>
-                `,
-                showConfirmButton: true
-            });
-        });
-    }
-
+function initializeFormHandlers() {
     // Clear Tag Cache Button Handler
     const clearTagCacheBtn = document.getElementById('clearTagCacheBtn');
     if (clearTagCacheBtn) {
@@ -534,6 +566,9 @@ document.addEventListener('DOMContentLoaded', (event) => {
 
     // Form submission handler
     const setupForm = document.getElementById('setupForm');
+    if (!setupForm) {
+        return;
+    }
     setupForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         
@@ -604,7 +639,14 @@ document.addEventListener('DOMContentLoaded', (event) => {
             submitBtn.innerHTML = originalBtnText;
         }
     });
-});
+}
+
+function normalizeSystemPromptNewlines() {
+    const systemPromptTextarea = document.getElementById('systemPrompt');
+    if (systemPromptTextarea) {
+        systemPromptTextarea.value = systemPromptTextarea.value.replace(/\\n/g, '\n');
+    }
+}
 
 class URLValidator {
     constructor() {
@@ -678,88 +720,260 @@ class URLValidator {
     }
 }
 
+const TOOLTIP_CARD_STYLES = 'background:#ffffff;color:#111827;border:1px solid #d1d5db;border-radius:8px;';
+const REGISTERED_TOOLTIP_INSTANCES = [];
+let tooltipResizeListenerAttached = false;
+
+function getSettingsTooltipPlacement() {
+    return window.innerWidth < 768 ? 'bottom' : 'right';
+}
+
+function createReadableTooltipContent(innerHtml, padding = '10px 12px') {
+    return `<div style="${TOOLTIP_CARD_STYLES}padding:${padding};line-height:1.45;">${innerHtml}</div>`;
+}
+
+function getReadableTooltipOptions(overrides = {}) {
+    return {
+        allowHTML: true,
+        placement: getSettingsTooltipPlacement(),
+        interactive: true,
+        theme: 'light-border',
+        touch: 'hold',
+        appendTo: () => document.body,
+        ...overrides
+    };
+}
+
+function normalizeTooltipInstances(instances) {
+    if (!instances) {
+        return [];
+    }
+
+    if (Array.isArray(instances)) {
+        return instances.filter((instance) => instance && typeof instance.setProps === 'function');
+    }
+
+    return typeof instances.setProps === 'function' ? [instances] : [];
+}
+
+function refreshAllTooltipPlacements() {
+    const placement = getSettingsTooltipPlacement();
+    REGISTERED_TOOLTIP_INSTANCES.forEach((instance) => {
+        instance.setProps({ placement });
+    });
+}
+
+function registerTooltipInstances(instances) {
+    const normalizedInstances = normalizeTooltipInstances(instances);
+    if (normalizedInstances.length === 0) {
+        return;
+    }
+
+    normalizedInstances.forEach((instance) => {
+        if (!REGISTERED_TOOLTIP_INSTANCES.includes(instance)) {
+            REGISTERED_TOOLTIP_INSTANCES.push(instance);
+        }
+    });
+
+    if (!tooltipResizeListenerAttached) {
+        window.addEventListener('resize', refreshAllTooltipPlacements);
+        tooltipResizeListenerAttached = true;
+    }
+}
+
 // Tooltip System
 class TooltipManager {
     constructor() {
         this.initialize();
     }
 
-    getTooltipPlacement() {
-        return window.innerWidth < 768 ? 'bottom' : 'right';
-    }
-
     initialize() {
-        this.tooltipInstance = tippy('#urlHelp', {
+        this.tooltipInstance = tippy('#urlHelp', getReadableTooltipOptions({
             content: this.getTooltipContent(),
-            allowHTML: true,
-            placement: this.getTooltipPlacement(),
-            interactive: true,
-            theme: 'custom',
             maxWidth: 450,
-            touch: 'hold',
             trigger: 'mouseenter click',
             zIndex: 40,
-        });
-
-        window.addEventListener('resize', () => {
-            this.tooltipInstance[0].setProps({ placement: this.getTooltipPlacement() });
-        });
+        }));
+        registerTooltipInstances(this.tooltipInstance);
     }
 
     getTooltipContent() {
-        return `
-            <div class="p-4 space-y-4">
-                <h3 class="text-lg font-bold">API URL Configuration</h3>
+        return createReadableTooltipContent(`
+                <h3 style="font-size:16px;font-weight:700;margin-bottom:8px;">API URL Configuration</h3>
                 
-                <div class="space-y-2">
+                <div style="margin-bottom:10px;">
                     <p>The URL should follow this format:</p>
-                    <code class="block p-2 bg-gray-100 dark:bg-gray-800 rounded">
+                    <code style="display:block;padding:8px;background:#f3f4f6;border-radius:6px;color:#111827;">
                         http://your-host:8000
                     </code>
                 </div>
                 
-                <div class="space-y-2">
-                    <p class="font-semibold">Important Notes:</p>
-                    <ul class="list-disc pl-4 space-y-1">
+                <div style="margin-bottom:10px;">
+                    <p style="font-weight:600;">Important Notes:</p>
+                    <ul style="padding-left:18px;margin-top:4px;">
                         <li>Must start with <u>http://</u> or <u>https://</u></li>
                         <li>Contains <strong>host/IP</strong> and optionally a <strong>port</strong></li>
                         <li>No additional paths or parameters</li>
                     </ul>
                 </div>
 
-                <div class="space-y-2">
-                    <p class="font-semibold">Docker Network Configuration:</p>
-                    <ul class="list-disc pl-4 space-y-1">
+                <div style="margin-bottom:10px;">
+                    <p style="font-weight:600;">Docker Network Configuration:</p>
+                    <ul style="padding-left:18px;margin-top:4px;">
                         <li>Using <strong>localhost</strong> or <strong>127.0.0.1</strong> won't work in Docker bridge mode</li>
                         <li>Use your machine's local IP (e.g., <code>192.168.1.x</code>) instead</li>
                         <li>Or use the Docker container name if both services are in the same network</li>
                     </ul>
                 </div>
 
-                <div class="space-y-2">
-                    <p class="font-semibold">Examples:</p>
-                    <ul class="list-none space-y-1">
+                <div style="margin-bottom:10px;">
+                    <p style="font-weight:600;">Examples:</p>
+                    <ul style="list-style:none;padding-left:0;margin-top:4px;">
                         <li>🔸 Local IP: <code>http://192.168.1.100:8000</code></li>
                         <li>🔸 Container: <code>http://paperless-ngx:8000</code></li>
                         <li>🔸 Remote: <code>http://paperless.domain.com</code></li>
                     </ul>
                 </div>
 
-                <p class="text-sm italic mt-4">The /api endpoint will be added automatically.</p>
-            </div>
-        `;
+                <p style="font-size:12px;font-style:italic;margin-top:8px;">The /api endpoint will be added automatically.</p>
+        `, '12px');
     }
 }
 
-// Initialize all components
-document.addEventListener('DOMContentLoaded', () => {
+class SettingsHintManager {
+    getHintTriggerClasses() {
+        return [
+            'inline-flex',
+            'items-center',
+            'justify-center',
+            'ml-2',
+            'text-blue-700',
+            'hover:text-blue-900',
+            'focus:outline-none',
+            'focus:ring-2',
+            'focus:ring-blue-600',
+            'rounded-full',
+            'transition-colors'
+        ];
+    }
+
+    constructor() {
+        this.initialize();
+    }
+
+    initialize() {
+        const hintRows = Array.from(document.querySelectorAll('#setupForm p.text-xs.text-gray-500'));
+        const tooltipTargets = [];
+
+        hintRows.forEach((hint) => {
+            const container = hint.closest('.space-y-2') || hint.parentElement;
+            if (!container) {
+                return;
+            }
+
+            const label = container.querySelector('label');
+            if (!label) {
+                return;
+            }
+
+            if (label.querySelector('.setting-hint-trigger')) {
+                hint.classList.add('hidden');
+                return;
+            }
+
+            const trigger = document.createElement('button');
+            trigger.type = 'button';
+            trigger.className = `setting-hint-trigger ${this.getHintTriggerClasses().join(' ')}`;
+            trigger.setAttribute('aria-label', 'Show setting hint');
+            trigger.style.width = '1.125rem';
+            trigger.style.height = '1.125rem';
+            trigger.style.minWidth = '1.125rem';
+            trigger.style.minHeight = '1.125rem';
+            trigger.innerHTML = '<i class="fas fa-circle-question" style="font-size:0.875rem;line-height:1;"></i>';
+            trigger.dataset.hintContent = hint.innerHTML;
+
+            if (!label.classList.contains('flex')) {
+                label.classList.add('flex', 'items-center');
+            }
+
+            label.appendChild(trigger);
+            hint.classList.add('hidden');
+            tooltipTargets.push(trigger);
+        });
+
+        if (tooltipTargets.length > 0) {
+            const hintTooltipInstances = tippy(tooltipTargets, getReadableTooltipOptions({
+                maxWidth: 360,
+                content(reference) {
+                    return createReadableTooltipContent(reference.dataset.hintContent || '', '8px 10px');
+                }
+            }));
+            registerTooltipInstances(hintTooltipInstances);
+        }
+
+        this.initializeTagCacheHint();
+    }
+
+    initializeTagCacheHint() {
+        const tagCacheTTLHelp = document.getElementById('tagCacheTTLHelp');
+        if (!tagCacheTTLHelp) {
+            return;
+        }
+
+        const urlHelp = document.getElementById('urlHelp');
+        if (urlHelp) {
+            urlHelp.classList.remove('text-gray-400', 'hover:text-gray-600');
+            urlHelp.classList.add(...this.getHintTriggerClasses());
+            urlHelp.style.width = '1.125rem';
+            urlHelp.style.height = '1.125rem';
+            urlHelp.style.minWidth = '1.125rem';
+            urlHelp.style.minHeight = '1.125rem';
+
+            const urlHelpIcon = urlHelp.querySelector('i');
+            if (urlHelpIcon) {
+                urlHelpIcon.style.fontSize = '0.875rem';
+                urlHelpIcon.style.lineHeight = '1';
+            }
+        }
+
+        tagCacheTTLHelp.classList.remove('text-gray-400', 'hover:text-gray-600');
+        tagCacheTTLHelp.classList.add(...this.getHintTriggerClasses());
+        tagCacheTTLHelp.style.width = '1.125rem';
+        tagCacheTTLHelp.style.height = '1.125rem';
+        tagCacheTTLHelp.style.minWidth = '1.125rem';
+        tagCacheTTLHelp.style.minHeight = '1.125rem';
+
+        const tagCacheIcon = tagCacheTTLHelp.querySelector('i');
+        if (tagCacheIcon) {
+            tagCacheIcon.style.fontSize = '0.875rem';
+            tagCacheIcon.style.lineHeight = '1';
+        }
+
+        const tagCacheTooltipInstance = tippy(tagCacheTTLHelp, getReadableTooltipOptions({
+            maxWidth: 420,
+            content: createReadableTooltipContent(`
+                    <p style="margin-bottom:8px;">Controls how long tags are cached before refreshing from Paperless-ngx.</p>
+                    <ul style="padding-left:18px; margin:0 0 8px 0;">
+                        <li><strong>60-180s:</strong> fresher data, more API calls</li>
+                        <li><strong>300s (recommended):</strong> balanced</li>
+                        <li><strong>600-3600s:</strong> fewer API calls, slower visibility of new tags</li>
+                    </ul>
+                    <p style="font-size:12px;">Good cache settings can reduce Paperless tag API calls significantly during batch processing.</p>
+            `)
+        }));
+        registerTooltipInstances(tagCacheTooltipInstance);
+    }
+}
+
+function initializeTooltipAndValidation() {
     const urlValidator = new URLValidator();
     const tooltipManager = new TooltipManager();
-});
+    const settingsHintManager = new SettingsHintManager();
+}
 
 
 // Custom Fields Management
-document.addEventListener('DOMContentLoaded', function() {
+function initializeCustomFieldsManagement() {
     // External API settings toggle
     const externalApiEnabled = document.getElementById('externalApiEnabled');
     const externalApiSettings = document.getElementById('externalApiSettings');
@@ -823,6 +1037,14 @@ document.addEventListener('DOMContentLoaded', function() {
         attributes: true,
         attributeFilter: ['data-theme']
     });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    normalizeSystemPromptNewlines();
+    initializeCoreSettings();
+    initializeFormHandlers();
+    initializeTooltipAndValidation();
+    initializeCustomFieldsManagement();
 });
 
 function updateThemeClasses(isDark) {
@@ -989,46 +1211,4 @@ function removeCustomField(button) {
 }
 
 // Clear Tag Cache Button Handler (PERF-002)
-document.addEventListener('DOMContentLoaded', () => {
-    const clearTagCacheBtn = document.getElementById('clearTagCacheBtn');
-    if (clearTagCacheBtn) {
-        clearTagCacheBtn.addEventListener('click', async () => {
-            const btn = clearTagCacheBtn;
-            const originalHTML = btn.innerHTML;
-            
-            try {
-                btn.disabled = true;
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Clearing Cache...';
-                
-                const response = await fetch('/api/settings/clear-tag-cache', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    await Swal.fire({
-                        icon: 'success',
-                        title: 'Cache Cleared!',
-                        text: result.message || 'Tag cache has been cleared successfully.',
-                        timer: 2000,
-                        showConfirmButton: false
-                    });
-                } else {
-                    throw new Error(result.error || 'Failed to clear cache');
-                }
-            } catch (error) {
-                console.error('Error clearing tag cache:', error);
-                await Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: error.message || 'Failed to clear tag cache. Please try again.'
-                });
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = originalHTML;
-            }
-        });
-    }
-});
+// duplicate clearTagCache handler removed (handled in main submit/event block above)

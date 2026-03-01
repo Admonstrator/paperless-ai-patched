@@ -143,6 +143,8 @@ jobs:
         with:
           context: .
           file: ./Dockerfile.lite
+          build-args: |
+            PAPERLESS_AI_COMMIT_SHA=${{ needs.generate-version.outputs.commit_sha }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -192,6 +194,8 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
+          build-args: |
+            PAPERLESS_AI_COMMIT_SHA=${{ needs.generate-version.outputs.commit_sha }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

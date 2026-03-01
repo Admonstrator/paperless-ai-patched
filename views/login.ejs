@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Paperless-AI</title>
+    <title>Login - Paperless-AI next</title>
     <script src="/vendor/tailwind/tailwindcss-3.4.16.js"></script>
     <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
     <link rel="stylesheet" href="css/dashboard.css">
@@ -17,8 +17,8 @@
         <div class="material-card w-full max-w-md">
             <div class="text-center mb-8">
                 <div class="flex flex-col items-center justify-center gap-4 mb-6">
-                    <img src="/favicon.webp" class="no-invert" alt="Paperless AI Logo" style="height: 60px;">
-                    <h1 class="brand-title text-2xl">Paperless-AI</h1>
+                    <img src="/favicon.webp" class="no-invert" alt="Paperless AI next Logo" style="height: 60px;">
+                    <h1 class="brand-title text-2xl">Paperless-AI next<span class="text-sm font-semibold text-blue-700"> next</span></h1>
                 </div>
                 <h2 class="text-xl font-bold">Sign in to your account</h2>
             </div>
@@ -45,7 +45,7 @@
                 </div>
 
                 <% if (error) { %>
-                    <div class="text-red-500 text-sm text-center bg-red-50 p-3 rounded-md">
+                    <div class="text-sm text-center p-3 rounded-md theme-alert-error border">
                         <%= error %>
                     </div>
                 <% } %>
@@ -60,40 +60,6 @@
         </div>
     </div>
 
-    <script>
-    // Theme Management für die Login-Seite
-    class ThemeManager {
-        constructor() {
-            this.themeToggle = document.getElementById('themeToggle');
-            this.initialize();
-        }
-
-        initialize() {
-            const savedTheme = localStorage.getItem('theme') || 'light';
-            this.setTheme(savedTheme);
-            
-            this.themeToggle.addEventListener('click', () => this.toggleTheme());
-        }
-
-        setTheme(theme) {
-            document.documentElement.setAttribute('data-theme', theme);
-            localStorage.setItem('theme', theme);
-            
-            const icon = this.themeToggle.querySelector('i');
-            icon.className = theme === 'light' ? 'fas fa-moon' : 'fas fa-sun';
-        }
-
-        toggleTheme() {
-            const currentTheme = document.documentElement.getAttribute('data-theme');
-            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-            this.setTheme(newTheme);
-        }
-    }
-
-    // Initialize Theme Manager when DOM is loaded
-    document.addEventListener('DOMContentLoaded', () => {
-        window.themeManager = new ThemeManager();
-    });
-    </script>
+    <%- include('partials/scripts/login-scripts') %>
 </body>
 </html>

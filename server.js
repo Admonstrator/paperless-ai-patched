@@ -43,7 +43,7 @@ let runningTask = false;
 const JWT_SECRET = config.getJwtSecret();
 
 if (!JWT_SECRET) {
-  txtLogger.log('error', 'JWT_SECRET environment variable is not set. Refusing to start without a secure JWT secret.');
+  console.error('JWT_SECRET environment variable is not set. Refusing to start without a secure JWT secret.');
   process.exit(1);
 }
 

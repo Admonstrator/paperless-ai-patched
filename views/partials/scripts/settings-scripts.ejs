@@ -1,0 +1,92 @@
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const apiKeyContainer = document.getElementById('apiKeyContainer');
+        const copyNotification = document.getElementById('copyNotification');
+        const regenerateBtn = document.getElementById('regenerateBtn');
+        const regenerateIcon = document.getElementById('regenerateIcon');
+
+        if (!apiKeyContainer || !copyNotification || !regenerateBtn || !regenerateIcon) {
+            return;
+        }
+
+        let timeoutId;
+
+        function showNotification(message, isError = false) {
+            const notificationBox = copyNotification;
+            const icon = notificationBox.querySelector('i');
+            const text = notificationBox.querySelector('span');
+
+            notificationBox.className = 'absolute right-0 top-0 mt-12 w-64 rounded-lg p-3 border';
+            icon.className = 'mr-2 fas';
+
+            if (isError) {
+                notificationBox.classList.add('theme-alert-error');
+                icon.classList.add('fa-exclamation-circle');
+            } else {
+                notificationBox.classList.add('theme-alert-success');
+                icon.classList.add('fa-check-circle');
+            }
+
+            text.textContent = message;
+            notificationBox.classList.remove('hidden');
+            notificationBox.classList.add('flex');
+
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+                notificationBox.classList.add('hidden');
+                notificationBox.classList.remove('flex');
+            }, 2000);
+        }
+
+        apiKeyContainer.addEventListener('click', async function() {
+            try {
+                await navigator.clipboard.writeText(this.dataset.apiKey);
+                showNotification('API key copied to clipboard!');
+            } catch (err) {
+                showNotification('Failed to copy API key!', true);
+            }
+        });
+
+        apiKeyContainer.addEventListener('mouseleave', function() {
+            this.classList.add('blur-sm');
+        });
+
+        apiKeyContainer.addEventListener('mouseenter', function() {
+            this.classList.remove('blur-sm');
+        });
+
+        regenerateBtn.addEventListener('click', async function() {
+            this.disabled = true;
+            regenerateIcon.classList.add('animate-spin');
+
+            try {
+                const response = await fetch('/api/key-regenerate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+
+                    await new Promise(resolve => setTimeout(resolve, 5000));
+
+                    apiKeyContainer.textContent = data.newKey;
+                    apiKeyContainer.dataset.apiKey = data.newKey;
+                    apiKeyContainer.title = data.newKey;
+
+                    showNotification('New API key generated!');
+                } else {
+                    throw new Error('Failed to regenerate key');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showNotification('Failed to regenerate API key!', true);
+            } finally {
+                regenerateBtn.disabled = false;
+                regenerateIcon.classList.remove('animate-spin');
+            }
+        });
+    });
+</script>

@@ -69,6 +69,12 @@
         [data-theme="dark"] .content-title {
             color: var(--text-primary);
         }
+
+        .settings-env-notice {
+            border: 1px solid var(--stats-border);
+            background-color: var(--token-usage-bg);
+            color: var(--text-primary);
+        }
     </style>
 </head>
 <body class="h-full">
@@ -92,20 +98,6 @@
 
             <nav class="sidebar-nav">
                 <%- include('partials/sidebar-nav', { chatEnabled, ragEnabled }) %>
-                <a href="https://github.com/admonstrator/paperless-ai-next" 
-                class="github-button" 
-                style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);">
-                <span class="star-button">
-                    <svg class="star-icon" height="16" width="16" viewBox="0 0 16 16">
-                        <path d="M8 .25a.75.75 0 01.673.418l1.882 3.815 4.21.612a.75.75 0 01.416 1.279l-3.046 2.97.719 4.192a.75.75 0 01-1.088.791L8 12.347l-3.766 1.98a.75.75 0 01-1.088-.79l.72-4.194L.818 6.374a.75.75 0 01.416-1.28l4.21-.611L7.327.668A.75.75 0 018 .25z"></path>
-                    </svg>
-                    Star
-                </span>
-                <span id="starCount" class="star-count">1.2k</span>
-            </a>
-            <p style="position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%); font-size: 10px; color: #555; text-align: center;">
-                Please support us on GitHub
-            </p>
             </nav>
         </aside>
 
@@ -126,8 +118,8 @@
                             <i class="fas fa-sync-alt" id="regenerateIcon"></i>
                             <span>Regenerate</span>
                         </button>
-                        <div id="copyNotification" 
-                             class="absolute right-0 top-0 mt-12 w-64 bg-green-50 dark:bg-green-900 text-green-800 dark:text-green-100 border border-green-200 dark:border-green-700 rounded-lg p-3 hidden">
+                            <div id="copyNotification" 
+                                class="absolute right-0 top-0 mt-12 w-64 theme-alert-success border rounded-lg p-3 hidden">
                             <div class="flex items-center">
                                 <i class="fas fa-check-circle mr-2"></i>
                                 <span>API key copied to clipboard!</span>
@@ -140,14 +132,14 @@
                     <% if (success || settingsError) { %>
                         <div class="mb-6 space-y-4">
                             <% if (success) { %>
-                                <div class="flex gap-2 p-4 bg-green-50 text-green-800 border border-green-200 rounded-lg">
+                                <div class="flex gap-2 p-4 theme-alert-success border rounded-lg">
                                     <i class="fas fa-check-circle mt-1"></i>
                                     <p><%= success %></p>
                                 </div>
                             <% } %>
                             
                             <% if (settingsError) { %>
-                                <div class="flex gap-2 p-4 bg-red-50 text-red-800 border border-red-200 rounded-lg">
+                                <div class="flex gap-2 p-4 theme-alert-error border rounded-lg">
                                     <i class="fas fa-exclamation-triangle mt-1"></i>
                                     <p><%= settingsError %></p>
                                 </div>
@@ -155,13 +147,34 @@
                         </div>
                     <% } %>
                     <form id="setupForm" class="space-y-8">
-                        <!-- Connection Section -->
-                        <section class="space-y-6">
-                            <h2 class="text-xl font-bold flex items-center gap-2 text-primary mb-4">
-                                <i class="fas fa-link"></i>
-                                Connection Settings
-                            </h2>
-                            <div class="space-y-4">
+                        <div class="settings-env-notice rounded-lg px-4 py-3 text-sm">
+                            All settings map to runtime Docker environment variables. Every field below shows the linked ENV key and if a restart is required. Current values are preloaded where safe.
+                        </div>
+
+                        <div class="tab-navigation border-b border-gray-200">
+                            <nav class="flex flex-wrap gap-2" role="tablist">
+                                <button type="button" class="settings-tab-button active flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 border-blue-500" data-tab="system-tab">
+                                    <i class="fas fa-server"></i>
+                                    System
+                                </button>
+                                <button type="button" class="settings-tab-button flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 border-transparent" data-tab="ai-tab">
+                                    <i class="fas fa-robot"></i>
+                                    AI
+                                </button>
+                                <button type="button" class="settings-tab-button flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 border-transparent" data-tab="ocr-tab">
+                                    <i class="fas fa-file-invoice"></i>
+                                    OCR
+                                </button>
+                                <button type="button" class="settings-tab-button flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 border-transparent" data-tab="troubleshooting-tab">
+                                    <i class="fas fa-wrench"></i>
+                                    Troubleshooting
+                                </button>
+                            </nav>
+                        </div>
+
+                        <div id="system-tab" class="settings-tab-content space-y-6">
+                            <section class="space-y-4">
+                                <h3 class="text-lg font-semibold">Connection</h3>
                                 <div class="space-y-2">
                                     <label for="paperlessUrl" class="flex items-center gap-2 text-sm font-medium">
                                         Paperless-ngx API URL
@@ -169,797 +182,500 @@
                                             <i class="fas fa-circle-question"></i>
                                         </button>
                                     </label>
-                                    <input type="text" 
-                                           id="paperlessUrl" 
-                                           name="paperlessUrl"
-                                           value="<%= config.PAPERLESS_API_URL %>"
-                                           class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                           placeholder="http://your-paperless-instance:8000"
-                                           required>
+                                    <input type="text" id="paperlessUrl" name="paperlessUrl" value="<%= config.PAPERLESS_API_URL %>" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="http://your-paperless-instance:8000" required>
+                                    <p class="text-xs text-gray-500">ENV: PAPERLESS_API_URL · Restart required</p>
                                 </div>
-        
+
                                 <div class="space-y-2">
                                     <label for="paperlessToken" class="text-sm font-medium">API Token</label>
                                     <div class="relative">
-                                        <input type="password" 
-                                               id="paperlessToken" 
-                                               name="paperlessToken"
-                                               value="<%= config.PAPERLESS_API_TOKEN %>"
-                                               class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                               required>
+                                        <input type="password" id="paperlessToken" name="paperlessToken" value="" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="<%= configuredSecrets.PAPERLESS_API_TOKEN ? 'Configured (leave empty to keep current value)' : 'Enter API token' %>">
                                         <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600" data-input="paperlessToken">
                                             <i class="fas fa-eye"></i>
                                         </button>
                                     </div>
+                                    <p class="text-xs text-gray-500">ENV: PAPERLESS_API_TOKEN · Restart required</p>
                                 </div>
 
                                 <div class="space-y-2">
-                                    <label for="paperlessUsername" class="flex items-center gap-2 text-sm font-medium">
-                                        Paperless-ngx Username
-                                    </label>
-                                    <input type="text" 
-                                           id="paperlessUsername" 
-                                           name="paperlessUsername"
-                                           value="<%= config.PAPERLESS_USERNAME %>"
-                                           class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                           placeholder="Your Paperless-ngx username"
-                                           required>
-                                </div>                                
-                            </div>
-                        </section>
-        
-                        <!-- AI Configuration Section -->
-                        <section class="space-y-6">
-                            <h2 class="text-xl font-bold flex items-center gap-2 text-primary mb-4">
-                                <i class="fas fa-robot"></i>
-                                AI Configuration
-                            </h2>
-                            <div class="space-y-4">
+                                    <label for="paperlessUsername" class="text-sm font-medium">Paperless-ngx Username</label>
+                                    <input type="text" id="paperlessUsername" name="paperlessUsername" value="<%= config.PAPERLESS_USERNAME %>" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                                    <p class="text-xs text-gray-500">ENV: PAPERLESS_USERNAME · Restart required</p>
+                                </div>
+                            </section>
+
+                            <section class="space-y-4 border-t pt-4">
+                                <h3 class="text-lg font-semibold">Processing</h3>
+                                <div class="space-y-2">
+                                    <label for="scanInterval" class="text-sm font-medium">Scan Interval (Cron Format)</label>
+                                    <input type="text" id="scanInterval" name="scanInterval" value="<%= config.SCAN_INTERVAL %>" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                                    <p class="text-xs text-gray-500">ENV: SCAN_INTERVAL · Restart required</p>
+                                </div>
+
+                                <div class="space-y-2">
+                                    <label for="useExistingData" class="text-sm font-medium">Use existing correspondents and tags</label>
+                                    <select id="useExistingData" name="useExistingData" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                        <option value="no" <%= config.USE_EXISTING_DATA === 'no' ? 'selected' : '' %>>No</option>
+                                        <option value="yes" <%= config.USE_EXISTING_DATA === 'yes' ? 'selected' : '' %>>Yes</option>
+                                    </select>
+                                    <p class="text-xs text-gray-500">ENV: USE_EXISTING_DATA · Restart required</p>
+                                </div>
+
+                                <div class="space-y-2">
+                                    <label for="showTags" class="text-sm font-medium">Process only specific pre-tagged documents</label>
+                                    <select id="showTags" name="showTags" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                        <option value="no" <%= config.PROCESS_PREDEFINED_DOCUMENTS === 'no' ? 'selected' : '' %>>No</option>
+                                        <option value="yes" <%= config.PROCESS_PREDEFINED_DOCUMENTS === 'yes' ? 'selected' : '' %>>Yes</option>
+                                    </select>
+                                    <p class="text-xs text-gray-500">ENV: PROCESS_PREDEFINED_DOCUMENTS + TAGS · Restart required</p>
+                                </div>
+
+                                <div id="tagsInputSection" class="<%= config.PROCESS_PREDEFINED_DOCUMENTS === 'yes' ? '' : 'hidden' %> space-y-2">
+                                    <label for="tagInput" class="text-sm font-medium">Tags</label>
+                                    <div class="flex gap-2">
+                                        <input type="text" id="tagInput" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Enter a tag and press Enter">
+                                        <button type="button" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                                            <i class="fas fa-plus mr-2"></i>
+                                            Add
+                                        </button>
+                                    </div>
+                                    <div id="tagsContainer" class="flex flex-wrap gap-2 mt-2">
+                                        <% if (config.TAGS && Array.isArray(config.TAGS) && config.TAGS.length > 0) { %>
+                                            <% config.TAGS.forEach(tag => { %>
+                                                <div class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full flex items-center gap-2">
+                                                    <span><%= tag %></span>
+                                                    <button type="button" class="hover:text-blue-600"><i class="fas fa-times"></i></button>
+                                                </div>
+                                            <% }); %>
+                                        <% } %>
+                                    </div>
+                                    <input type="hidden" id="tags" name="tags" value="<%= Array.isArray(config.TAGS) ? config.TAGS.join(',') : '' %>">
+                                </div>
+
+                                <div class="space-y-2">
+                                    <label for="ignoreTagInput" class="text-sm font-medium">Ignore Tags</label>
+                                    <div class="flex gap-2">
+                                        <input type="text" id="ignoreTagInput" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Enter a tag to ignore and press Enter">
+                                        <button type="button" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                                            <i class="fas fa-plus mr-2"></i>
+                                            Add
+                                        </button>
+                                    </div>
+                                    <div id="ignoreTagsContainer" class="flex flex-wrap gap-2 mt-2">
+                                        <% if (config.IGNORE_TAGS && Array.isArray(config.IGNORE_TAGS) && config.IGNORE_TAGS.length > 0) { %>
+                                            <% config.IGNORE_TAGS.forEach(tag => { %>
+                                                <div class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full flex items-center gap-2">
+                                                    <span><%= tag %></span>
+                                                    <button type="button" class="hover:text-blue-600"><i class="fas fa-times"></i></button>
+                                                </div>
+                                            <% }); %>
+                                        <% } %>
+                                    </div>
+                                    <input type="hidden" id="ignoreTags" name="ignoreTags" value="<%= Array.isArray(config.IGNORE_TAGS) ? config.IGNORE_TAGS.join(',') : '' %>">
+                                    <p class="text-xs text-gray-500">ENV: IGNORE_TAGS · Restart required</p>
+                                </div>
+
+                                <div class="space-y-2">
+                                    <label for="disableAutomaticProcessing" class="text-sm font-medium">Disable automatic processing</label>
+                                    <div class="border border-gray-200 shadow-sm rounded-lg hover:border-blue-500 transition-colors duration-200">
+                                        <label for="disableAutomaticProcessing" class="flex items-center p-4 cursor-pointer w-full">
+                                            <input type="checkbox" id="disableAutomaticProcessing" class="w-5 h-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500" <%= config.DISABLE_AUTOMATIC_PROCESSING === 'yes' ? 'checked' : '' %>>
+                                            <div class="ml-3">
+                                                <div class="flex items-center text-gray-900 font-medium">
+                                                    <i class="fas fa-power-off mr-2 text-blue-500"></i>
+                                                    Disable Automatic Processing
+                                                </div>
+                                                <p class="text-sm text-gray-500 mt-1">If enabled, scans are not processed by AI automatically.</p>
+                                            </div>
+                                        </label>
+                                    </div>
+                                    <p class="text-xs text-gray-500">ENV: DISABLE_AUTOMATIC_PROCESSING · Restart required</p>
+                                </div>
+                            </section>
+                        </div>
+
+                        <div id="ai-tab" class="settings-tab-content space-y-6 hidden">
+                            <section class="space-y-4">
+                                <h3 class="text-lg font-semibold">Provider</h3>
                                 <div class="space-y-2">
                                     <label for="aiProvider" class="text-sm font-medium">AI Provider</label>
-                                    <select id="aiProvider" 
-                                            name="aiProvider"
-                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    <select id="aiProvider" name="aiProvider" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                         <option value="openai" <%= config.AI_PROVIDER === 'openai' ? 'selected' : '' %>>OpenAI (ChatGPT)</option>
                                         <option value="ollama" <%= config.AI_PROVIDER === 'ollama' ? 'selected' : '' %>>Ollama (Local LLM)</option>
                                         <option value="custom" <%= config.AI_PROVIDER === 'custom' ? 'selected' : '' %>>Custom</option>
                                         <option value="azure" <%= config.AI_PROVIDER === 'azure' ? 'selected' : '' %>>Azure</option>
                                     </select>
+                                    <p class="text-xs text-gray-500">ENV: AI_PROVIDER · Restart required</p>
                                 </div>
 
-                                <!-- OpenAI Settings -->
                                 <div id="openaiSettings" class="space-y-4">
                                     <div class="space-y-2">
                                         <label for="openaiKey" class="text-sm font-medium">OpenAI API Key</label>
                                         <div class="relative">
-                                            <input type="password" 
-                                                id="openaiKey" 
-                                                name="openaiKey"
-                                                value="<%= config.OPENAI_API_KEY %>"
-                                                class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                                            <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600" data-input="openaiKey">
-                                                <i class="fas fa-eye"></i>
-                                            </button>
+                                            <input type="password" id="openaiKey" name="openaiKey" value="" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="<%= configuredSecrets.OPENAI_API_KEY ? 'Configured (leave empty to keep current value)' : 'Enter OpenAI API key' %>">
+                                            <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600" data-input="openaiKey"><i class="fas fa-eye"></i></button>
                                         </div>
+                                        <p class="text-xs text-gray-500">ENV: OPENAI_API_KEY · Restart required</p>
                                     </div>
-                                    
                                     <div class="space-y-2">
                                         <label for="openaiModel" class="text-sm font-medium">OpenAI Model</label>
-                                        <select id="openaiModel" 
-                                                name="openaiModel"
-                                                class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                        <select id="openaiModel" name="openaiModel" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                             <option value="gpt-3.5-turbo-0125" <%= config.OPENAI_MODEL === 'gpt-3.5-turbo-0125' ? 'selected' : '' %>>GPT-3.5 Turbo</option>
                                             <option value="gpt-4o" <%= config.OPENAI_MODEL === 'gpt-4o' ? 'selected' : '' %>>GPT-4o</option>
                                             <option value="o3-mini" <%= config.OPENAI_MODEL === 'o3-mini' ? 'selected' : '' %>>o3-mini</option>
-                                            <option value="gpt-4o-mini" <%= config.OPENAI_MODEL === 'gpt-4o-mini' ? 'selected' : '' %>>GPT-4o-mini (Best value)</option>
+                                            <option value="gpt-4o-mini" <%= config.OPENAI_MODEL === 'gpt-4o-mini' ? 'selected' : '' %>>GPT-4o-mini</option>
                                         </select>
+                                        <p class="text-xs text-gray-500">ENV: OPENAI_MODEL · Restart required</p>
                                     </div>
                                 </div>
 
-                                <!-- Ollama Settings -->
-                                <div id="ollamaSettings" class="space-y-4">
+                                <div id="ollamaSettings" class="space-y-4 hidden">
                                     <div class="space-y-2">
                                         <label for="ollamaUrl" class="text-sm font-medium">Ollama API URL</label>
-                                        <input type="text" 
-                                            id="ollamaUrl"
-                                            name="ollamaUrl"
-                                            value="<%= config.OLLAMA_API_URL %>"
-                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                        <input type="text" id="ollamaUrl" name="ollamaUrl" value="<%= config.OLLAMA_API_URL %>" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                        <p class="text-xs text-gray-500">ENV: OLLAMA_API_URL · Restart required</p>
                                     </div>
-                                    
                                     <div class="space-y-2">
                                         <label for="ollamaModel" class="text-sm font-medium">Ollama Model</label>
-                                        <input type="text" 
-                                            id="ollamaModel" 
-                                            name="ollamaModel"
-                                            value="<%= config.OLLAMA_MODEL %>"
-                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                        <input type="text" id="ollamaModel" name="ollamaModel" value="<%= config.OLLAMA_MODEL %>" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                        <p class="text-xs text-gray-500">ENV: OLLAMA_MODEL · Restart required</p>
                                     </div>
                                 </div>
 
-                                <!-- Custom Provider Settings -->
-                                <div id="customSettings" class="space-y-4">
+                                <div id="customSettings" class="space-y-4 hidden">
                                     <div class="space-y-2">
-                                        <label for="customBaseUrl" class="text-sm font-medium">Base URL</label>
-                                        <input type="text" 
-                                            id="customBaseUrl" 
-                                            name="customBaseUrl"
-                                            value="<%= config.CUSTOM_BASE_URL %>"
-                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                            placeholder="https://api.example.com">
+                                        <label for="customBaseUrl" class="text-sm font-medium">Custom Base URL</label>
+                                        <input type="text" id="customBaseUrl" name="customBaseUrl" value="<%= config.CUSTOM_BASE_URL %>" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                        <p class="text-xs text-gray-500">ENV: CUSTOM_BASE_URL · Restart required</p>
                                     </div>
-
                                     <div class="space-y-2">
-                                        <label for="customApiKey" class="text-sm font-medium">API Key</label>
+                                        <label for="customApiKey" class="text-sm font-medium">Custom API Key</label>
                                         <div class="relative">
-                                            <input type="password" 
-                                                id="customApiKey" 
-                                                name="customApiKey"
-                                                value="<%= config.CUSTOM_API_KEY %>"
-                                                class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                                            <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600" data-input="customApiKey">
-                                                <i class="fas fa-eye"></i>
-                                            </button>
+                                            <input type="password" id="customApiKey" name="customApiKey" value="" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="<%= configuredSecrets.CUSTOM_API_KEY ? 'Configured (leave empty to keep current value)' : 'Enter Custom API key' %>">
+                                            <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600" data-input="customApiKey"><i class="fas fa-eye"></i></button>
                                         </div>
+                                        <p class="text-xs text-gray-500">ENV: CUSTOM_API_KEY · Restart required</p>
                                     </div>
-
                                     <div class="space-y-2">
-                                        <label for="customModel" class="text-sm font-medium">Model</label>
-                                        <input type="text" 
-                                            id="customModel" 
-                                            name="customModel"
-                                            value="<%= config.CUSTOM_MODEL %>"
-                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                            placeholder="Enter model name">
+                                        <label for="customModel" class="text-sm font-medium">Custom Model</label>
+                                        <input type="text" id="customModel" name="customModel" value="<%= config.CUSTOM_MODEL %>" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                        <p class="text-xs text-gray-500">ENV: CUSTOM_MODEL · Restart required</p>
                                     </div>
                                 </div>
 
-                                <!-- Azure Settings -->
-                                <div id="azureSettings" class="space-y-4">
+                                <div id="azureSettings" class="space-y-4 hidden">
                                     <div class="space-y-2">
-                                        <label for="azureEndpoint">Endpoint</label>
-                                        <input type="text" 
-                                               id="azureEndpoint" 
-                                               name="azureEndpoint"
-                                               value="<%= config.AZURE_ENDPOINT %>"
-                                               class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                               placeholder="https://api.example.com">
+                                        <label for="azureEndpoint" class="text-sm font-medium">Azure Endpoint</label>
+                                        <input type="text" id="azureEndpoint" name="azureEndpoint" value="<%= config.AZURE_ENDPOINT %>" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                        <p class="text-xs text-gray-500">ENV: AZURE_ENDPOINT · Restart required</p>
                                     </div>
-                                    
                                     <div class="space-y-2">
-                                        <label for="azureApiKey">API Key</label>
+                                        <label for="azureApiKey" class="text-sm font-medium">Azure API Key</label>
                                         <div class="relative">
-                                            <input type="password" 
-                                                   id="azureApiKey" 
-                                                   name="azureApiKey"
-                                                   value="<%= config.AZURE_API_KEY %>"
-                                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                                            <button type="button" class="password-toggle" data-input="azureApiKey">
-                                                <i class="fas fa-eye"></i>
-                                            </button>
+                                            <input type="password" id="azureApiKey" name="azureApiKey" value="" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="<%= configuredSecrets.AZURE_API_KEY ? 'Configured (leave empty to keep current value)' : 'Enter Azure API key' %>">
+                                            <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600" data-input="azureApiKey"><i class="fas fa-eye"></i></button>
                                         </div>
+                                        <p class="text-xs text-gray-500">ENV: AZURE_API_KEY · Restart required</p>
                                     </div>
-                                    
                                     <div class="space-y-2">
-                                        <label for="azureDeploymentName">Deployment</label>
-                                        <input type="text" 
-                                               id="azureDeploymentName" 
-                                               name="azureDeploymentName"
-                                               value="<%= config.AZURE_DEPLOYMENT_NAME %>"
-                                               class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                               placeholder="Enter deployment name">
+                                        <label for="azureDeploymentName" class="text-sm font-medium">Deployment</label>
+                                        <input type="text" id="azureDeploymentName" name="azureDeploymentName" value="<%= config.AZURE_DEPLOYMENT_NAME %>" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                        <p class="text-xs text-gray-500">ENV: AZURE_DEPLOYMENT_NAME · Restart required</p>
                                     </div>
-
                                     <div class="space-y-2">
-                                        <label for="azureApiVersion">API Version</label>
-                                        <input type="text" 
-                                               id="azureApiVersion" 
-                                               name="azureApiVersion"
-                                               value="<%= config.AZURE_API_VERSION %>"
-                                               class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                               placeholder="Enter API version">
+                                        <label for="azureApiVersion" class="text-sm font-medium">API Version</label>
+                                        <input type="text" id="azureApiVersion" name="azureApiVersion" value="<%= config.AZURE_API_VERSION %>" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                        <p class="text-xs text-gray-500">ENV: AZURE_API_VERSION · Restart required</p>
                                     </div>
                                 </div>
 
-                                <!-- Token Limit Field -->
-                                <div class="space-y-2">
-                                    <label for="tokenLimit">Token Limit</label>
-                                    <input type="number" 
-                                        id="tokenLimit" 
-                                        name="tokenLimit"
-                                        value="<%= config.TOKEN_LIMIT %>"
-                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        placeholder="Enter token limit of model">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4">
+                                    <div class="space-y-2">
+                                        <label for="tokenLimit" class="text-sm font-medium">Token Limit</label>
+                                        <input type="number" id="tokenLimit" name="tokenLimit" value="<%= config.TOKEN_LIMIT %>" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                        <p class="text-xs text-gray-500">ENV: TOKEN_LIMIT · Restart required</p>
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label for="responseTokens" class="text-sm font-medium">Response Tokens</label>
+                                        <input type="number" id="responseTokens" name="responseTokens" value="<%= config.RESPONSE_TOKENS %>" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                        <p class="text-xs text-gray-500">ENV: RESPONSE_TOKENS · Restart required</p>
+                                    </div>
                                 </div>
+                            </section>
 
-                                <!--  Response Tokens Field -->
+                            <section class="space-y-4 border-t pt-4">
+                                <h3 class="text-lg font-semibold">AI Behavior</h3>
                                 <div class="space-y-2">
-                                    <label for="responseTokens">Response Tokens</label>
-                                    <input type="number" 
-                                        id="responseTokens" 
-                                        name="responseTokens"
-                                        value="<%= config.RESPONSE_TOKENS %>"
-                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        placeholder="Enter approximate token amount for response">
-                                </div>
-                            </div>
-                        </section>
-        
-                        <!-- Advanced Settings Section -->
-                        <section class="space-y-6">
-                            <h2 class="text-xl font-bold flex items-center gap-2 text-primary mb-4">
-                                <i class="fas fa-cog"></i>
-                                Advanced Settings
-                            </h2>
-                            <div class="space-y-2">
-                                <div class="form-group">
-                                    <label for="useExistingData">Use existing Correspondents and Tags?</label>
-                                    <select id="useExistingData" 
-                                            name="useExistingData" 
-                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                                        <option value="no" <%= config.USE_EXISTING_DATA === 'no' ? 'selected' : '' %>>No</option>
-                                        <option value="yes" <%= config.USE_EXISTING_DATA === 'yes' ? 'selected' : '' %>>Yes</option>
+                                    <label for="aiProcessedTag" class="text-sm font-medium">Add AI-processed tag to documents</label>
+                                    <select id="aiProcessedTag" name="aiProcessedTag" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                        <option value="no" <%= config.ADD_AI_PROCESSED_TAG === 'no' ? 'selected' : '' %>>No</option>
+                                        <option value="yes" <%= config.ADD_AI_PROCESSED_TAG === 'yes' ? 'selected' : '' %>>Yes</option>
                                     </select>
+                                    <p class="text-xs text-gray-500">ENV: ADD_AI_PROCESSED_TAG · Restart required</p>
+                                </div>
+                                <div id="aiTagNameSection" class="<%= config.ADD_AI_PROCESSED_TAG === 'yes' ? '' : 'hidden' %> space-y-2">
+                                    <label for="aiTagName" class="text-sm font-medium">AI-processed Tag Name</label>
+                                    <input type="text" id="aiTagName" name="aiTagName" value="<%= config.AI_PROCESSED_TAG_NAME || 'ai-processed' %>" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    <p class="text-xs text-gray-500">ENV: AI_PROCESSED_TAG_NAME · Restart required</p>
+                                </div>
+
+                                <div class="space-y-2">
+                                    <label for="usePromptTags" class="text-sm font-medium">Use specific tags in prompt</label>
+                                    <select id="usePromptTags" name="usePromptTags" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                        <option value="no" <%= config.USE_PROMPT_TAGS === 'no' ? 'selected' : '' %>>No</option>
+                                        <option value="yes" <%= config.USE_PROMPT_TAGS === 'yes' ? 'selected' : '' %>>Yes</option>
+                                    </select>
+                                    <p class="text-xs text-gray-500">ENV: USE_PROMPT_TAGS + PROMPT_TAGS · Restart required</p>
+                                </div>
+
+                                <div id="promptTagsSection" class="<%= config.USE_PROMPT_TAGS === 'yes' ? '' : 'hidden' %> space-y-2">
+                                    <label for="promptTagInput" class="text-sm font-medium">Prompt Tags</label>
+                                    <div class="flex gap-2">
+                                        <input type="text" id="promptTagInput" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Enter a tag and press Enter">
+                                        <button type="button" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                                            <i class="fas fa-plus mr-2"></i>
+                                            Add
+                                        </button>
+                                    </div>
+                                    <div id="promptTagsContainer" class="flex flex-wrap gap-2 mt-2">
+                                        <% if (config.PROMPT_TAGS && Array.isArray(config.PROMPT_TAGS) && config.PROMPT_TAGS.length > 0) { %>
+                                            <% config.PROMPT_TAGS.forEach(tag => { %>
+                                                <div class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full flex items-center gap-2">
+                                                    <span><%= tag %></span>
+                                                    <button type="button" class="hover:text-blue-600"><i class="fas fa-times"></i></button>
+                                                </div>
+                                            <% }); %>
+                                        <% } %>
+                                    </div>
+                                    <input type="hidden" id="promptTags" name="promptTags" value="<%= Array.isArray(config.PROMPT_TAGS) ? config.PROMPT_TAGS.join(',') : '' %>">
+                                </div>
+
+                                <div class="space-y-2">
+                                    <label for="systemPrompt" class="text-sm font-medium">Prompt Description</label>
+                                    <textarea id="systemPrompt" name="systemPrompt" rows="8" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Describe how the AI should analyze your documents..."><%= config.SYSTEM_PROMPT %></textarea>
+                                    <button id="systemPromptBtn" type="button" class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
+                                        <i class="fas fa-lightbulb mr-2"></i>
+                                        Example
+                                    </button>
+                                    <p class="text-xs text-gray-500">ENV: SYSTEM_PROMPT · Restart required</p>
+                                </div>
+                            </section>
+
+                            <section class="space-y-4 border-t pt-4">
+                                <h3 class="text-lg font-semibold">Restrictions & External API</h3>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <label for="restrictToExistingTags" class="flex items-center gap-3 border rounded-lg p-3 cursor-pointer">
+                                        <input type="checkbox" id="restrictToExistingTags" name="restrictToExistingTags" class="w-5 h-5" <%= config.RESTRICT_TO_EXISTING_TAGS === 'yes' ? 'checked' : '' %>>
+                                        <span>Restrict to Existing Tags</span>
+                                    </label>
+                                    <label for="restrictToExistingCorrespondents" class="flex items-center gap-3 border rounded-lg p-3 cursor-pointer">
+                                        <input type="checkbox" id="restrictToExistingCorrespondents" name="restrictToExistingCorrespondents" class="w-5 h-5" <%= config.RESTRICT_TO_EXISTING_CORRESPONDENTS === 'yes' ? 'checked' : '' %>>
+                                        <span>Restrict to Existing Correspondents</span>
+                                    </label>
+                                    <label for="restrictToExistingDocumentTypes" class="flex items-center gap-3 border rounded-lg p-3 cursor-pointer">
+                                        <input type="checkbox" id="restrictToExistingDocumentTypes" name="restrictToExistingDocumentTypes" class="w-5 h-5" <%= config.RESTRICT_TO_EXISTING_DOCUMENT_TYPES === 'yes' ? 'checked' : '' %>>
+                                        <span>Restrict to Existing Document Types</span>
+                                    </label>
+                                </div>
+                                <p class="text-xs text-gray-500">ENV: RESTRICT_TO_EXISTING_* · Restart required</p>
+
+                                <label for="externalApiEnabled" class="flex items-center gap-3 border rounded-lg p-3 cursor-pointer">
+                                    <input type="checkbox" id="externalApiEnabled" name="externalApiEnabled" class="w-5 h-5" <%= config.EXTERNAL_API_ENABLED === 'yes' ? 'checked' : '' %>>
+                                    <span>Enable External API Integration</span>
+                                </label>
+
+                                <div id="externalApiSettings" class="space-y-4 <%= config.EXTERNAL_API_ENABLED === 'yes' ? '' : 'hidden' %>">
+                                    <div class="space-y-2">
+                                        <label for="externalApiUrl" class="text-sm font-medium">API URL</label>
+                                        <input type="text" id="externalApiUrl" name="externalApiUrl" value="<%= config.EXTERNAL_API_URL || '' %>" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label for="externalApiMethod" class="text-sm font-medium">HTTP Method</label>
+                                        <select id="externalApiMethod" name="externalApiMethod" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                            <option value="GET" <%= config.EXTERNAL_API_METHOD === 'GET' ? 'selected' : '' %>>GET</option>
+                                            <option value="POST" <%= config.EXTERNAL_API_METHOD === 'POST' ? 'selected' : '' %>>POST</option>
+                                            <option value="PUT" <%= config.EXTERNAL_API_METHOD === 'PUT' ? 'selected' : '' %>>PUT</option>
+                                        </select>
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label for="externalApiHeaders" class="text-sm font-medium">Headers (JSON)</label>
+                                        <textarea id="externalApiHeaders" name="externalApiHeaders" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"><%= config.EXTERNAL_API_HEADERS || '' %></textarea>
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label for="externalApiBody" class="text-sm font-medium">Request Body (JSON)</label>
+                                        <textarea id="externalApiBody" name="externalApiBody" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"><%= config.EXTERNAL_API_BODY || '' %></textarea>
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label for="externalApiTimeout" class="text-sm font-medium">Timeout (milliseconds)</label>
+                                        <input type="number" id="externalApiTimeout" name="externalApiTimeout" value="<%= config.EXTERNAL_API_TIMEOUT || '5000' %>" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label for="externalApiTransform" class="text-sm font-medium">Transform Path</label>
+                                        <textarea id="externalApiTransform" name="externalApiTransform" rows="4" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"><%= config.EXTERNAL_API_TRANSFORM || '' %></textarea>
+                                    </div>
+                                    <p class="text-xs text-gray-500">ENV: EXTERNAL_API_* · Restart required</p>
+                                </div>
+                            </section>
+
+                            <section class="space-y-4 border-t pt-4">
+                                <h3 class="text-lg font-semibold">AI Function Limits</h3>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <label for="activateTagging" class="flex items-center gap-3 border rounded-lg p-3 cursor-pointer"><input type="checkbox" id="activateTagging" name="activateTagging" class="w-5 h-5" <%= config.ACTIVATE_TAGGING === 'yes' ? 'checked' : '' %>><span>Tags Assignment</span></label>
+                                    <label for="activateCorrespondents" class="flex items-center gap-3 border rounded-lg p-3 cursor-pointer"><input type="checkbox" id="activateCorrespondents" name="activateCorrespondents" class="w-5 h-5" <%= config.ACTIVATE_CORRESPONDENTS === 'yes' ? 'checked' : '' %>><span>Correspondent Detection</span></label>
+                                    <label for="activateDocumentType" class="flex items-center gap-3 border rounded-lg p-3 cursor-pointer"><input type="checkbox" id="activateDocumentType" name="activateDocumentType" class="w-5 h-5" <%= config.ACTIVATE_DOCUMENT_TYPE === 'yes' ? 'checked' : '' %>><span>Document Type Classification</span></label>
+                                    <label for="activateTitle" class="flex items-center gap-3 border rounded-lg p-3 cursor-pointer"><input type="checkbox" id="activateTitle" name="activateTitle" class="w-5 h-5" <%= config.ACTIVATE_TITLE === 'yes' ? 'checked' : '' %>><span>Title Generation</span></label>
+                                    <label for="activateCustomFields" class="flex items-center gap-3 border rounded-lg p-3 cursor-pointer"><input type="checkbox" id="activateCustomFields" name="activateCustomFields" class="w-5 h-5" <%= config.ACTIVATE_CUSTOM_FIELDS === 'yes' ? 'checked' : '' %>><span>Custom Fields</span></label>
+                                </div>
+                                <p class="text-xs text-gray-500">ENV: ACTIVATE_* · Restart required</p>
+                            </section>
+
+                            <section class="space-y-4 border-t pt-4">
+                                <h3 class="text-lg font-semibold">Custom Fields</h3>
+                                <div id="customFieldsList" class="space-y-2">
+                                    <% if (config.CUSTOM_FIELDS && Array.isArray(JSON.parse(config.CUSTOM_FIELDS).custom_fields)) { %>
+                                        <% JSON.parse(config.CUSTOM_FIELDS).custom_fields.forEach((field) => { %>
+                                            <div class="custom-field-item flex items-center gap-2 p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-blue-500 transition-colors">
+                                                <div class="cursor-move text-gray-400"><i class="fas fa-grip-vertical"></i></div>
+                                                <div class="flex-1">
+                                                    <p class="font-medium text-gray-900 dark:text-gray-100"><%= field.value %></p>
+                                                    <p class="text-sm text-gray-500 dark:text-gray-400">Type: <%= field.data_type %> <%= field.data_type === 'monetary' && field.currency ? `(${field.currency})` : '' %></p>
+                                                </div>
+                                                <button type="button" onclick="removeCustomField(this)" class="text-gray-400 hover:text-red-500 transition-colors"><i class="fas fa-trash"></i></button>
+                                            </div>
+                                        <% }); %>
+                                    <% } %>
+                                </div>
+
+                                <div class="grid grid-cols-12 gap-3">
+                                    <div class="col-span-5"><input type="text" id="newFieldName" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" placeholder="Enter field name..."></div>
+                                    <div class="col-span-3">
+                                        <select id="newFieldType" onchange="toggleCurrencySelect()" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                                            <option value="string">Text</option>
+                                            <option value="float">Number</option>
+                                            <option value="integer">Integer</option>
+                                            <option value="monetary">Currency</option>
+                                            <option value="date">Date</option>
+                                            <option value="boolean">Boolean</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-span-2">
+                                        <select id="currencyCode" class="hidden w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                                            <option value="EUR">EUR</option>
+                                            <option value="USD">USD</option>
+                                            <option value="GBP">GBP</option>
+                                            <option value="JPY">JPY</option>
+                                            <option value="CHF">CHF</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-span-2"><button type="button" onclick="addCustomField()" class="w-full px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg">Add</button></div>
+                                </div>
+                                <input type="hidden" id="customFieldsJson" name="customFields" value='<%= config.CUSTOM_FIELDS || "{\"custom_fields\":[]}" %>'>
+                                <p class="text-xs text-gray-500">ENV: CUSTOM_FIELDS · Restart required</p>
+                            </section>
+                        </div>
+
+                        <div id="ocr-tab" class="settings-tab-content space-y-6 hidden">
+                            <section class="space-y-4">
+                                <h3 class="text-lg font-semibold">Mistral OCR</h3>
+                                <div class="space-y-2">
+                                    <label for="mistralOcrEnabled" class="text-sm font-medium">Enable Mistral OCR fallback</label>
+                                    <select id="mistralOcrEnabled" name="mistralOcrEnabled" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                        <option value="no" <%= config.MISTRAL_OCR_ENABLED === 'no' ? 'selected' : '' %>>No</option>
+                                        <option value="yes" <%= config.MISTRAL_OCR_ENABLED === 'yes' ? 'selected' : '' %>>Yes</option>
+                                    </select>
+                                    <p class="text-xs text-gray-500">ENV: MISTRAL_OCR_ENABLED · Restart required</p>
                                 </div>
                                 <div class="space-y-2">
-                                    <label for="scanInterval" class="text-sm font-medium">Scan Interval (Cron Format)</label>
-                                    <input type="text" 
-                                           id="scanInterval" 
-                                           name="scanInterval"
-                                           value="<%= config.SCAN_INTERVAL %>"
-                                           class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                           required>
-                                    <p class="text-sm text-gray-500">Default: every 30 minutes</p>
-                                </div>
-
-                                <!-- Performance: Tag Cache Configuration -->
-                                <div class="border-t pt-4 space-y-4">
-                                    <h3 class="text-lg font-medium flex items-center gap-2 text-primary">
-                                        <i class="fas fa-tachometer-alt"></i>
-                                        Performance: Tag Cache
-                                    </h3>
-                                    
-                                    <div class="space-y-2">
-                                        <label for="tagCacheTTL" class="text-sm font-medium flex items-center gap-2">
-                                            Tag Cache Lifetime (Seconds)
-                                            <button type="button" class="text-gray-400 hover:text-gray-600 focus:outline-none" id="tagCacheTTLHelp">
-                                                <i class="fas fa-circle-question"></i>
-                                            </button>
-                                        </label>
-                                        <input type="number" 
-                                               id="tagCacheTTL" 
-                                               name="tagCacheTTL"
-                                               min="60"
-                                               max="3600"
-                                               value="<%= config.TAG_CACHE_TTL_SECONDS || 300 %>"
-                                               class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                               required>
-                                        <p class="text-sm text-gray-500">How long to cache tags before refreshing. Recommended: 300 (5 min). Range: 60-3600 seconds.</p>
+                                    <label for="mistralApiKey" class="text-sm font-medium">Mistral API Key</label>
+                                    <div class="relative">
+                                        <input type="password" id="mistralApiKey" name="mistralApiKey" value="" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="<%= configuredSecrets.MISTRAL_API_KEY ? 'Configured (leave empty to keep current value)' : 'Enter Mistral API key' %>">
+                                        <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600" data-input="mistralApiKey"><i class="fas fa-eye"></i></button>
                                     </div>
+                                    <p class="text-xs text-gray-500">ENV: MISTRAL_API_KEY · Restart required</p>
+                                </div>
+                                <div class="space-y-2">
+                                    <label for="mistralOcrModel" class="text-sm font-medium">Mistral OCR Model</label>
+                                    <input type="text" id="mistralOcrModel" name="mistralOcrModel" value="<%= config.MISTRAL_OCR_MODEL || 'mistral-ocr-latest' %>" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    <p class="text-xs text-gray-500">ENV: MISTRAL_OCR_MODEL · Restart required</p>
+                                </div>
+                            </section>
+                        </div>
 
-                                    <div class="space-y-2">
-                                        <button type="button" 
-                                                id="clearTagCacheBtn"
-                                                class="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition-colors duration-200 flex items-center gap-2">
-                                            <i class="fas fa-trash-alt" id="clearCacheIcon"></i>
-                                            <span>Clear Tag Cache Now</span>
+                        <div id="troubleshooting-tab" class="settings-tab-content space-y-6 hidden">
+                            <section class="space-y-4">
+                                <h3 class="text-lg font-semibold">Caching & RAG</h3>
+                                <div class="space-y-2">
+                                    <label for="tagCacheTTL" class="text-sm font-medium flex items-center gap-2">
+                                        Tag Cache Lifetime (Seconds)
+                                        <button type="button" class="text-gray-400 hover:text-gray-600 focus:outline-none" id="tagCacheTTLHelp">
+                                            <i class="fas fa-circle-question"></i>
                                         </button>
-                                        <p class="text-sm text-gray-500">Manually clear the tag cache to force immediate refresh from Paperless-ngx.</p>
-                                    </div>
+                                    </label>
+                                    <input type="number" id="tagCacheTTL" name="tagCacheTTL" min="60" max="3600" value="<%= config.TAG_CACHE_TTL_SECONDS || 300 %>" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                                    <p class="text-xs text-gray-500">ENV: TAG_CACHE_TTL_SECONDS · Restart required</p>
                                 </div>
-        
-                                <!-- Tags Section -->
-                                <div class="space-y-4">
+                                <button type="button" id="clearTagCacheBtn" class="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition-colors duration-200 flex items-center gap-2">
+                                    <i class="fas fa-trash-alt" id="clearCacheIcon"></i>
+                                    <span>Clear Tag Cache Now</span>
+                                </button>
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4">
                                     <div class="space-y-2">
-                                        <label for="showTags" class="text-sm font-medium">Process only specific pre tagged documents?</label>
-                                        <select id="showTags" 
-                                                name="showTags" 
-                                                class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                                            <option value="no" <%= config.PROCESS_PREDEFINED_DOCUMENTS === 'no' ? 'selected' : '' %>>No</option>
-                                            <option value="yes" <%= config.PROCESS_PREDEFINED_DOCUMENTS === 'yes' ? 'selected' : '' %>>Yes</option>
+                                        <label for="ragServiceEnabled" class="text-sm font-medium">Enable RAG service routes</label>
+                                        <select id="ragServiceEnabled" name="ragServiceEnabled" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                            <option value="true" <%= config.RAG_SERVICE_ENABLED === 'true' ? 'selected' : '' %>>True</option>
+                                            <option value="false" <%= config.RAG_SERVICE_ENABLED === 'false' ? 'selected' : '' %>>False</option>
                                         </select>
+                                        <p class="text-xs text-gray-500">ENV: RAG_SERVICE_ENABLED · Restart required</p>
                                     </div>
-        
-                                    <div id="tagsInputSection" class="<%= config.PROCESS_PREDEFINED_DOCUMENTS === 'yes' ? '' : 'hidden' %> space-y-4">
-                                        <div class="space-y-2">
-                                            <label for="tagInput" class="text-sm font-medium">Tags</label>
-                                            <div class="flex gap-2">
-                                                <input type="text" 
-                                                    id="tagInput" 
-                                                    class="flex-1 px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                    placeholder="Enter a tag and press Enter">
-                                                <button type="button" 
-                                                        class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-                                                    <i class="fas fa-plus mr-2"></i>
-                                                    Add
-                                                </button>
-                                            </div>
-                                            <div id="tagsContainer" class="flex flex-wrap gap-2 mt-2">
-                                                <% if (config.TAGS && Array.isArray(config.TAGS) && config.TAGS.length > 0) { %>
-                                                    <% config.TAGS.forEach(tag => { %>
-                                                        <div class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full flex items-center gap-2">
-                                                            <span><%= tag %></span>
-                                                            <button type="button" class="hover:text-blue-600"><i class="fas fa-times"></i></button>
-                                                        </div>
-                                                    <% }); %>
-                                                <% } %>
-                                            </div>
-                                            <input type="hidden" id="tags" name="tags" value="<%= Array.isArray(config.TAGS) ? config.TAGS.join(',') : '' %>">
-                                        </div>
+                                    <div class="space-y-2">
+                                        <label for="ragServiceUrl" class="text-sm font-medium">RAG Service URL</label>
+                                        <input type="text" id="ragServiceUrl" name="ragServiceUrl" value="<%= config.RAG_SERVICE_URL || 'http://localhost:8000' %>" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                        <p class="text-xs text-gray-500">ENV: RAG_SERVICE_URL · Restart required</p>
                                     </div>
+                                </div>
+                            </section>
 
+                            <section class="space-y-4 border-t pt-4">
+                                <h3 class="text-lg font-semibold">Runtime Controls</h3>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div class="space-y-2">
-                                        <label for="ignoreTagInput" class="text-sm font-medium">Ignore Tags</label>
-                                        <div class="flex gap-2">
-                                            <input type="text"
-                                                id="ignoreTagInput"
-                                                class="flex-1 px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                placeholder="Enter a tag to ignore and press Enter">
-                                            <button type="button"
-                                                    class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-                                                <i class="fas fa-plus mr-2"></i>
-                                                Add
-                                            </button>
-                                        </div>
-                                        <div id="ignoreTagsContainer" class="flex flex-wrap gap-2 mt-2">
-                                            <% if (config.IGNORE_TAGS && Array.isArray(config.IGNORE_TAGS) && config.IGNORE_TAGS.length > 0) { %>
-                                                <% config.IGNORE_TAGS.forEach(tag => { %>
-                                                    <div class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full flex items-center gap-2">
-                                                        <span><%= tag %></span>
-                                                        <button type="button" class="hover:text-blue-600"><i class="fas fa-times"></i></button>
-                                                    </div>
-                                                <% }); %>
-                                            <% } %>
-                                        </div>
-                                        <input type="hidden" id="ignoreTags" name="ignoreTags" value="<%= Array.isArray(config.IGNORE_TAGS) ? config.IGNORE_TAGS.join(',') : '' %>">
-                                        <p class="text-sm text-gray-500">Documents with these tags are excluded from regular scans and dashboard totals.</p>
+                                        <label for="globalRateLimitWindowMs" class="text-sm font-medium">Global rate-limit window (ms)</label>
+                                        <input type="number" id="globalRateLimitWindowMs" name="globalRateLimitWindowMs" value="<%= config.GLOBAL_RATE_LIMIT_WINDOW_MS || 900000 %>" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                        <p class="text-xs text-gray-500">ENV: GLOBAL_RATE_LIMIT_WINDOW_MS · Restart required</p>
                                     </div>
-                                </div>
-        
-                                <!-- Tag & Correspondent Restrictions Section -->
-                                <div class="border-t pt-4 space-y-4">
                                     <div class="space-y-2">
-                                        <h3 class="text-lg font-medium flex items-center gap-2 text-primary">
-                                            <i class="fas fa-filter"></i>
-                                            AI Restrictions
-                                        </h3>
-                                        
-                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div class="border border-gray-200 shadow-sm rounded-lg hover:border-blue-500 transition-colors duration-200">
-                                                <label for="restrictToExistingTags" class="flex items-center p-4 cursor-pointer w-full">
-                                                    <input type="checkbox" 
-                                                        id="restrictToExistingTags" 
-                                                        name="restrictToExistingTags" 
-                                                        class="w-5 h-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                                                        <%= config.RESTRICT_TO_EXISTING_TAGS === 'yes' ? 'checked' : '' %>>
-                                                    <div class="ml-3">
-                                                        <div class="flex items-center text-gray-900 font-medium">
-                                                            <i class="fas fa-tags mr-2 text-blue-500"></i>
-                                                            Restrict to Existing Tags
-                                                        </div>
-                                                        <p class="text-sm text-gray-500 mt-1">AI will only use tags that already exist in Paperless-ngx</p>
-                                                    </div>
-                                                </label>
-                                            </div>
-                                            
-                                            <div class="border border-gray-200 shadow-sm rounded-lg hover:border-blue-500 transition-colors duration-200">
-                                                <label for="restrictToExistingCorrespondents" class="flex items-center p-4 cursor-pointer w-full">
-                                                    <input type="checkbox" 
-                                                        id="restrictToExistingCorrespondents" 
-                                                        name="restrictToExistingCorrespondents" 
-                                                        class="w-5 h-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                                                        <%= config.RESTRICT_TO_EXISTING_CORRESPONDENTS === 'yes' ? 'checked' : '' %>>
-                                                    <div class="ml-3">
-                                                        <div class="flex items-center text-gray-900 font-medium">
-                                                            <i class="fas fa-user mr-2 text-blue-500"></i>
-                                                            Restrict to Existing Correspondents
-                                                        </div>
-                                                        <p class="text-sm text-gray-500 mt-1">AI will only use correspondents that already exist in Paperless-ngx</p>
-                                                    </div>
-                                                </label>
-                                            </div>
-                                        </div>
-                                        
-                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                                            <div class="border border-gray-200 shadow-sm rounded-lg hover:border-blue-500 transition-colors duration-200">
-                                                <label for="restrictToExistingDocumentTypes" class="flex items-center p-4 cursor-pointer w-full">
-                                                    <input type="checkbox" 
-                                                        id="restrictToExistingDocumentTypes" 
-                                                        name="restrictToExistingDocumentTypes" 
-                                                        class="w-5 h-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                                                        <%= config.RESTRICT_TO_EXISTING_DOCUMENT_TYPES === 'yes' ? 'checked' : '' %>>
-                                                    <div class="ml-3">
-                                                        <div class="flex items-center text-gray-900 font-medium">
-                                                            <i class="fas fa-file-alt mr-2 text-blue-500"></i>
-                                                            Restrict to Existing Document Types
-                                                        </div>
-                                                        <p class="text-sm text-gray-500 mt-1">AI will only use document types that already exist in Paperless-ngx</p>
-                                                    </div>
-                                                </label>
-                                            </div>
-                                        </div>
+                                        <label for="globalRateLimitMax" class="text-sm font-medium">Global rate-limit max requests</label>
+                                        <input type="number" id="globalRateLimitMax" name="globalRateLimitMax" value="<%= config.GLOBAL_RATE_LIMIT_MAX || 1000 %>" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                        <p class="text-xs text-gray-500">ENV: GLOBAL_RATE_LIMIT_MAX · Restart required</p>
                                     </div>
-                                </div>
-                                
-                                <!-- External API Integration Section -->
-                                <div class="border-t pt-4 space-y-4">
                                     <div class="space-y-2">
-                                        <h3 class="text-lg font-medium flex items-center gap-2 text-primary">
-                                            <i class="fas fa-plug"></i>
-                                            External API Integration
-                                        </h3>
-                                        
-                                        <div class="border border-gray-200 shadow-sm rounded-lg hover:border-blue-500 transition-colors duration-200 mb-4">
-                                            <label for="externalApiEnabled" class="flex items-center p-4 cursor-pointer w-full">
-                                                <input type="checkbox" 
-                                                    id="externalApiEnabled" 
-                                                    name="externalApiEnabled" 
-                                                    class="w-5 h-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                                                    <%= config.EXTERNAL_API_ENABLED === 'yes' ? 'checked' : '' %>>
-                                                <div class="ml-3">
-                                                    <div class="flex items-center text-gray-900 font-medium">
-                                                        <i class="fas fa-globe mr-2 text-blue-500"></i>
-                                                        Enable External API Integration
-                                                    </div>
-                                                    <p class="text-sm text-gray-500 mt-1">Enrich AI prompts with data from external API</p>
-                                                </div>
-                                            </label>
-                                        </div>
-                                        
-                                        <div id="externalApiSettings" class="space-y-4 <%= config.EXTERNAL_API_ENABLED === 'yes' ? '' : 'hidden' %>">
-                                            <div class="space-y-2">
-                                                <label for="externalApiUrl" class="text-sm font-medium">API URL</label>
-                                                <input type="text" 
-                                                    id="externalApiUrl" 
-                                                    name="externalApiUrl"
-                                                    value="<%= config.EXTERNAL_API_URL || '' %>"
-                                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                    placeholder="https://api.example.com/data">
-                                            </div>
-                                            
-                                            <div class="space-y-2">
-                                                <label for="externalApiMethod" class="text-sm font-medium">HTTP Method</label>
-                                                <select id="externalApiMethod" 
-                                                        name="externalApiMethod"
-                                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                                                    <option value="GET" <%= config.EXTERNAL_API_METHOD === 'GET' ? 'selected' : '' %>>GET</option>
-                                                    <option value="POST" <%= config.EXTERNAL_API_METHOD === 'POST' ? 'selected' : '' %>>POST</option>
-                                                    <option value="PUT" <%= config.EXTERNAL_API_METHOD === 'PUT' ? 'selected' : '' %>>PUT</option>
-                                                </select>
-                                            </div>
-                                            
-                                            <div class="space-y-2">
-                                                <label for="externalApiHeaders" class="text-sm font-medium">Headers (JSON)</label>
-                                                <textarea id="externalApiHeaders"  
-                                                          name="externalApiHeaders"
-                                                          rows="3"
-                                                          class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                          placeholder='{"Content-Type": "application/json", "Authorization": "Bearer YOUR_TOKEN"}'><%= config.EXTERNAL_API_HEADERS || '' %></textarea>
-                                            </div>
-                                            
-                                            <div class="space-y-2">
-                                                <label for="externalApiBody" class="text-sm font-medium">Request Body (JSON) - For POST/PUT</label>
-                                                <textarea id="externalApiBody" 
-                                                          name="externalApiBody"
-                                                          rows="3"
-                                                          class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                          placeholder='{"query": "your_query", "filters": {"key": "value"}}'><%= config.EXTERNAL_API_BODY || '' %></textarea>
-                                            </div>
-                                            
-                                            <div class="space-y-2">
-                                                <label for="externalApiTimeout" class="text-sm font-medium">Timeout (milliseconds)</label>
-                                                <input type="number" 
-                                                       id="externalApiTimeout" 
-                                                       name="externalApiTimeout"
-                                                       value="<%= config.EXTERNAL_API_TIMEOUT || '5000' %>"
-                                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                       placeholder="5000">
-                                            </div>
-                                            
-                                            <div class="space-y-2">
-                                                <label for="externalApiTransform" class="text-sm font-medium">Transform Function (JavaScript)</label>
-                                                <textarea id="externalApiTransform" 
-                                                          name="externalApiTransform"
-                                                          rows="5"
-                                                          class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                          placeholder="// Function to transform API response
-// Return the data you want to include in the prompt
-function transform(data) {
-  return data;
-}"><%= config.EXTERNAL_API_TRANSFORM || '// Function to transform API response\n// Return the data you want to include in the prompt\nfunction transform(data) {\n  return data;\n}' %></textarea>
-                                            </div>
-                                        </div>
+                                        <label for="trustProxy" class="text-sm font-medium">Trust Proxy</label>
+                                        <input type="text" id="trustProxy" name="trustProxy" value="<%= config.TRUST_PROXY %>" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="false | true | 1 | loopback">
+                                        <p class="text-xs text-gray-500">ENV: TRUST_PROXY · Restart required</p>
                                     </div>
-                                </div>
-                                
-                                <!-- AI Tag Section -->
-                                <div class="border-t pt-4 space-y-4">
                                     <div class="space-y-2">
-                                        <label for="aiProcessedTag" class="text-sm font-medium">Add AI-processed tag to documents?</label>
-                                        <select id="aiProcessedTag" 
-                                                name="aiProcessedTag" 
-                                                class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                                            <option value="no" <%= config.ADD_AI_PROCESSED_TAG === 'no' ? 'selected' : '' %>>No</option>
-                                            <option value="yes" <%= config.ADD_AI_PROCESSED_TAG === 'yes' ? 'selected' : '' %>>Yes</option>
+                                        <label for="minContentLength" class="text-sm font-medium">Minimum content length</label>
+                                        <input type="number" id="minContentLength" name="minContentLength" value="<%= config.MIN_CONTENT_LENGTH || 10 %>" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                        <p class="text-xs text-gray-500">ENV: MIN_CONTENT_LENGTH · Restart required</p>
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label for="paperlessAiPort" class="text-sm font-medium">Paperless-AI Port</label>
+                                        <input type="number" id="paperlessAiPort" name="paperlessAiPort" value="<%= config.PAPERLESS_AI_PORT || 3000 %>" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                        <p class="text-xs text-gray-500">ENV: PAPERLESS_AI_PORT · Restart required</p>
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label for="externalApiAllowPrivateIps" class="text-sm font-medium">Allow private IPs for external API</label>
+                                        <select id="externalApiAllowPrivateIps" name="externalApiAllowPrivateIps" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                            <option value="no" <%= config.EXTERNAL_API_ALLOW_PRIVATE_IPS === 'no' ? 'selected' : '' %>>No</option>
+                                            <option value="yes" <%= config.EXTERNAL_API_ALLOW_PRIVATE_IPS === 'yes' ? 'selected' : '' %>>Yes</option>
                                         </select>
-                                    </div>
-        
-                                    <div id="aiTagNameSection" class="<%= config.ADD_AI_PROCESSED_TAG === 'yes' ? '' : 'hidden' %> space-y-2">
-                                        <label for="aiTagName" class="text-sm font-medium">AI-processed Tag Name</label>
-                                        <input type="text" 
-                                            id="aiTagName" 
-                                            name="aiTagName"
-                                            value="<%= config.AI_PROCESSED_TAG_NAME || 'ai-processed' %>"
-                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                            placeholder="ai-processed">
-                                        <p class="text-sm text-gray-500">This tag will be added to documents after AI processing</p>
+                                        <p class="text-xs text-gray-500">ENV: EXTERNAL_API_ALLOW_PRIVATE_IPS · Restart required</p>
                                     </div>
                                 </div>
-        
-                                <!-- Prompt Tags Section -->
-                                <div class="border-t pt-4 space-y-4">
-                                    <div class="space-y-2">
-                                        <label for="usePromptTags" class="text-sm font-medium">Use specific tags in prompt?</label>
-                                        <select id="usePromptTags" 
-                                                name="usePromptTags" 
-                                                class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                                            <option value="no" <%= config.USE_PROMPT_TAGS === 'no' ? 'selected' : '' %>>No</option>
-                                            <option value="yes" <%= config.USE_PROMPT_TAGS === 'yes' ? 'selected' : '' %>>Yes</option>
-                                        </select>
-                                    </div>
-        
-                                    <div id="promptTagsSection" class="<%= config.USE_PROMPT_TAGS === 'yes' ? '' : 'hidden' %> space-y-4">
-                                        <div class="space-y-2">
-                                            <label for="promptTagInput" class="text-sm font-medium">Prompt Tags</label>
-                                            <div class="flex gap-2">
-                                                <input type="text" 
-                                                    id="promptTagInput" 
-                                                    class="flex-1 px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                    placeholder="Enter a tag and press Enter">
-                                                <button type="button" 
-                                                        class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-                                                    <i class="fas fa-plus mr-2"></i>
-                                                    Add
-                                                </button>
-                                            </div>
-                                            <div id="promptTagsContainer" class="flex flex-wrap gap-2 mt-2">
-                                                <% if (config.PROMPT_TAGS && Array.isArray(config.PROMPT_TAGS) && config.PROMPT_TAGS.length > 0) { %>
-                                                    <% config.PROMPT_TAGS.forEach(tag => { %>
-                                                        <div class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full flex items-center gap-2">
-                                                            <span><%= tag %></span>
-                                                            <button type="button" class="hover:text-blue-600"><i class="fas fa-times"></i></button>
-                                                        </div>
-                                                    <% }); %>
-                                                <% } %>
-                                            </div>
-                                            <input type="hidden" id="promptTags" name="promptTags" value="<%= Array.isArray(config.PROMPT_TAGS) ? config.PROMPT_TAGS.join(',') : '' %>">
-                                            <p class="text-sm text-gray-500">These tags will be exclusively used in the AI prompt</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <hr/>
-                                <!-- Automatic Processing Section -->
-                                <div class="border-t pt-4 space-y-4">
-                                    <div class="space-y-2">
-                                        <label for="disableAutomaticProcessing" class="text-sm font-medium">Disable automatic processing?</label>
-                                        <div class="border border-gray-200 shadow-sm rounded-lg hover:border-blue-500 transition-colors duration-200">
-                                            <label for="disableAutomaticProcessing" class="flex items-center p-4 cursor-pointer w-full">
-                                                <input type="checkbox" 
-                                                    id="disableAutomaticProcessing" 
-                                                    class="w-5 h-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                                                    <%= config.DISABLE_AUTOMATIC_PROCESSING === 'yes' ? 'checked' : '' %>>
-                                                <div class="ml-3">
-                                                    <div class="flex items-center text-gray-900 font-medium">
-                                                        <i class="fas fa-robot mr-2 text-blue-500"></i>
-                                                        Disable Automatic Processing
-                                                    </div>
-                                                    <p class="text-sm text-gray-500 mt-1">Determines if the AI will run on its own or every scan is started manually</p>
-                                                </div>
-                                            </label>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <hr class="my-6"/>
-                                <!-- Limit Functions Section -->
-                                <section class="space-y-6">
-                                    <h2 class="text-xl font-bold flex items-center gap-2 text-primary mb-4">
-                                        <i class="fas fa-tasks"></i>
-                                        AI Function Limits
-                                    </h2>
-                                    <div class="space-y-4">
-                                        <div class="space-y-2">
-                                            <label class="text-sm font-medium">Enable/Disable AI Functions</label>
-                                            <p class="text-sm text-gray-500 mb-4">Select which functions the AI should perform during document analysis</p>
-                                            
-                                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <div class="border border-gray-200 shadow-sm rounded-lg hover:border-blue-500 transition-colors duration-200">
-                                                    <label for="activateTagging" class="flex items-center p-4 cursor-pointer w-full">
-                                                        <input type="checkbox" 
-                                                            id="activateTagging" 
-                                                            name="activateTagging" 
-                                                            class="w-5 h-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                                                            <%= config.ACTIVATE_TAGGING === 'yes' ? 'checked' : '' %>>
-                                                        <div class="ml-3">
-                                                            <div class="flex items-center text-gray-900 font-medium">
-                                                                <i class="fas fa-tags mr-2 text-blue-500"></i>
-                                                                Tags Assignment
-                                                            </div>
-                                                            <p class="text-sm text-gray-500 mt-1">Automatically assign relevant tags to documents</p>
-                                                        </div>
-                                                    </label>
-                                                </div>
-                                                
-                                                <div class="border border-gray-200 shadow-sm rounded-lg hover:border-blue-500 transition-colors duration-200">
-                                                    <label for="activateCorrespondents" class="flex items-center p-4 cursor-pointer w-full">
-                                                        <input type="checkbox" 
-                                                            id="activateCorrespondents" 
-                                                            name="activateCorrespondents" 
-                                                            class="w-5 h-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                                                            <%= config.ACTIVATE_CORRESPONDENTS === 'yes' ? 'checked' : '' %>>
-                                                        <div class="ml-3">
-                                                            <div class="flex items-center text-gray-900 font-medium">
-                                                                <i class="fas fa-user mr-2 text-blue-500"></i>
-                                                                Correspondent Detection
-                                                            </div>
-                                                            <p class="text-sm text-gray-500 mt-1">Identify document senders automatically</p>
-                                                        </div>
-                                                    </label>
-                                                </div>
-                                                
-                                                <div class="border border-gray-200 shadow-sm rounded-lg hover:border-blue-500 transition-colors duration-200">
-                                                    <label for="activateDocumentType" class="flex items-center p-4 cursor-pointer w-full">
-                                                        <input type="checkbox" 
-                                                            id="activateDocumentType" 
-                                                            name="activateDocumentType" 
-                                                            class="w-5 h-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                                                            <%= config.ACTIVATE_DOCUMENT_TYPE === 'yes' ? 'checked' : '' %>>
-                                                        <div class="ml-3">
-                                                            <div class="flex items-center text-gray-900 font-medium">
-                                                                <i class="fas fa-file-alt mr-2 text-blue-500"></i>
-                                                                Document Type Classification
-                                                            </div>
-                                                            <p class="text-sm text-gray-500 mt-1">Determine the type of document automatically</p>
-                                                        </div>
-                                                    </label>
-                                                </div>
-                                                
-                                                <div class="border border-gray-200 shadow-sm rounded-lg hover:border-blue-500 transition-colors duration-200">
-                                                    <label for="activateTitle" class="flex items-center p-4 cursor-pointer w-full">
-                                                        <input type="checkbox" 
-                                                            id="activateTitle" 
-                                                            name="activateTitle" 
-                                                            class="w-5 h-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                                                            <%= config.ACTIVATE_TITLE === 'yes' ? 'checked' : '' %>>
-                                                        <div class="ml-3">
-                                                            <div class="flex items-center text-gray-900 font-medium">
-                                                                <i class="fas fa-heading mr-2 text-blue-500"></i>
-                                                                Title Generation
-                                                            </div>
-                                                            <p class="text-sm text-gray-500 mt-1">Generate meaningful titles for documents</p>
-                                                        </div>
-                                                    </label>
-                                                </div>
-                                                <div class="border border-gray-200 shadow-sm rounded-lg hover:border-blue-500 transition-colors duration-200">
-                                                    <label for="activateCustomFields" class="flex items-center p-4 cursor-pointer w-full">
-                                                        <input type="checkbox" 
-                                                            id="activateCustomFields" 
-                                                            name="activateCustomFields" 
-                                                            class="w-5 h-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                                                            <%= config.ACTIVATE_CUSTOM_FIELDS === 'yes' ? 'checked' : '' %>>
-                                                        <div class="ml-3">
-                                                            <div class="flex items-center text-gray-900 font-medium">
-                                                                <i class="fas fa-filter mr-2 text-blue-500"></i>
-                                                                Custom Fields
-                                                            </div>
-                                                            <p class="text-sm text-gray-500 mt-1">Add custom fields to the documents</p>
-                                                        </div>
-                                                    </label>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </section>
-                                <!-- Custom Fields Section -->
-                                <section class="space-y-6">
-                                    <h2 class="text-xl font-bold flex items-center gap-2 text-primary mb-4">
-                                        <i class="fas fa-table text-blue-500"></i>
-                                        Custom Fields
-                                    </h2>
-                                    <div class="space-y-4">
-                                        <div id="customFieldsList" class="space-y-2">
-                                            <% if (config.CUSTOM_FIELDS && Array.isArray(JSON.parse(config.CUSTOM_FIELDS).custom_fields)) { %>
-                                                <% JSON.parse(config.CUSTOM_FIELDS).custom_fields.forEach((field, index) => { %>
-                                                    <div class="custom-field-item flex items-center gap-2 p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-blue-500 transition-colors">
-                                                        <div class="cursor-move text-gray-400">
-                                                            <i class="fas fa-grip-vertical"></i>
-                                                        </div>
-                                                        <div class="flex-1">
-                                                            <p class="font-medium text-gray-900 dark:text-gray-100"><%= field.value %></p>
-                                                            <p class="text-sm text-gray-500 dark:text-gray-400">
-                                                                Type: <%= field.data_type %>
-                                                                <% if (field.data_type === 'monetary' && field.currency) { %>
-                                                                    (<%= field.currency %>)
-                                                                <% } %>
-                                                            </p>
-                                                        </div>
-                                                        <button type="button" 
-                                                                onclick="removeCustomField(this)"
-                                                                class="text-gray-400 hover:text-red-500 transition-colors">
-                                                            <i class="fas fa-trash"></i>
-                                                        </button>
-                                                    </div>
-                                                <% }); %>
-                                            <% } %>
-                                        </div>
+                            </section>
+                        </div>
 
-                                        <div class="grid grid-cols-12 gap-3">
-                                            <div class="col-span-5">
-                                                <input type="text" 
-                                                    id="newFieldName" 
-                                                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" 
-                                                    placeholder="Enter field name...">
-                                            </div>
-                                            
-                                            <div class="col-span-3">
-                                                <select id="newFieldType" 
-                                                        onchange="toggleCurrencySelect()"
-                                                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
-                                                    <option value="string">Text</option>
-                                                    <option value="float">Number</option>
-                                                    <option value="integer">Integer</option>
-                                                    <option value="monetary">Currency</option>
-                                                    <option value="date">Date</option>
-                                                    <option value="boolean">Boolean</option>
-                                                </select>
-                                            </div>
-
-                                            <div class="col-span-2">
-                                                <select id="currencyCode" 
-                                                        class="hidden w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
-                                                    <option value="EUR">EUR</option>
-                                                    <option value="USD">USD</option>
-                                                    <option value="GBP">GBP</option>
-                                                    <option value="JPY">JPY</option>
-                                                    <option value="CHF">CHF</option>
-                                                </select>
-                                            </div>
-
-                                            <div class="col-span-2">
-                                                <button type="button" 
-                                                        onclick="addCustomField()"
-                                                        class="w-full px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex items-center justify-center gap-2">
-                                                    <i class="fas fa-plus"></i>
-                                                    Add
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        <input type="hidden" id="customFieldsJson" name="customFields" value='<%= config.CUSTOM_FIELDS || "{\"custom_fields\":[]}" %>'>
-                                    </div>
-                                </section>
-                                <!-- System Prompt Section -->
-                                <div class="border-t pt-4 space-y-4">
-                                    <div class="space-y-2">
-                                        <label for="systemPrompt" class="text-sm font-medium">Prompt Description</label>
-                                        <div class="space-y-2">
-                                            <textarea id="systemPrompt" 
-                                                      name="systemPrompt"
-                                                      rows="8"
-                                                      class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                      placeholder="Describe how the AI should analyze your documents..."><%= config.SYSTEM_PROMPT %></textarea>
-                                            <button id="systemPromptBtn" type="button" 
-                                                    class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
-                                                <i class="fas fa-lightbulb mr-2"></i>
-                                                Example
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </section>
-        
-                        <!-- Submit Button -->
                         <div class="border-t pt-6">
                             <button type="submit" class="w-full px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex items-center justify-center gap-2">
                                 <i class="fas fa-save"></i>
@@ -971,202 +687,7 @@ function transform(data) {
             </div>
         </main>
     </div>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const apiKeyContainer = document.getElementById('apiKeyContainer');
-            const copyNotification = document.getElementById('copyNotification');
-            let timeoutId;
-        
-            apiKeyContainer.addEventListener('click', async function() {
-                const apiKey = this.dataset.apiKey;
-                try {
-                    await navigator.clipboard.writeText(apiKey);
-                    
-                    // Show notification
-                    copyNotification.classList.remove('hidden');
-                    copyNotification.classList.add('flex');
-                    
-                    // Hide notification after 2 seconds
-                    clearTimeout(timeoutId);
-                    timeoutId = setTimeout(() => {
-                        copyNotification.classList.add('hidden');
-                        copyNotification.classList.remove('flex');
-                    }, 2000);
-                } catch (err) {
-                    console.error('Failed to copy text: ', err);
-                }
-            });
-        
-            // Optional: Re-blur when mouse leaves
-            apiKeyContainer.addEventListener('mouseleave', function() {
-                this.classList.add('blur-sm');
-            });
-        
-            apiKeyContainer.addEventListener('mouseenter', function() {
-                this.classList.remove('blur-sm');
-            });
-        });
-    </script>
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const apiKeyContainer = document.getElementById('apiKeyContainer');
-        const copyNotification = document.getElementById('copyNotification');
-        const regenerateBtn = document.getElementById('regenerateBtn');
-        const regenerateIcon = document.getElementById('regenerateIcon');
-        let timeoutId;
-    
-        function showNotification(message, isError = false) {
-            const notificationBox = copyNotification;
-            const icon = notificationBox.querySelector('i');
-            const text = notificationBox.querySelector('span');
-    
-            // Reset classes
-            notificationBox.className = 'absolute right-0 top-0 mt-12 w-64 rounded-lg p-3 border';
-            icon.className = 'mr-2 fas';
-    
-            if (isError) {
-                notificationBox.classList.add('bg-red-50', 'text-red-800', 'border-red-200');
-                icon.classList.add('fa-exclamation-circle');
-            } else {
-                notificationBox.classList.add('bg-green-50', 'text-green-800', 'border-green-200');
-                icon.classList.add('fa-check-circle');
-            }
-    
-            text.textContent = message;
-            notificationBox.classList.remove('hidden');
-            notificationBox.classList.add('flex');
-    
-            clearTimeout(timeoutId);
-            timeoutId = setTimeout(() => {
-                notificationBox.classList.add('hidden');
-                notificationBox.classList.remove('flex');
-            }, 2000);
-        }
-    
-        // Copy functionality
-        apiKeyContainer.addEventListener('click', async function() {
-            try {
-                await navigator.clipboard.writeText(this.dataset.apiKey);
-                showNotification('API key copied to clipboard!');
-            } catch (err) {
-                showNotification('Failed to copy API key!', true);
-            }
-        });
-    
-        // Blur functionality
-        apiKeyContainer.addEventListener('mouseleave', function() {
-            this.classList.add('blur-sm');
-        });
-    
-        apiKeyContainer.addEventListener('mouseenter', function() {
-            this.classList.remove('blur-sm');
-        });
-    
-        // Regenerate Button functionality
-        regenerateBtn.addEventListener('click', async function() {
-            this.disabled = true;
-            regenerateIcon.classList.add('animate-spin');
-    
-            try {
-                const response = await fetch('/api/key-regenerate', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                });
-    
-                if (response.ok) {
-                    const data = await response.json();
-                    
-                    // Wait 5 seconds
-                    await new Promise(resolve => setTimeout(resolve, 5000));
-                    
-                    // Update key container
-                    apiKeyContainer.textContent = data.newKey;
-                    apiKeyContainer.dataset.apiKey = data.newKey;
-                    apiKeyContainer.title = data.newKey;
-                    
-                    showNotification('New API key generated!');
-                } else {
-                    throw new Error('Failed to regenerate key');
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                showNotification('Failed to regenerate API key!', true);
-            } finally {
-                regenerateBtn.disabled = false;
-                regenerateIcon.classList.remove('animate-spin');
-            }
-        });
-    });
-    </script>
-    <!-- Füge dies direkt vor dem schließenden </body> Tag ein -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const mobileMenuButton = document.getElementById('mobileMenuButton');
-            const sidebar = document.querySelector('.sidebar');
-            const sidebarOverlay = document.getElementById('sidebarOverlay');
-            
-            function toggleSidebar(event) {
-                event.stopPropagation(); // Prevent event bubbling
-                sidebar.classList.toggle('active');
-                sidebarOverlay.classList.toggle('active');
-                
-                // Toggle menu icon
-                const icon = mobileMenuButton.querySelector('i');
-                if (sidebar.classList.contains('active')) {
-                    icon.classList.remove('fa-bars');
-                    icon.classList.add('fa-times');
-                } else {
-                    icon.classList.remove('fa-times');
-                    icon.classList.add('fa-bars');
-                }
-            }
-
-            // Toggle sidebar when clicking the menu button
-            mobileMenuButton.addEventListener('click', toggleSidebar);
-
-            // Close sidebar when clicking the overlay
-            sidebarOverlay.addEventListener('click', function(event) {
-                event.stopPropagation(); // Prevent event bubbling
-                if (sidebar.classList.contains('active')) {
-                    toggleSidebar(event);
-                }
-            });
-
-            // Prevent sidebar from closing when clicking inside it
-            sidebar.addEventListener('click', function(event) {
-                event.stopPropagation();
-            });
-
-            // Handle links in sidebar
-            const sidebarLinks = document.querySelectorAll('.sidebar-link');
-            sidebarLinks.forEach(link => {
-                link.addEventListener('click', function(event) {
-                    // Don't prevent default here to allow navigation
-                    event.stopPropagation();
-                });
-            });
-        });
-    </script>
-    <script>
-        // get github stars count from repo
-        async function getStarsCount() {
-            try {
-                const response = await fetch('https://api.github.com/repos/admonstrator/paperless-ai-next');
-                if (!response.ok) throw new Error('Failed to fetch repo info');
-                
-                const data = await response.json();
-                document.getElementById('starCount').textContent = data.stargazers_count.toLocaleString();
-            } catch (error) {
-                console.error('Failed to fetch stars count:', error);
-            }
-        }
-        document.addEventListener('DOMContentLoaded', function() {
-            getStarsCount();
-        });
-    </script>
-    <script src="/js/sidebar-badges.js"></script>
+    <%- include('partials/scripts/settings-scripts') %>
     <script src="js/settings.js"></script>
 </body>
 </html>

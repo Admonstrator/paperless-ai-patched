@@ -1,0 +1,75 @@
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const currentPath = window.location.pathname;
+        const navLinks = document.querySelectorAll('.sidebar-nav .sidebar-link[href]');
+
+        navLinks.forEach((link) => {
+            const linkPath = link.getAttribute('href');
+            if (linkPath === currentPath) {
+                link.classList.add('active');
+            }
+        });
+
+        const mobileMenuButton = document.getElementById('mobileMenuButton');
+        const sidebar = document.querySelector('.sidebar');
+        const sidebarOverlay = document.getElementById('sidebarOverlay');
+
+        if (mobileMenuButton && sidebar && sidebarOverlay) {
+            function toggleSidebar(event) {
+                event.stopPropagation();
+                sidebar.classList.toggle('active');
+                sidebarOverlay.classList.toggle('active');
+
+                const icon = mobileMenuButton.querySelector('i');
+                if (icon) {
+                    if (sidebar.classList.contains('active')) {
+                        icon.classList.remove('fa-bars');
+                        icon.classList.add('fa-times');
+                    } else {
+                        icon.classList.remove('fa-times');
+                        icon.classList.add('fa-bars');
+                    }
+                }
+            }
+
+            mobileMenuButton.addEventListener('click', toggleSidebar);
+
+            sidebarOverlay.addEventListener('click', function (event) {
+                event.stopPropagation();
+                if (sidebar.classList.contains('active')) {
+                    toggleSidebar(event);
+                }
+            });
+
+            sidebar.addEventListener('click', function (event) {
+                event.stopPropagation();
+            });
+
+            document.querySelectorAll('.sidebar-link').forEach((link) => {
+                link.addEventListener('click', function (event) {
+                    event.stopPropagation();
+                });
+            });
+        }
+
+        async function getStarsCount() {
+            try {
+                const response = await fetch('https://api.github.com/repos/admonstrator/paperless-ai-next');
+                if (!response.ok) {
+                    throw new Error('Failed to fetch repo info');
+                }
+
+                const data = await response.json();
+                const starCountElement = document.getElementById('starCount');
+                if (starCountElement) {
+                    starCountElement.textContent = data.stargazers_count.toLocaleString();
+                }
+            } catch (error) {
+                console.error('Failed to fetch stars count:', error);
+            }
+        }
+
+        getStarsCount();
+    });
+</script>
+<script src="/js/sidebar-badges.js"></script>

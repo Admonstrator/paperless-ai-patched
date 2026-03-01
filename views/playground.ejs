@@ -80,50 +80,74 @@
                     </div>
                 </div>
 
+                <div id="playgroundInitialLoading" class="material-card mb-4" role="status" aria-live="polite" aria-busy="true">
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-spinner fa-spin text-blue-500 text-xl" aria-hidden="true"></i>
+                        <div>
+                            <div class="font-medium">Loading document previews...</div>
+                            <div class="text-sm text-gray-600">Please wait while thumbnails are prepared.</div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Documents Grid -->
-                <div class="grid grid-cols-4 gap-4" id="documentsGrid">
-                    <% documents.forEach(function(doc) { %>
-                        <div class="material-card document-card" data-document-id="<%= doc.id %>">
-                            <!-- Thumbnail -->
-                            <div class="relative aspect-[3/4]">
-                                <img src="/thumb/<%= doc.id %>" 
-                                     alt="<%= doc.title %>"
-                                     class="w-full h-full object-cover rounded-lg">
-                                
-                                <!-- Tags Container -->
-                                <div class="tags-container absolute top-2 left-2 right-2 flex flex-wrap gap-1">
-                                    <% doc.tags.forEach(function(tagId) { %>
-                                    <span class="tag text-xs px-2 py-1 rounded-full bg-blue-600 text-white" 
-                                          data-tag-id="<%= tagId %>">
-                                        <%= tagNames[tagId] || 'Unknown' %>
-                                    </span>
-                                    <% }); %>
-                                </div>
-                            </div>
-                            
-                            <!-- Document Info -->
-                            <div class="document-info">
-                                <div class="info-container">
-                                    <div class="info-item">
-                                        <h3 class="text-sm font-medium truncate"><%= doc.title %></h3>
-                                    </div>
-                                    
-                                    <div class="info-item">
-                                        <p class="text-xs text-gray-600 truncate">
-                                            <%= new Date(doc.created).toLocaleDateString() %>
-                                        </p>
-                                        
-                                        <% if (doc.correspondent) { %>
-                                        <p class="text-xs text-gray-600 truncate" 
-                                           data-correspondent="<%= doc.correspondent %>">
-                                            <%= correspondentNames[doc.correspondent] || 'Unknown' %>
-                                        </p>
-                                        <% } %>
-                                    </div>
+                <div id="documentsGridWrapper" class="relative">
+                    <div id="playgroundAnalysisOverlay" class="hidden absolute inset-0 z-10 flex items-center justify-center bg-white/75 dark:bg-slate-900/75 rounded-lg" role="status" aria-live="polite" aria-busy="true">
+                        <div class="material-card max-w-md w-full mx-4">
+                            <div class="flex items-center gap-3">
+                                <i class="fas fa-spinner fa-spin text-blue-500 text-xl" aria-hidden="true"></i>
+                                <div>
+                                    <div id="playgroundAnalysisStatus" class="font-medium">Analyzing documents...</div>
+                                    <div class="text-sm text-gray-600">This can take a moment for larger batches.</div>
                                 </div>
                             </div>
                         </div>
-                    <% }); %>
+                    </div>
+
+                    <div class="grid grid-cols-4 gap-4" id="documentsGrid">
+                        <% documents.forEach(function(doc) { %>
+                            <div class="material-card document-card" data-document-id="<%= doc.id %>">
+                                <!-- Thumbnail -->
+                                <div class="relative aspect-[3/4]">
+                                    <img src="/thumb/<%= doc.id %>" 
+                                         alt="<%= doc.title %>"
+                                         class="w-full h-full object-cover rounded-lg">
+                                    
+                                    <!-- Tags Container -->
+                                    <div class="tags-container absolute top-2 left-2 right-2 flex flex-wrap gap-1">
+                                        <% doc.tags.forEach(function(tagId) { %>
+                                        <span class="tag text-xs px-2 py-1 rounded-full bg-blue-600 text-white" 
+                                              data-tag-id="<%= tagId %>">
+                                            <%= tagNames[tagId] || 'Unknown' %>
+                                        </span>
+                                        <% }); %>
+                                    </div>
+                                </div>
+                                
+                                <!-- Document Info -->
+                                <div class="document-info">
+                                    <div class="info-container">
+                                        <div class="info-item">
+                                            <h3 class="text-sm font-medium truncate"><%= doc.title %></h3>
+                                        </div>
+                                        
+                                        <div class="info-item">
+                                            <p class="text-xs text-gray-600 truncate">
+                                                <%= new Date(doc.created).toLocaleDateString() %>
+                                            </p>
+                                            
+                                            <% if (doc.correspondent) { %>
+                                            <p class="text-xs text-gray-600 truncate" 
+                                               data-correspondent="<%= doc.correspondent %>">
+                                                <%= correspondentNames[doc.correspondent] || 'Unknown' %>
+                                            </p>
+                                            <% } %>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        <% }); %>
+                    </div>
                 </div>
             </div>
         </main>

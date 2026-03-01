@@ -100,9 +100,22 @@ class ChartManager {
 class DashboardStatsLoader {
     constructor() {
         this.minimumLoadingTimeMs = 400;
+        this.loadingBlock = document.getElementById('dashboardLoadingBlock');
     }
 
     setLoadingState(isLoading) {
+        if (this.loadingBlock) {
+            this.loadingBlock.classList.toggle('hidden', !isLoading);
+            this.loadingBlock.setAttribute('aria-busy', isLoading ? 'true' : 'false');
+        }
+
+        const chartSkeletonElements = document.querySelectorAll('[data-dashboard-chart-skeleton]');
+        chartSkeletonElements.forEach((skeletonElement) => {
+            skeletonElement.classList.toggle('hidden', !isLoading);
+            skeletonElement.setAttribute('aria-hidden', isLoading ? 'false' : 'true');
+            skeletonElement.setAttribute('aria-busy', isLoading ? 'true' : 'false');
+        });
+
         const valueElements = document.querySelectorAll('[data-dashboard-value]');
         valueElements.forEach((valueElement) => {
             valueElement.classList.toggle('hidden', isLoading);

@@ -82,14 +82,27 @@
                     </div>
                 </div>
 
+                <div id="dashboardLoadingBlock" class="material-card mb-6" role="status" aria-live="polite" aria-busy="true">
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-spinner fa-spin text-blue-500 text-xl" aria-hidden="true"></i>
+                        <div>
+                            <div class="font-medium">Loading dashboard data...</div>
+                            <div class="text-sm text-gray-600">Fetching latest statistics and charts.</div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Top Cards -->
                 <div class="card-grid">
                     <!-- Document Chart -->
                     <div class="material-card col-span-2">
                         <h3 class="card-title">Document Processing Status</h3>
                         <div class="flex items-center">
-                            <div class="w-1/2">
+                            <div class="w-1/2 relative">
                                 <canvas id="documentChart" height="200"></canvas>
+                                <div id="documentChartSkeleton" data-dashboard-chart-skeleton class="absolute inset-0 bg-white/85 dark:bg-slate-900/85 flex items-center justify-center rounded" aria-hidden="false">
+                                    <div class="w-32 h-32 rounded-full border-8 border-gray-200 border-t-gray-300 animate-pulse"></div>
+                                </div>
                             </div>
                             <div class="w-1/2 pl-6">
                                 <div class="stats-legend">
@@ -203,7 +216,7 @@
                     <div class="material-card">
                         <h3 class="card-title">AI Token Usage</h3>
                         <div class="space-y-4">
-                            <div class="p-4 bg-blue-50 rounded-lg">
+                            <div class="p-4 rounded-lg theme-info-surface">
                                 <div class="flex items-center justify-between mb-2">
                                     <span class="text-sm text-gray-600">Average Token Usage per Document</span>
                                 </div>
@@ -267,7 +280,7 @@
                                     <div class="flex-1">
                                         <div class="flex items-center gap-2 mb-1">
                                             <span class="font-medium">Processing Document</span>
-                                            <span id="currentDocId" class="text-sm bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full"></span>
+                                            <span id="currentDocId" class="text-sm theme-pill-info px-2 py-0.5 rounded-full"></span>
                                         </div>
                                         <div id="currentDocTitle" class="text-sm text-gray-600 truncate"></div>
                                     </div>
@@ -307,16 +320,20 @@
                     <!-- Token Distribution Chart -->
                     <div class="material-card">
                         <h3 class="card-title">Token Usage Distribution</h3>
-                        <div class="chart-container">
+                        <div class="chart-container relative">
                             <canvas id="tokenDistribution"></canvas>
+                            <div id="tokenDistributionSkeleton" data-dashboard-chart-skeleton class="absolute inset-0 animate-pulse rounded bg-gray-200/90" aria-hidden="false"></div>
                         </div>
                     </div>
                 
                     <!-- Document Types Chart -->
                     <div class="material-card">
                         <h3 class="card-title">Document Type Distribution</h3>
-                        <div class="chart-container">
+                        <div class="chart-container relative">
                             <canvas id="documentTypes"></canvas>
+                            <div id="documentTypesSkeleton" data-dashboard-chart-skeleton class="absolute inset-0 bg-white/85 dark:bg-slate-900/85 flex items-center justify-center rounded" aria-hidden="false">
+                                <div class="w-24 h-24 rounded-full border-8 border-gray-200 border-t-gray-300 animate-pulse"></div>
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -401,6 +401,9 @@ class PlaygroundAnalyzer {
         this.analysisPrompt = document.getElementById('analysisPrompt');
         this.analyzeButton = document.getElementById('analyzeButton');
         this.documentsGrid = document.getElementById('documentsGrid');
+        this.initialLoadingBlock = document.getElementById('playgroundInitialLoading');
+        this.analysisOverlay = document.getElementById('playgroundAnalysisOverlay');
+        this.analysisOverlayStatus = document.getElementById('playgroundAnalysisStatus');
         this.isAnalyzing = false;
         this.promptRating = new PromptRatingSystem(); // Initialize rating system here
 
@@ -410,6 +413,53 @@ class PlaygroundAnalyzer {
     initialize() {
         this.analyzeButton.addEventListener('click', () => this.startAnalysis());
         this.setupStyles();
+        this.initializeThumbnailLoadingState();
+    }
+
+    initializeThumbnailLoadingState() {
+        if (!this.documentsGrid || !this.initialLoadingBlock) return;
+
+        const images = Array.from(this.documentsGrid.querySelectorAll('img'));
+        if (images.length === 0) {
+            this.initialLoadingBlock.classList.add('hidden');
+            this.initialLoadingBlock.setAttribute('aria-busy', 'false');
+            return;
+        }
+
+        const loadPromises = images.map((image) => {
+            if (image.complete) {
+                return Promise.resolve();
+            }
+
+            return new Promise((resolve) => {
+                const finalize = () => resolve();
+                image.addEventListener('load', finalize, { once: true });
+                image.addEventListener('error', finalize, { once: true });
+            });
+        });
+
+        const maxWaitPromise = new Promise((resolve) => {
+            setTimeout(resolve, 8000);
+        });
+
+        Promise.race([
+            Promise.allSettled(loadPromises),
+            maxWaitPromise
+        ]).finally(() => {
+            this.initialLoadingBlock.classList.add('hidden');
+            this.initialLoadingBlock.setAttribute('aria-busy', 'false');
+        });
+    }
+
+    setAnalysisLoadingState(isLoading, statusText = 'Analyzing documents...') {
+        if (!this.analysisOverlay) return;
+
+        this.analysisOverlay.classList.toggle('hidden', !isLoading);
+        this.analysisOverlay.setAttribute('aria-busy', isLoading ? 'true' : 'false');
+
+        if (this.analysisOverlayStatus) {
+            this.analysisOverlayStatus.textContent = statusText;
+        }
     }
 
     setupStyles() {
@@ -546,11 +596,13 @@ class PlaygroundAnalyzer {
     
         this.isAnalyzing = true;
         this.analyzeButton.disabled = true;
+        this.setAnalysisLoadingState(true, 'Starting analysis...');
         this.showMessage('Starting document analysis...', 'info');
     
         try {
             const documents = Array.from(this.documentsGrid.children);
             for (const [index, docCard] of documents.entries()) {
+                this.setAnalysisLoadingState(true, `Analyzing document ${index + 1} of ${documents.length}...`);
                 this.showMessage(`Analyzing document ${index + 1} of ${documents.length}...`, 'info');
                 
                 docCard.scrollIntoView({ 
@@ -581,6 +633,7 @@ class PlaygroundAnalyzer {
         } finally {
             this.isAnalyzing = false;
             this.analyzeButton.disabled = false;
+            this.setAnalysisLoadingState(false);
         }
     }
 

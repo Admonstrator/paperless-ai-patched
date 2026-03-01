@@ -88,7 +88,7 @@ export default defineConfig({
     starlight({
       title: 'Paperless-AI next',
       description:
-        'Community fork of Paperless-AI next – collecting upstream PRs, security patches, and performance improvements for Paperless-ngx.',
+        'Next-generation fork of paperless-ai for Paperless-ngx, improving AI/OCR reliability with an OCR rescue queue (Mistral), a permanent-failure queue, and ignore filters. Adds history + one-click rescan, restore-original-metadata, and Date/Boolean custom fields support.',
       customCss: ['./src/styles/docs.css'],
       head: [
         {
@@ -145,9 +145,9 @@ if (document.readyState === 'loading') {
           `
         }
       ],
-      favicon: '/logo.png',
+      favicon: '/assets/logo.png',
       logo: {
-        src: '/logo.png',
+        src: '/assets/logo.png',
         alt: 'Paperless-AI next'
       },
       social: [

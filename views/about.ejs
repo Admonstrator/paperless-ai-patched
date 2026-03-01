@@ -41,6 +41,7 @@
                     <h3 class="card-title">System Information (Support)</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                         <div class="p-3 rounded-lg bg-gray-50"><strong>App Version:</strong> <%= supportInfo.appVersion %></div>
+                        <div class="p-3 rounded-lg bg-gray-50"><strong>Build Commit SHA:</strong> <span class="font-mono break-all"><%= supportInfo.commitSha %></span></div>
                         <div class="p-3 rounded-lg bg-gray-50"><strong>Node.js:</strong> <%= supportInfo.nodeVersion %></div>
                         <div class="p-3 rounded-lg bg-gray-50"><strong>Platform:</strong> <%= supportInfo.platform %></div>
                         <div class="p-3 rounded-lg bg-gray-50"><strong>Environment:</strong> <%= supportInfo.nodeEnv %></div>

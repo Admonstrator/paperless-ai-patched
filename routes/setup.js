@@ -5202,6 +5202,7 @@ router.get('/about', protectApiRoute, async (req, res) => {
 
     const supportInfo = {
       appVersion: configFile.PAPERLESS_AI_VERSION || 'unknown',
+      commitSha: process.env.PAPERLESS_AI_COMMIT_SHA || 'unknown',
       nodeVersion: process.version,
       platform: `${process.platform} (${process.arch})`,
       nodeEnv: process.env.NODE_ENV || 'production',
@@ -5228,6 +5229,7 @@ router.get('/about', protectApiRoute, async (req, res) => {
       chatEnabled: isChatEnabled(),
       supportInfo: {
         appVersion: configFile.PAPERLESS_AI_VERSION || 'unknown',
+        commitSha: process.env.PAPERLESS_AI_COMMIT_SHA || 'unknown',
         nodeVersion: process.version,
         platform: `${process.platform} (${process.arch})`,
         nodeEnv: process.env.NODE_ENV || 'production',

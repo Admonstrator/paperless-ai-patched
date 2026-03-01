@@ -7,7 +7,7 @@
     <script src="/vendor/tailwind/tailwindcss-3.4.16.js"></script>
     <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
     <link rel="stylesheet" href="css/dashboard.css">
-    <script src="js/playground-analyzer.js"></script>
+    <script src="js/playground-analyzer.js" defer></script>
     <style>
         .document-card {
             position: relative;
@@ -27,6 +27,45 @@
             opacity: 0.5;
             cursor: not-allowed;
         }
+
+        .thumbnail-skeleton {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-secondary);
+            border-radius: 0.5rem;
+        }
+
+        .thumbnail-skeleton::after {
+            content: '';
+            width: 80%;
+            height: 80%;
+            border-radius: 0.5rem;
+            background: linear-gradient(90deg, rgba(148, 163, 184, 0.12) 25%, rgba(148, 163, 184, 0.25) 50%, rgba(148, 163, 184, 0.12) 75%);
+            background-size: 200% 100%;
+            animation: thumbShimmer 1.2s infinite;
+        }
+
+        @keyframes thumbShimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        .thumbnail-skeleton.hidden {
+            display: none;
+        }
+
+        .playground-thumb {
+            opacity: 0;
+            transition: opacity 0.25s ease;
+        }
+
+        .playground-thumb.is-ready {
+            opacity: 1;
+        }
+
         /* Add smooth transition for image inversion */
         img {
             transition: filter 0.3s ease;
@@ -85,7 +124,7 @@
                         <i class="fas fa-spinner fa-spin text-blue-500 text-xl" aria-hidden="true"></i>
                         <div>
                             <div class="font-medium">Loading document previews...</div>
-                            <div class="text-sm text-gray-600">Please wait while thumbnails are prepared.</div>
+                            <div id="playgroundInitialLoadingStatus" class="text-sm text-gray-600">Preparing thumbnail requests...</div>
                         </div>
                     </div>
                 </div>
@@ -109,9 +148,13 @@
                             <div class="material-card document-card" data-document-id="<%= doc.id %>">
                                 <!-- Thumbnail -->
                                 <div class="relative aspect-[3/4]">
-                                    <img src="/thumb/<%= doc.id %>" 
+                                    <div class="thumbnail-skeleton" data-thumb-skeleton aria-hidden="true"></div>
+                                    <img src="data:image/gif;base64,R0lGODlhAQABAAAAACw="
+                                         data-thumb-src="/thumb/<%= doc.id %>"
                                          alt="<%= doc.title %>"
-                                         class="w-full h-full object-cover rounded-lg">
+                                         class="playground-thumb w-full h-full object-cover rounded-lg"
+                                         loading="lazy"
+                                         decoding="async">
                                     
                                     <!-- Tags Container -->
                                     <div class="tags-container absolute top-2 left-2 right-2 flex flex-wrap gap-1">

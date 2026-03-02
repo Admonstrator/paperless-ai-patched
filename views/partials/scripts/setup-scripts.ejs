@@ -1,3 +1,32 @@
+<!-- Global CSRF fetch interceptor -->
+<script>
+    (function() {
+        const originalFetch = window.fetch;
+        window.fetch = async (...args) => {
+            let [resource, config] = args;
+            if (!config) config = {};
+            const method = (config.method || 'GET').toUpperCase();
+            const ignoredMethods = ['GET', 'HEAD', 'OPTIONS'];
+            if (!ignoredMethods.includes(method)) {
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                if (csrfToken) {
+                    if (!config.headers) config.headers = {};
+                    if (config.headers instanceof Headers) {
+                        if (!config.headers.has('X-CSRF-Token')) {
+                            config.headers.append('X-CSRF-Token', csrfToken);
+                        }
+                    } else {
+                        if (!config.headers['X-CSRF-Token'] && !config.headers['x-csrf-token']) {
+                            config.headers['X-CSRF-Token'] = csrfToken;
+                        }
+                    }
+                }
+            }
+            return originalFetch(resource, config);
+        };
+    })();
+</script>
+
 <!-- Initialize textarea newlines -->
 <script>
     document.addEventListener('DOMContentLoaded', (event) => {

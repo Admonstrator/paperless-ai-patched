@@ -92,10 +92,15 @@ router.get('/index/check', async (req, res) => {
 router.get('/status', async (req, res) => {
   try {
     const status = await ragService.checkStatus();
-    const aiStatus = await ragService.getAIStatus();
-    // Combine RAG and AI status
-    status.ai_status = aiStatus.status;
-    status.ai_model = aiStatus.model;
+    try {
+      const aiStatus = await ragService.getAIStatus();
+      status.ai_status = aiStatus.status;
+      status.ai_model = aiStatus.model;
+    } catch (aiError) {
+      console.error('Error checking AI status:', aiError);
+      status.ai_status = 'unknown';
+      status.ai_model = 'Unknown';
+    }
     // console.log('RAG Status:', status);
     // console.log('AI Status:', aiStatus);
     res.json(status);

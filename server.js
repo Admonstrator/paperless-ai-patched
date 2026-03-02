@@ -132,10 +132,11 @@ app.use(cookieParser());
 // CSRF Protection configuration
 const {
   invalidCsrfTokenError,
-  generateToken,
+  generateCsrfToken,
   doubleCsrfProtection,
 } = doubleCsrf({
   getSecret: () => JWT_SECRET,
+  getSessionIdentifier: () => "psai-session", // Stable identifier for stateless JWT auth
   cookieName: "psai.x-csrf-token",
   cookieOptions: {
     sameSite: "lax",
@@ -144,7 +145,7 @@ const {
   },
   size: 64,
   ignoredMethods: ["GET", "HEAD", "OPTIONS"],
-  getTokenFromRequest: (req) => req.headers["x-csrf-token"] || req.body._csrf,
+  getCsrfTokenFromRequest: (req) => req.headers["x-csrf-token"] || req.body._csrf,
 });
 
 // Middleware to skip CSRF for API Key authenticated requests and provide token to EJS
@@ -167,7 +168,7 @@ app.use((req, res, next) => {
     }
     
     // Make CSRF token available to EJS templates
-    res.locals.csrfToken = generateToken(req, res);
+    res.locals.csrfToken = generateCsrfToken(req, res);
     next();
   });
 });
@@ -632,7 +633,8 @@ if (process.env.RAG_SERVICE_ENABLED === 'true') {
   app.get('/rag', isAuthenticated, async (req, res) => {
     try {
       res.render('rag', { 
-        title: 'Dokumenten-Fragen'
+        title: 'Ask your documents - RAG Interface',
+        version: config.PAPERLESS_AI_VERSION || ' '
       });
     } catch (error) {
       console.error('Error rendering RAG UI:', error);

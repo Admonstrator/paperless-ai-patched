@@ -2,6 +2,8 @@ import os
 import json
 import logging
 import hashlib
+import shutil
+import threading
 import numpy as np
 from datetime import datetime
 from typing import List, Dict, Optional, Any, Union, Tuple
@@ -57,12 +59,19 @@ DOCUMENTS_FILE = "./data/documents.json"
 CHROMADB_DIR = "./data/chromadb"
 BM25_FILE = "./data/bm25_index.json"
 STATE_FILE = "./data/system_state.json"
+MODEL_CACHE_DIR = "./data/model_cache"
 EMBEDDING_MODEL_NAME = "paraphrase-multilingual-MiniLM-L12-v2"
 CROSS_ENCODER_MODEL_NAME = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 COLLECTION_NAME = "documents"
 BM25_WEIGHT = 0.3
 SEMANTIC_WEIGHT = 0.7
 MAX_RESULTS = 20
+
+# Ensure model cache is persisted across restarts/redeploys
+os.makedirs(MODEL_CACHE_DIR, exist_ok=True)
+os.environ.setdefault("HF_HOME", MODEL_CACHE_DIR)
+os.environ.setdefault("TRANSFORMERS_CACHE", MODEL_CACHE_DIR)
+os.environ.setdefault("SENTENCE_TRANSFORMERS_HOME", MODEL_CACHE_DIR)
 
 # Download NLTK resources if not present
 nltk.download('punkt', quiet=True)
@@ -1374,7 +1383,7 @@ def run_indexing(force_update=False, check_new=False):
         
         # Dokumente aktualisieren
         if force_update:
-            global_state.indexing_status.message = "Vollständige Neuindexierung wird durchgeführt"
+            global_state.indexing_status.message = "Reindexing all documents (force update)"
             global_state.save_state()
             # Force refresh will reindex everything
             global_state.data_manager.load_documents(force_refresh=True)
@@ -1383,12 +1392,12 @@ def run_indexing(force_update=False, check_new=False):
             should_check = global_state.system_status.data_loaded == False or check_new
             
             if should_check:
-                global_state.indexing_status.message = "Prüfe auf neue Dokumente"
+                global_state.indexing_status.message = "Checking for new documents"
                 global_state.save_state()
                 # Explicitly check for new documents
                 global_state.data_manager.load_documents(force_refresh=False, check_new=True)
             else:
-                global_state.indexing_status.message = "Lade vorhandene Dokumente ohne Aktualisierung"
+                global_state.indexing_status.message = "Loading existing documents without update"
                 global_state.save_state()
                 # Load documents without checking for new ones
                 global_state.data_manager.load_documents(force_refresh=False, check_new=False)
@@ -1398,7 +1407,7 @@ def run_indexing(force_update=False, check_new=False):
         
         # Update the status message based on whether new documents were found
         if new_docs_count > 0:
-            global_state.indexing_status.message = f"Indexiere {new_docs_count} neue Dokumente"
+            global_state.indexing_status.message = f"Indexing {new_docs_count} new documents"
             global_state.save_state()
             
             # Initialize or update the search engine
@@ -1406,16 +1415,16 @@ def run_indexing(force_update=False, check_new=False):
             # to do a full rebuild or just add new documents
             global_state.search_engine.initialize(force_update=force_update)
             
-            global_state.indexing_status.message = f"Indexierung abgeschlossen - {new_docs_count} neue Dokumente hinzugefügt"
+            global_state.indexing_status.message = f"Indexing completed - {new_docs_count} new documents added"
         else:
             # If we have documents loaded and search engine not initialized, load existing indexes
             if global_state.system_status.data_loaded and not global_state.search_engine.is_initialized:
                 # Just load existing indexes without rebuilding
-                global_state.indexing_status.message = "Lade vorhandene Indizes"
+                global_state.indexing_status.message = "Loading existing indexes"
                 global_state.save_state()
                 global_state.search_engine.initialize(force_update=False)
             
-            global_state.indexing_status.message = "Keine neuen Dokumente gefunden, Suchindex ist aktuell"
+            global_state.indexing_status.message = "No new documents found, search index is up to date"
         
         # Validate the search engine after indexing
         if not global_state.search_engine.is_initialized or not global_state.search_engine.validate_state():
@@ -1540,10 +1549,10 @@ async def startup_event():
             global_state.save_state()
             return
         
-        # Initialize DataManager with model loading but WITHOUT document loading
+        # Initialize DataManager without model loading to keep API responsive
         global_state.data_manager = DataManager(initialize_on_start=False)
-        # Just initialize the models but don't load documents yet
-        global_state.data_manager.initialize_models()
+        global_state.indexing_status.message = "Waiting for initialization"
+        global_state.save_state()
         
         # Check if documents exist and ChromaDB is ready
         documents_exist = os.path.exists(DOCUMENTS_FILE)
@@ -1660,16 +1669,13 @@ async def startup_event():
                 not global_state.data_manager.chroma_initialized):
                 
                 logger.info("Search engine needs initialization after startup")
-                
-                # Initialize search engine after startup
-                @app.on_event("startup")
-                async def post_startup_init():
-                    # Wait a short time to let the API start
+
+                def post_startup_init_work():
                     time.sleep(2)
-                    
                     logger.info("Post-startup initialization of search engine")
-                    # Run indexing without forcing refresh but allow rebuild of indexes
                     run_indexing(force_update=False)
+
+                threading.Thread(target=post_startup_init_work, daemon=True).start()
         else:
             # If we're missing documents, initialize without loading
             logger.info("Not all required data found for auto-loading")
@@ -1891,6 +1897,84 @@ async def initialize_system(force: bool = False, background: bool = True, backgr
         "config_valid": bool(global_state.data_manager and global_state.data_manager.paperless_url and global_state.data_manager.paperless_token)
     }
 
+@app.post("/models/redownload")
+async def redownload_models(background: bool = True, background_tasks: BackgroundTasks = None):
+    """Force-clear the local model cache and re-download RAG models"""
+    if global_state.indexing_status.running:
+        return {
+            "status": "running",
+            "message": "Another indexing/model task is already in progress"
+        }
+
+    def _run_model_redownload():
+        global_state.indexing_status.running = True
+        global_state.indexing_status.message = "Preparing model re-download"
+        global_state.save_state()
+
+        try:
+            global_state.indexing_status.message = "Clearing model cache"
+            global_state.save_state()
+
+            if os.path.exists(MODEL_CACHE_DIR):
+                shutil.rmtree(MODEL_CACHE_DIR, ignore_errors=True)
+            os.makedirs(MODEL_CACHE_DIR, exist_ok=True)
+
+            if not global_state.data_manager:
+                global_state.data_manager = DataManager(initialize_on_start=False)
+
+            # Drop loaded model handles so models are created from scratch
+            global_state.data_manager.sentence_transformer = None
+            global_state.data_manager.embedding_function = None
+            global_state.data_manager.cross_encoder = None
+            global_state.data_manager.chroma_client = None
+            global_state.data_manager.is_initialized = False
+
+            global_state.system_status.index_ready = False
+            global_state.system_status.chroma_ready = False
+            global_state.system_status.bm25_ready = False
+
+            global_state.indexing_status.message = "Downloading and initializing models"
+            global_state.save_state()
+
+            init_ok = global_state.data_manager.initialize_models()
+            if not init_ok:
+                raise RuntimeError("Model initialization failed")
+
+            # Recreate search engine against newly initialized model stack
+            global_state.indexing_status.message = "Rebuilding search engine"
+            global_state.save_state()
+
+            global_state.search_engine = SearchEngine(global_state.data_manager, initialize_on_start=False)
+            if global_state.system_status.data_loaded:
+                global_state.search_engine.initialize(force_update=False)
+
+            global_state.indexing_status.message = "Model re-download completed"
+            global_state.indexing_status.up_to_date = True
+            global_state.indexing_status.last_indexed = datetime.now().isoformat()
+            global_state.system_status.index_ready = bool(global_state.search_engine and global_state.search_engine.is_initialized)
+            global_state.system_status.chroma_ready = bool(global_state.data_manager and global_state.data_manager.chroma_initialized)
+            global_state.system_status.bm25_ready = bool(global_state.search_engine and global_state.search_engine.bm25_initialized)
+        except Exception as e:
+            logger.error(f"Error during model re-download: {str(e)}")
+            logger.error(traceback.format_exc())
+            global_state.indexing_status.message = f"Model re-download failed: {str(e)}"
+        finally:
+            global_state.indexing_status.running = False
+            global_state.save_state()
+
+    if background and background_tasks:
+        background_tasks.add_task(_run_model_redownload)
+        return {
+            "status": "started",
+            "message": "Model re-download started in background"
+        }
+
+    _run_model_redownload()
+    return {
+        "status": "completed",
+        "message": "Model re-download completed"
+    }
+
 @app.post("/check_health")
 async def check_health():
     """Perform a comprehensive health check of the system"""
@@ -2018,26 +2102,23 @@ if __name__ == "__main__":
         @app.on_event("startup")
         async def initialize_on_startup():
             logger.info("Running initialization after startup")
-            # Give the app time to start
-            time.sleep(1)
-            
-            # Check if we already have documents loaded
-            if global_state.system_status.data_loaded and not args.force_refresh:
-                logger.info(f"Already have {global_state.indexing_status.documents_count} documents loaded")
-                
-                # If explicitly told to skip checking, don't run indexing
-                if args.skip_check and not args.rebuild_indexes:
-                    logger.info("Skipping document check due to --skip-check flag")
-                    
-                    # Just make sure search engine is initialized with existing data
-                    if not global_state.system_status.index_ready:
-                        logger.info("Initializing search engine with existing data")
-                        global_state.search_engine.initialize(force_update=args.rebuild_indexes)
-                    
-                    return
-            
-            # Only run indexing if we need to
-            run_indexing(args.force_refresh, args.check_new)
+            def run_init_work():
+                time.sleep(1)
+
+                if global_state.system_status.data_loaded and not args.force_refresh:
+                    logger.info(f"Already have {global_state.indexing_status.documents_count} documents loaded")
+
+                    if args.skip_check and not args.rebuild_indexes:
+                        logger.info("Skipping document check due to --skip-check flag")
+
+                        if not global_state.system_status.index_ready and global_state.search_engine:
+                            logger.info("Initializing search engine with existing data")
+                            global_state.search_engine.initialize(force_update=args.rebuild_indexes)
+                        return
+
+                run_indexing(args.force_refresh, args.check_new)
+
+            threading.Thread(target=run_init_work, daemon=True).start()
     
     # If check-new is requested from command line
     elif args.check_new:
@@ -2046,10 +2127,11 @@ if __name__ == "__main__":
         @app.on_event("startup")
         async def check_new_on_startup():
             logger.info("Checking for new documents after startup")
-            # Give the app time to start
-            time.sleep(1)
-            # Run indexing with check_new=True but without force refresh
-            run_indexing(False, True)
+            def run_check_new_work():
+                time.sleep(1)
+                run_indexing(False, True)
+
+            threading.Thread(target=run_check_new_work, daemon=True).start()
     
     # If rebuild-indexes is requested from command line
     elif args.rebuild_indexes:
@@ -2058,11 +2140,13 @@ if __name__ == "__main__":
         @app.on_event("startup")
         async def rebuild_indexes_on_startup():
             logger.info("Rebuilding indexes after startup")
-            # Give the app time to start
-            time.sleep(2)
-            
-            if global_state.search_engine and global_state.data_manager.documents:
-                logger.info("Rebuilding indexes with existing documents")
-                global_state.search_engine.initialize(force_update=True)
+            def run_rebuild_work():
+                time.sleep(2)
+
+                if global_state.search_engine and global_state.data_manager.documents:
+                    logger.info("Rebuilding indexes with existing documents")
+                    global_state.search_engine.initialize(force_update=True)
+
+            threading.Thread(target=run_rebuild_work, daemon=True).start()
     
     uvicorn.run("main:app", host=args.host, port=args.port, reload=False)

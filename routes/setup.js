@@ -1799,6 +1799,22 @@ router.post('/api/settings/reset-local-overrides', isAuthenticated, cacheClearLi
   }
 });
 
+router.post('/api/settings/rag-force-model-redownload', isAuthenticated, cacheClearLimiter, async (req, res) => {
+  try {
+    const result = await RAGService.redownloadModels();
+    res.json({
+      success: true,
+      message: result?.message || 'Model re-download has been started in the background.'
+    });
+  } catch (error) {
+    console.error('[ERROR] triggering RAG model re-download:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to trigger model re-download'
+    });
+  }
+});
+
 router.post('/api/reset-all-documents', isAuthenticated, cacheClearLimiter, async (req, res) => {
   try {
     await documentModel.deleteAllDocuments();

@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
     <title>Paperless-AI next Dashboard</title>
     <link rel="icon" type="image/webp" href="/favicon.webp">
     <script src="/vendor/tailwind/tailwindcss-3.4.16.js"></script>
@@ -651,6 +652,15 @@
                                         <input type="text" id="ragServiceUrl" name="ragServiceUrl" value="<%= config.RAG_SERVICE_URL || 'http://localhost:8000' %>" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                         <p class="text-xs text-gray-500">ENV: RAG_SERVICE_URL · Restart required</p>
                                     </div>
+                                </div>
+
+                                <div class="space-y-2">
+                                    <p class="text-sm text-gray-600">Force clear the local RAG model cache and re-download all embedding/reranking models in the background.</p>
+                                    <button type="button" id="forceModelRedownloadBtn" class="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 transition-colors duration-200 flex items-center gap-2">
+                                        <i class="fas fa-cloud-arrow-down"></i>
+                                        <span>Force Model Re-download</span>
+                                    </button>
+                                    <p class="text-xs text-gray-500">This is a runtime action. It may take several minutes depending on internet speed and model cache size.</p>
                                 </div>
                             </section>
 

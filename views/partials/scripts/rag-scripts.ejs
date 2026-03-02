@@ -1,6 +1,29 @@
 <script>
+    // CSRF Token handling
+    function getTokenHeaders() {
+        return fetch('/api/csrf-token', { method: 'GET', credentials: 'same-origin' })
+                .then(res => res.ok ? res.json() : { token: '' })
+                .then(data => {
+                    let config = {
+                        headers: new Map()
+                    };
+                    if (data.token) {
+                        const csrfToken = data.token;
+                        if (!config.headers.has('X-CSRF-Token')) {
+                            config.headers.append('X-CSRF-Token', csrfToken);
+                        }
+                    } else {
+                        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                        if (!config.headers['X-CSRF-Token'] && !config.headers['x-csrf-token']) {
+                            config.headers['X-CSRF-Token'] = csrfToken;
+                        }
+                    }
+                    return config;
+                });
+    }
+
     // DOM Elements
-    const themeToggle = document.getElementById('theme-toggle');
+    const themeToggle = document.getElementById('themeToggle');
     const statusIndicator = document.getElementById('status-indicator');
     const statusText = document.getElementById('status-text');
     const apiStatus = document.getElementById('api-status');
@@ -19,11 +42,40 @@
     const aiToggle = document.getElementById('ai-toggle');
     const aiModelBadge = document.getElementById('ai-model-badge');
     const aiModelName = document.getElementById('ai-model-name');
+    const loadingOverlay = document.getElementById('rag-loading-overlay');
+    const loadingTitle = document.getElementById('loading-title');
+    const loadingStatus = document.getElementById('loading-status');
+    const loadingErrorAction = document.getElementById('loading-error-action');
+    const progressBar = document.getElementById('rag-progress-bar');
+    const progressText = document.getElementById('rag-progress-text');
+    const stepServerIcon = document.getElementById('step-server-icon');
+    const stepDataIcon = document.getElementById('step-data-icon');
+    const stepChromaIcon = document.getElementById('step-chroma-icon');
+    const stepBm25Icon = document.getElementById('step-bm25-icon');
+    const stepIndexIcon = document.getElementById('step-index-icon');
+
+    const stepStatusElements = {
+        server: document.getElementById('step-server-status'),
+        data: document.getElementById('step-data-status'),
+        chroma: document.getElementById('step-chroma-status'),
+        bm25: document.getElementById('step-bm25-status'),
+        index: document.getElementById('step-index-status')
+    };
+
+    const stepIcons = {
+        server: stepServerIcon,
+        data: stepDataIcon,
+        chroma: stepChromaIcon,
+        bm25: stepBm25Icon,
+        index: stepIndexIcon
+    };
 
     // State
-    let darkMode = localStorage.getItem('darkMode') === 'true';
+    let darkMode = (localStorage.getItem('theme') || 'light') === 'dark';
     let useAI = localStorage.getItem('useAI') !== 'false';
     let isConnected = false;
+    let isReady = false;
+    let initializeRequested = false;
 
     // Initialize
     document.addEventListener('DOMContentLoaded', () => {
@@ -49,11 +101,13 @@
             updateTheme();
         });
 
-        aiToggle.addEventListener('click', () => {
-            useAI = !useAI;
-            localStorage.setItem('useAI', useAI);
-            updateAIToggle();
-        });
+        if (aiToggle) {
+            aiToggle.addEventListener('click', () => {
+                useAI = !useAI;
+                localStorage.setItem('useAI', useAI);
+                updateAIToggle();
+            });
+        }
 
         filtersToggle.addEventListener('click', () => {
             filtersContent.classList.toggle('hidden');
@@ -139,14 +193,17 @@
     function updateTheme() {
         if (darkMode) {
             document.documentElement.setAttribute('data-theme', 'dark');
+            localStorage.setItem('theme', 'dark');
             themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
         } else {
-            document.documentElement.removeAttribute('data-theme');
+            document.documentElement.setAttribute('data-theme', 'light');
+            localStorage.setItem('theme', 'light');
             themeToggle.innerHTML = '<i class="fas fa-moon"></i>';
         }
     }
 
     function updateAIToggle() {
+        if (!aiToggle) return;
         if (useAI) {
             aiToggle.classList.add('active');
             aiToggle.title = 'Disable AI response';
@@ -161,6 +218,120 @@
         messageInput.style.height = (messageInput.scrollHeight) + 'px';
     }
 
+    function updateLoadingStep(step, status, label) {
+        const iconEl = stepIcons[step];
+        if (!iconEl) return;
+
+        iconEl.className = `rag-step-icon rag-step-icon--${status}`;
+
+        if (status === 'loading') {
+            iconEl.innerHTML = '<i class="fas fa-circle-notch fa-spin text-xs"></i>';
+        } else if (status === 'done') {
+            iconEl.innerHTML = '<i class="fas fa-check text-xs"></i>';
+        } else if (status === 'error') {
+            iconEl.innerHTML = '<i class="fas fa-times text-xs"></i>';
+        } else {
+            iconEl.innerHTML = '<i class="fas fa-clock text-xs"></i>';
+        }
+
+        if (stepStatusElements[step] && label) {
+            stepStatusElements[step].textContent = label;
+        }
+    }
+
+    function setProgress(percent, label) {
+        const safePercent = Math.max(0, Math.min(100, percent));
+        if (progressBar) {
+            progressBar.style.width = `${safePercent}%`;
+            const track = progressBar.parentElement;
+            if (track) {
+                track.setAttribute('aria-valuenow', String(Math.round(safePercent)));
+            }
+        }
+        if (progressText) {
+            progressText.textContent = label ? `${Math.round(safePercent)}% · ${label}` : `${Math.round(safePercent)}%`;
+        }
+    }
+
+    function calculateProgress(statusData) {
+        let progress = 0;
+        if (statusData.server_up) progress = 20;
+        if (statusData.data_loaded) progress = 40;
+        if (statusData.chroma_ready) progress = 60;
+        if (statusData.bm25_ready) progress = 80;
+        if (statusData.index_ready) progress = 100;
+
+        if (statusData.indexing_status?.running && progress < 95) {
+            progress = Math.min(progress + 10, 95);
+        }
+
+        return progress;
+    }
+
+    async function maybeStartInitialization(statusData) {
+        if (initializeRequested || isReady) return;
+        if (!statusData.server_up || statusData.index_ready) return;
+
+        const indexingRunning = Boolean(statusData.indexing_status && statusData.indexing_status.running);
+        if (indexingRunning) return;
+
+        initializeRequested = true;
+        try {
+            await fetch('/api/rag/initialize', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ force: false })
+            });
+        } catch (error) {
+            console.error('Failed to auto-initialize RAG service:', error);
+            initializeRequested = false;
+        }
+    }
+
+    function updateLoadingFromStatus(statusData) {
+        if (!statusData.server_up) {
+            updateLoadingStep('server', 'error', 'Not reachable');
+            updateLoadingStep('data', 'pending', 'Pending');
+            updateLoadingStep('chroma', 'pending', 'Pending');
+            updateLoadingStep('bm25', 'pending', 'Pending');
+            updateLoadingStep('index', 'pending', 'Pending');
+            setProgress(5, 'Waiting for server');
+            loadingStatus.textContent = 'Could not connect to the RAG server. Please make sure the service is running.';
+            return;
+        }
+
+        updateLoadingStep('server', 'done', 'Connected');
+        updateLoadingStep('data', statusData.data_loaded ? 'done' : 'loading', statusData.data_loaded ? 'Loaded' : 'Loading');
+        updateLoadingStep('chroma', statusData.chroma_ready ? 'done' : (statusData.data_loaded ? 'loading' : 'pending'), statusData.chroma_ready ? 'Ready' : (statusData.data_loaded ? 'Preparing' : 'Pending'));
+        updateLoadingStep('bm25', statusData.bm25_ready ? 'done' : (statusData.chroma_ready ? 'loading' : 'pending'), statusData.bm25_ready ? 'Ready' : (statusData.chroma_ready ? 'Building' : 'Pending'));
+        updateLoadingStep('index', statusData.index_ready ? 'done' : (statusData.bm25_ready ? 'loading' : 'pending'), statusData.index_ready ? 'Ready' : (statusData.bm25_ready ? 'Finalizing' : 'Pending'));
+
+        const progress = calculateProgress(statusData);
+        const backendMessage = statusData.indexing_status?.message;
+
+        if (statusData.index_ready) {
+            loadingTitle.textContent = 'RAG Ready';
+            loadingStatus.textContent = backendMessage || 'Search index ready.';
+            setProgress(100, 'Ready');
+            return;
+        }
+
+        loadingTitle.textContent = 'RAG Initialization';
+        loadingStatus.textContent = backendMessage || 'Preparing search components...';
+        setProgress(progress, statusData.indexing_status?.running ? 'Indexing' : 'Initializing');
+    }
+
+    function hideLoadingOverlay() {
+        if (loadingOverlay) {
+            loadingOverlay.classList.add('opacity-0');
+            setTimeout(() => {
+                loadingOverlay.classList.add('hidden');
+            }, 500);
+        }
+    }
+
     async function checkStatus() {
         try {
             const response = await fetch('/api/rag/status');
@@ -168,16 +339,38 @@
                 const data = await response.json();
                 isConnected = true;
                 updateStatus(data);
+
+                updateLoadingFromStatus(data);
+                await maybeStartInitialization(data);
+
+                if (data.index_ready && !isReady) {
+                    isReady = true;
+                    setTimeout(hideLoadingOverlay, 400);
+                }
             } else {
-                isConnected = false;
-                updateStatusIndicator('offline', 'Offline');
-                updateStatusBadgesOffline();
+                handleConnectionError();
             }
         } catch (error) {
             console.error('Error checking status:', error);
-            isConnected = false;
-            updateStatusIndicator('offline', 'Offline');
-            updateStatusBadgesOffline();
+            handleConnectionError();
+        }
+    }
+
+    function handleConnectionError() {
+        isConnected = false;
+        updateStatusIndicator('offline', 'Offline');
+        updateStatusBadgesOffline();
+        
+        if (!isReady) {
+            updateLoadingStep('server', 'error', 'Not reachable');
+            updateLoadingStep('data', 'pending', 'Pending');
+            updateLoadingStep('chroma', 'pending', 'Pending');
+            updateLoadingStep('bm25', 'pending', 'Pending');
+            updateLoadingStep('index', 'pending', 'Pending');
+            loadingTitle.textContent = "Connection Failed";
+            loadingStatus.textContent = "Could not connect to the RAG server. Please make sure the service is running.";
+            setProgress(5, 'Waiting for server');
+            loadingErrorAction.classList.remove('hidden');
         }
     }
 
@@ -217,6 +410,8 @@
         apiStatus.innerHTML = '';
         addStatusBadge(false, 'Server', 'Connecting...', 'warning');
         addStatusBadge(false, 'Data', 'Pending', 'warning');
+        addStatusBadge(false, 'Chroma', 'Pending', 'warning');
+        addStatusBadge(false, 'BM25', 'Pending', 'warning');
         addStatusBadge(false, 'Index', 'Pending', 'warning');
     }
 
@@ -224,6 +419,8 @@
         apiStatus.innerHTML = '';
         addStatusBadge(false, 'Server', 'Offline', 'error');
         addStatusBadge(false, 'Data', 'Unknown', 'error');
+        addStatusBadge(false, 'Chroma', 'Unknown', 'error');
+        addStatusBadge(false, 'BM25', 'Unknown', 'error');
         addStatusBadge(false, 'Index', 'Unknown', 'error');
     }
 
@@ -252,12 +449,37 @@
             );
         }
 
+        if (statusData.chroma_ready !== undefined) {
+            addStatusBadge(
+                statusData.chroma_ready,
+                'Chroma',
+                statusData.chroma_ready ? 'Ready' : 'Not ready'
+            );
+        }
+
+        if (statusData.bm25_ready !== undefined) {
+            addStatusBadge(
+                statusData.bm25_ready,
+                'BM25',
+                statusData.bm25_ready ? 'Ready' : 'Not ready'
+            );
+        }
+
         if (statusData.indexing_status && statusData.indexing_status.running) {
             addStatusBadge(
                 false,
                 'Indexing',
                 'In Progress',
                 'warning'
+            );
+        }
+
+        if (statusData.indexing_status && statusData.indexing_status.message) {
+            addStatusBadge(
+                true,
+                'Task',
+                statusData.indexing_status.message,
+                'success'
             );
         }
 
@@ -368,7 +590,7 @@
         let html = `<div class="markdown">${formattedMessage}</div>`;
 
         if (modelUsed) {
-            html += `<div style="font-size: 0.75rem; margin-top: 0.5rem; color: var(--text-tertiary);">
+            html += `<div class="rag-model-meta">
                         <i class="fas fa-robot"></i> Answered with ${modelUsed}
                     </div>`;
         }

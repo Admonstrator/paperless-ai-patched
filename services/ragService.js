@@ -189,6 +189,22 @@ class RagService {
   }
 
   /**
+   * Force clear model cache and re-download models
+   * @returns {Promise<Object>} - Model refresh status
+   */
+  async redownloadModels() {
+    try {
+      const response = await axios.post(`${this.baseUrl}/models/redownload`, {
+        background: true
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error triggering model re-download:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get AI status
    * @returns {Promise<{status: string}>}
    */

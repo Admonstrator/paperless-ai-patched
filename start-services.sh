@@ -24,11 +24,25 @@ fi
 
 # Start the Python RAG service in the background
 echo "Starting Python RAG service..."
-"$PYTHON_BIN" main.py --host 127.0.0.1 --port 8000 --initialize &
+"$PYTHON_BIN" main.py --host 127.0.0.1 --port 8000 &
 PYTHON_PID=$!
 
-# Give it a moment to initialize
-sleep 2
+# Wait until RAG API is reachable (or timeout)
+echo "Waiting for RAG service health endpoint..."
+RAG_READY=0
+for i in $(seq 1 60); do
+	if "$PYTHON_BIN" -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/status', timeout=1).status == 200 else 1)" >/dev/null 2>&1; then
+		RAG_READY=1
+		echo "RAG service is reachable (attempt $i)."
+		break
+	fi
+	sleep 1
+done
+
+if [[ "$RAG_READY" -ne 1 ]]; then
+	echo "[WARN] RAG service did not become reachable within 60 seconds. Continuing startup anyway."
+fi
+
 echo "Python RAG service started with PID: $PYTHON_PID"
 
 # Set environment variables for the Node.js service

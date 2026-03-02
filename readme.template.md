@@ -102,7 +102,7 @@ services:
     volumes:
       - data:/app/data
     environment:
-      - PAPERLESS_URL=http://host.docker.internal:8000
+      - PAPERLESS_API_URL=http://host.docker.internal:8000
       - PAPERLESS_API_TOKEN=your_paperless_api_token
 
 volumes:
@@ -122,7 +122,7 @@ services:
     volumes:
       - data:/app/data
     environment:
-      - PAPERLESS_URL=http://host.docker.internal:8000
+      - PAPERLESS_API_URL=http://host.docker.internal:8000
       - PAPERLESS_API_TOKEN=your_paperless_api_token
 
 volumes:

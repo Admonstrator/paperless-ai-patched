@@ -33,9 +33,19 @@ Also consider supporting the **original author**:
 
 This fork collects pending upstream PRs, applies security patches, and tests improvements. Since the upstream project is no longer actively maintained, it has grown into the most up-to-date version available.
 
-> ⚠️ **Upstream Credit** – All original work belongs to [clusterzx](https://github.com/clusterzx)  
+> ℹ️ **Upstream Credit** – All original work belongs to [clusterzx](https://github.com/clusterzx)  
 
 📖 **[Full documentation →](https://paperless-ai-next.admon.me/)**
+
+## ⚠️ Please notice
+
+This fork may not be fully compatible with the original Paperless-AI nor with previous Paperless-AI-patched versions.
+
+> ⚠️ **Important:** Upgrading or migrating from the original project can lead to **data loss** (including metadata, history, or local app data) - please create a full backup before any upgrade or migration. A fresh install and document reprocessing may still be required for the best experience.
+
+I use this fork for my own setup, but every deployment is at your own risk. Keep regular Paperless-ngx backups, especially before any upgrade or migration, as data loss can still occur.
+
+I am actively improving the upgrade path and will provide detailed migration instructions in the documentation. 🙏
 
 ---
 
@@ -49,9 +59,9 @@ What makes this fork stand out:
   - Faster dashboard loading with async/lazy stats
 
 - 🛡️ **Security hardening**
-  - SSRF and code-injection fixes
-  - Global rate limiting for API + streaming endpoints
-  - Security dependency fixes (including CVE patches)
+  - Regular dependency updates with security patches
+  - Improved input validation and error handling
+  - Container image optimizations for smaller attack surface
 
 - 🧠 **Smarter OCR + AI fallback flow**
   - Mistral OCR queue for weak/failed text extraction
@@ -83,32 +93,40 @@ Please check the docker variables [here](https://paperless-ai-next.admon.me/gett
 
 ```yaml
 services:
-  paperless-ai:
+  paperless-ai-next:
     image: admonstrator/paperless-ai-next:latest-lite
     container_name: paperless-ai-next
     restart: unless-stopped
     ports:
       - "3000:3000"
     volumes:
-      - ./data:/app/data
+      - data:/app/data
     environment:
-      - PAPERLESS_AI_INITIAL_SETUP=yes
+      - PAPERLESS_URL=http://host.docker.internal:8000
+      - PAPERLESS_API_TOKEN=your_paperless_api_token
+
+volumes:
+  data:
 ```
 
 **Full version** – AI tagging + RAG semantic search (~1.5–2 GB):
 
 ```yaml
 services:
-  paperless-ai:
+  paperless-ai-next:
     image: admonstrator/paperless-ai-next:latest-full
     container_name: paperless-ai-next
     restart: unless-stopped
     ports:
       - "3000:3000"
     volumes:
-      - ./data:/app/data
+      - data:/app/data
     environment:
-      - PAPERLESS_AI_INITIAL_SETUP=yes
+      - PAPERLESS_URL=http://host.docker.internal:8000
+      - PAPERLESS_API_TOKEN=your_paperless_api_token
+
+volumes:
+  data:
 ```
 
 Then open [http://localhost:3000](http://localhost:3000) to complete setup.

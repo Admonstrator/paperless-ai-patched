@@ -7,7 +7,7 @@
 **An integration fork of Paperless-AI next – picking up where the original left off.**
 
 [![Latest Release](https://img.shields.io/github/v/release/admonstrator/paperless-ai-next?style=for-the-badge&logo=github&color=blue)](https://github.com/admonstrator/paperless-ai-next/releases/latest)
-[![Docker Pulls](https://img.shields.io/badge/docker%20pulls-320-brightgreen?style=for-the-badge&logo=docker)](https://hub.docker.com/r/admonstrator/paperless-ai-next)
+[![Docker Pulls](https://img.shields.io/badge/docker%20pulls-860-brightgreen?style=for-the-badge&logo=docker)](https://hub.docker.com/r/admonstrator/paperless-ai-next)
 [![License](https://img.shields.io/github/license/admonstrator/paperless-ai-next?style=for-the-badge)](LICENSE)
 [![Stars](https://img.shields.io/github/stars/admonstrator/paperless-ai-next?style=for-the-badge)](https://github.com/admonstrator/paperless-ai-next/stargazers)
 [![Docs](https://img.shields.io/badge/docs-paperless--ai--next.admon.me-blue?style=for-the-badge&logo=readthedocs)](https://paperless-ai-next.admon.me/)
@@ -34,7 +34,6 @@ Also consider supporting the **original author**:
 This fork collects pending upstream PRs, applies security patches, and tests improvements. Since the upstream project is no longer actively maintained, it has grown into the most up-to-date version available.
 
 > ⚠️ **Upstream Credit** – All original work belongs to [clusterzx](https://github.com/clusterzx)  
-> 📦 **Current Version** – `v2026-02-28-02`
 
 📖 **[Full documentation →](https://paperless-ai-next.admon.me/)**
 
@@ -78,7 +77,7 @@ See the complete fix list in the documentation:
 
 ### Docker Compose (Recommended)
 
-Please check the docker variables [here](https://paperless-ai-next.admon.me/getting-started/configuration/#docker-environment-variables) for more configuration options.
+Please check the docker variables [here](https://paperless-ai-next.admon.me/getting-started/configuration/#docker-environment-variables) for all configuration options.
 
 **Lite version** – AI tagging & OCR only (~500–700 MB):
 
@@ -147,6 +146,6 @@ Then open [http://localhost:3000](http://localhost:3000) to complete setup.
 
 <div align="center">
 
-_Last updated: 2026-03-01_
+_Last updated: 2026-03-02_
 
 </div>

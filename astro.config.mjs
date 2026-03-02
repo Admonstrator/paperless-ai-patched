@@ -145,7 +145,7 @@ if (document.readyState === 'loading') {
           `
         }
       ],
-      favicon: '/favicon.webp',
+      favicon: '/favicon.png',
       logo: {
         src: '/logo.png',
         alt: 'Paperless-AI next'

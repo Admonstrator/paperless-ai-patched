@@ -4,7 +4,7 @@
 
 # 📄 Paperless-AI next
 
-**An integration fork of Paperless-AI next – picking up where the original left off.**
+**An integration fork of Paperless-AI – picking up where the original left off.**
 
 [![Latest Release](https://img.shields.io/github/v/release/admonstrator/paperless-ai-next?style=for-the-badge&logo=github&color=blue)](https://github.com/admonstrator/paperless-ai-next/releases/latest)
 [![Docker Pulls](https://img.shields.io/docker/pulls/admonstrator/paperless-ai-next?style=for-the-badge&logo=docker)](https://hub.docker.com/r/admonstrator/paperless-ai-next)

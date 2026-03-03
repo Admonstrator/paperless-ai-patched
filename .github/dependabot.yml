@@ -1,131 +1,131 @@
 version: 2
 updates:
-  - package-ecosystem: "npm"
-    directory: "/"
-    target-branch: "dependabot"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "05:00"
-      timezone: "Europe/Berlin"
-    open-pull-requests-limit: 5
-    labels:
-      - "dependencies"
-      - "npm"
-    groups:
-      runtime-core:
-        patterns:
-          - "express"
-          - "better-sqlite3"
-          - "jsonwebtoken"
-          - "bcryptjs"
-          - "node-cron"
-          - "axios"
-          - "openai"
-      docs-tooling:
-        patterns:
-          - "astro"
-          - "@astrojs/*"
-          - "@starlight/*"
-          - "eslint*"
-          - "prettier*"
-          - "markdown-it"
-          - "mermaid"
-      ui-and-utils:
-        patterns:
-          - "chart.js"
-          - "datatables.net*"
-          - "sweetalert2"
-          - "highlight.js"
-          - "marked"
-          - "dotenv"
-          - "sanitize-html"
-          - "swagger-jsdoc"
-          - "swagger-ui-express"
-          - "*"
-    ignore:
-      - dependency-name: "astro"
-        update-types:
-          - "version-update:semver-major"
-      - dependency-name: "@astrojs/starlight"
-        update-types:
-          - "version-update:semver-major"
-      - dependency-name: "better-sqlite3"
-        update-types:
-          - "version-update:semver-major"
+- package-ecosystem: "npm"
+  directory: "/"
+  target-branch: "dependabot"
+  schedule:
+    interval: "weekly"
+    day: "monday"
+    time: "05:00"
+    timezone: "Europe/Berlin"
+  open-pull-requests-limit: 5
+  labels:
+  - "dependencies"
+  - "npm"
+  groups:
+    runtime-core:
+      patterns:
+      - "express"
+      - "better-sqlite3"
+      - "jsonwebtoken"
+      - "bcryptjs"
+      - "node-cron"
+      - "axios"
+      - "openai"
+    docs-tooling:
+      patterns:
+      - "astro"
+      - "@astrojs/*"
+      - "@starlight/*"
+      - "eslint*"
+      - "prettier*"
+      - "markdown-it"
+      - "mermaid"
+    ui-and-utils:
+      patterns:
+      - "chart.js"
+      - "datatables.net*"
+      - "sweetalert2"
+      - "highlight.js"
+      - "marked"
+      - "dotenv"
+      - "sanitize-html"
+      - "swagger-jsdoc"
+      - "swagger-ui-express"
+      - "*"
+  ignore:
+  - dependency-name: "astro"
+    update-types:
+    - "version-update:semver-major"
+  - dependency-name: "@astrojs/starlight"
+    update-types:
+    - "version-update:semver-major"
+  - dependency-name: "better-sqlite3"
+    update-types:
+    - "version-update:semver-major"
 
-  - package-ecosystem: "pip"
-    directory: "/"
-    target-branch: "dependabot"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "05:10"
-      timezone: "Europe/Berlin"
-    open-pull-requests-limit: 5
-    labels:
-      - "dependencies"
-      - "python"
-    groups:
-      ai-rag-stack:
-        patterns:
-          - "torch"
-          - "sentence-transformers"
-          - "chromadb"
-          - "rank-bm25"
-          - "nltk"
-      api-core:
-        patterns:
-          - "fastapi"
-          - "uvicorn"
-          - "pydantic"
-          - "python-multipart"
-          - "requests"
-          - "urllib3"
-      python-misc:
-        patterns:
-          - "*"
-    ignore:
-      - dependency-name: "torch"
-        update-types:
-          - "version-update:semver-major"
-      - dependency-name: "chromadb"
-        update-types:
-          - "version-update:semver-major"
-      - dependency-name: "sentence-transformers"
-        update-types:
-          - "version-update:semver-major"
+- package-ecosystem: "pip"
+  directory: "/"
+  target-branch: "dependabot"
+  schedule:
+    interval: "weekly"
+    day: "monday"
+    time: "05:10"
+    timezone: "Europe/Berlin"
+  open-pull-requests-limit: 5
+  labels:
+  - "dependencies"
+  - "python"
+  groups:
+    ai-rag-stack:
+      patterns:
+      - "torch"
+      - "sentence-transformers"
+      - "chromadb"
+      - "rank-bm25"
+      - "nltk"
+    api-core:
+      patterns:
+      - "fastapi"
+      - "uvicorn"
+      - "pydantic"
+      - "python-multipart"
+      - "requests"
+      - "urllib3"
+    python-misc:
+      patterns:
+      - "*"
+  ignore:
+  - dependency-name: "torch"
+    update-types:
+    - "version-update:semver-major"
+  - dependency-name: "chromadb"
+    update-types:
+    - "version-update:semver-major"
+  - dependency-name: "sentence-transformers"
+    update-types:
+    - "version-update:semver-major"
 
-  - package-ecosystem: "docker"
-    directory: "/"
-    target-branch: "dependabot"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "05:20"
-      timezone: "Europe/Berlin"
-    open-pull-requests-limit: 5
-    labels:
-      - "dependencies"
-      - "docker"
-    groups:
-      docker-base-images:
-        patterns:
-          - "*"
+- package-ecosystem: "docker"
+  directory: "/"
+  target-branch: "dependabot"
+  schedule:
+    interval: "weekly"
+    day: "monday"
+    time: "05:20"
+    timezone: "Europe/Berlin"
+  open-pull-requests-limit: 5
+  labels:
+  - "dependencies"
+  - "docker"
+  groups:
+    docker-base-images:
+      patterns:
+      - "*"
 
-  - package-ecosystem: "github-actions"
-    directory: "/"
-    target-branch: "dependabot"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "05:30"
-      timezone: "Europe/Berlin"
-    open-pull-requests-limit: 5
-    labels:
-      - "dependencies"
-      - "github-actions"
-    groups:
-      workflow-dependencies:
-        patterns:
-          - "*"
+- package-ecosystem: "github-actions"
+  directory: "/"
+  target-branch: "dependabot"
+  schedule:
+    interval: "weekly"
+    day: "monday"
+    time: "05:30"
+    timezone: "Europe/Berlin"
+  open-pull-requests-limit: 5
+  labels:
+  - "dependencies"
+  - "github-actions"
+  groups:
+    workflow-dependencies:
+      patterns:
+      - "*"

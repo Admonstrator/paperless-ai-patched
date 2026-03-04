@@ -48,6 +48,7 @@ Each subdirectory represents an integrated fix with:
 | [NEXT-018](next-018-terminal-failed-queue/) | Permanently failed queue with reset flow for AI/OCR failures | ✅ Applied | 2026-02-28 |
 | [NEXT-019](next-019-settings-tabs-env-editor/) | Settings UI rework with tabs, hints, and runtime ENV coverage | ✅ Applied | 2026-03-01 |
 | [NEXT-020](next-020-paperless-public-url-discovery/) | Public Paperless URL discovery with optional manual override | ✅ Applied | 2026-03-01 |
+| [NEXT-021](next-021-chat-document-search/) | Searchable Document Chat selector with API-backed filtering, rate limit, and dynamic loading | ✅ Applied | 2026-03-04 |
 
 ## 🚀 How to Use
 

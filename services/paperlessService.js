@@ -890,6 +890,88 @@ class PaperlessService {
       return !hasExcludedTag;
     });
   }
+
+  async searchDocumentsForChat(options = {}) {
+    this.initialize();
+    if (!this.client) {
+      console.error('[DEBUG] Client not initialized');
+      return [];
+    }
+
+    const rawQuery = typeof options.query === 'string' ? options.query : '';
+    const normalizedQuery = rawQuery.trim();
+    const parsedLimit = parseInt(options.limit, 10);
+    const safeLimit = Number.isInteger(parsedLimit) ? Math.max(1, Math.min(parsedLimit, 100)) : 25;
+
+    const shouldFilterByTags = process.env.PROCESS_PREDEFINED_DOCUMENTS === 'yes';
+    const includeTagNames = this.parseTagList(process.env.TAGS);
+    const excludeTagNames = this.parseTagList(process.env.IGNORE_TAGS);
+    let includeTagIds = [];
+    let excludeTagIds = [];
+
+    if (shouldFilterByTags) {
+      if (includeTagNames.length === 0) {
+        console.warn('[DEBUG] PROCESS_PREDEFINED_DOCUMENTS is set to yes but no TAGS are defined');
+        return [];
+      }
+
+      includeTagIds = await this.resolveTagIdsByName(includeTagNames);
+      if (includeTagIds.length === 0) {
+        console.warn('[DEBUG] None of the specified tags were found');
+        return [];
+      }
+    }
+
+    if (excludeTagNames.length > 0) {
+      excludeTagIds = await this.resolveTagIdsByName(excludeTagNames);
+    }
+
+    const documents = [];
+    let page = 1;
+    let hasMore = true;
+    const pageSize = Math.min(100, Math.max(25, safeLimit * 2));
+
+    while (hasMore && documents.length < safeLimit) {
+      try {
+        const params = {
+          page,
+          page_size: pageSize,
+          ordering: '-created',
+          fields: 'id,title,correspondent,created,tags'
+        };
+
+        if (normalizedQuery) {
+          params.query = normalizedQuery;
+        }
+
+        if (shouldFilterByTags && includeTagIds.length > 0) {
+          params.tags__id__in = includeTagIds.join(',');
+        }
+
+        const response = await this.client.get('/documents/', { params });
+        const results = Array.isArray(response?.data?.results) ? response.data.results : [];
+        const filteredResults = this.filterDocumentsByExcludedTagIds(results, excludeTagIds);
+
+        documents.push(...filteredResults);
+        hasMore = response?.data?.next !== null;
+        page += 1;
+      } catch (error) {
+        console.error('[ERROR] fetching chat documents:', error.message);
+        if (error.response) {
+          console.error('[ERROR] Response status:', error.response.status);
+        }
+        break;
+      }
+    }
+
+    // Keep response payload lean for chat document search consumers.
+    return documents.slice(0, safeLimit).map(document => ({
+      id: document.id,
+      title: document.title,
+      correspondent: document.correspondent,
+      created: document.created
+    }));
+  }
   
   async getAllDocuments(options = {}) {
     this.initialize();

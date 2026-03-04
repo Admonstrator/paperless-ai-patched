@@ -17,9 +17,17 @@
                 <!-- Document Selection -->
                 <div class="material-card mb-6">
                     <h2 class="card-title">Select Document</h2>
-                    <select id="documentSelect" class="w-full rounded-md border-border-color bg-bg-primary text-text-primary p-2 focus:border-accent-primary focus:ring-accent-primary">
-                        <option value="">Choose a document...</option>
-                    </select>
+                    <div class="manual-search-wrapper">
+                        <input
+                            id="manualDocumentSearchInput"
+                            class="w-full rounded-md border-border-color bg-bg-primary text-text-primary p-2 focus:border-accent-primary focus:ring-accent-primary"
+                            type="search"
+                            placeholder="Search documents (title, ID, correspondent)..."
+                            autocomplete="off">
+                        <div id="manualDocumentSearchResults" class="manual-search-results hidden" role="listbox" aria-label="Manual document search results"></div>
+                        <input type="hidden" id="documentSelect" value="">
+                        <p id="manualDocumentSearchStatus" class="manual-search-status">Loading recent documents...</p>
+                    </div>
                 </div>
         
                 <!-- Main Grid -->

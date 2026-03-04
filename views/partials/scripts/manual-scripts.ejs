@@ -4,6 +4,12 @@ let availableTags = [];
 let currentDocument = null;
 let currentCorrespondent = null;
 let isUpdating = false;
+let manualSearchDebounceTimer = null;
+let manualSearchController = null;
+let manualSearchResults = [];
+let manualActiveSearchIndex = -1;
+const MANUAL_SEARCH_LIMIT = 25;
+const MANUAL_SEARCH_DEBOUNCE_MS = 250;
 
 // Show message (error or success)
 function showMessage(message, type = 'error') {
@@ -53,17 +59,246 @@ async function fetchDocuments() {
     }
 }
 
+function getManualDocumentTitle(doc) {
+    return doc?.title || `Document ${doc?.id || ''}`;
+}
+
+function formatManualDocumentDate(createdValue) {
+    if (!createdValue) {
+        return 'Unknown date';
+    }
+
+    const parsedDate = new Date(createdValue);
+    if (Number.isNaN(parsedDate.getTime())) {
+        return String(createdValue).slice(0, 10) || 'Unknown date';
+    }
+
+    const year = parsedDate.getFullYear();
+    const month = String(parsedDate.getMonth() + 1).padStart(2, '0');
+    const day = String(parsedDate.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function setManualSearchStatus(message, isError = false) {
+    const statusElement = document.getElementById('manualDocumentSearchStatus');
+    if (!statusElement) return;
+
+    statusElement.textContent = message;
+    statusElement.classList.toggle('error', isError);
+}
+
+function clearManualSearchResults() {
+    const resultsElement = document.getElementById('manualDocumentSearchResults');
+    if (!resultsElement) return;
+
+    resultsElement.innerHTML = '';
+    resultsElement.classList.add('hidden');
+    manualSearchResults = [];
+    manualActiveSearchIndex = -1;
+}
+
+function createManualSearchPill(text, type) {
+    const pill = document.createElement('span');
+    pill.className = `manual-search-pill ${type}`;
+    pill.textContent = text;
+    return pill;
+}
+
+function updateManualActiveResultHighlight() {
+    const resultsElement = document.getElementById('manualDocumentSearchResults');
+    if (!resultsElement) return;
+
+    const items = resultsElement.querySelectorAll('.manual-search-item');
+    items.forEach((item, index) => {
+        item.classList.toggle('active', index === manualActiveSearchIndex);
+    });
+}
+
+function selectManualDocument(doc) {
+    const input = document.getElementById('manualDocumentSearchInput');
+    const hiddenSelect = document.getElementById('documentSelect');
+    if (!input || !hiddenSelect || !doc) return;
+
+    input.value = getManualDocumentTitle(doc);
+    input.dataset.selectedDocumentId = String(doc.id);
+    hiddenSelect.value = String(doc.id);
+    clearManualSearchResults();
+    setManualSearchStatus(`Selected: ${getManualDocumentTitle(doc)}`);
+    handleDocumentSelection(doc.id);
+}
+
+function renderManualSearchResults(documents = []) {
+    const resultsElement = document.getElementById('manualDocumentSearchResults');
+    if (!resultsElement) return;
+
+    resultsElement.innerHTML = '';
+    manualSearchResults = documents;
+    manualActiveSearchIndex = -1;
+
+    if (documents.length === 0) {
+        resultsElement.classList.add('hidden');
+        return;
+    }
+
+    documents.forEach((doc, index) => {
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'manual-search-item';
+        item.setAttribute('role', 'option');
+        item.dataset.index = String(index);
+
+        const titleElement = document.createElement('div');
+        titleElement.className = 'manual-search-title';
+        titleElement.textContent = getManualDocumentTitle(doc);
+
+        const metaElement = document.createElement('div');
+        metaElement.className = 'manual-search-meta';
+        metaElement.appendChild(createManualSearchPill(doc?.correspondent || 'No correspondent', 'correspondent'));
+        metaElement.appendChild(createManualSearchPill(formatManualDocumentDate(doc?.created), 'date'));
+        metaElement.appendChild(createManualSearchPill(`ID ${doc?.id || '-'}`, 'id'));
+
+        item.appendChild(titleElement);
+        item.appendChild(metaElement);
+
+        item.addEventListener('mousedown', (event) => {
+            event.preventDefault();
+            selectManualDocument(doc);
+        });
+
+        resultsElement.appendChild(item);
+    });
+
+    resultsElement.classList.remove('hidden');
+}
+
+function selectManualActiveResult() {
+    if (manualActiveSearchIndex >= 0 && manualActiveSearchIndex < manualSearchResults.length) {
+        selectManualDocument(manualSearchResults[manualActiveSearchIndex]);
+        return true;
+    }
+
+    if (manualSearchResults.length === 1) {
+        selectManualDocument(manualSearchResults[0]);
+        return true;
+    }
+
+    return false;
+}
+
+async function loadManualDocuments(searchTerm = '', options = {}) {
+    const { showResults = true } = options;
+
+    if (manualSearchController) {
+        manualSearchController.abort();
+    }
+
+    manualSearchController = new AbortController();
+    const params = new URLSearchParams({
+        q: searchTerm,
+        limit: String(MANUAL_SEARCH_LIMIT)
+    });
+
+    setManualSearchStatus('Searching documents...');
+
+    try {
+        const response = await fetch(`/api/chat/documents?${params.toString()}`, {
+            method: 'GET',
+            signal: manualSearchController.signal
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to fetch documents');
+        }
+
+        const payload = await response.json();
+        const documents = Array.isArray(payload?.data?.documents) ? payload.data.documents : [];
+
+        if (showResults) {
+            renderManualSearchResults(documents);
+        }
+
+        if (documents.length === 0) {
+            if (showResults) {
+                clearManualSearchResults();
+            }
+            setManualSearchStatus('No matching documents found.');
+        } else {
+            setManualSearchStatus(`Showing ${documents.length} document${documents.length === 1 ? '' : 's'}.`);
+        }
+    } catch (error) {
+        if (error.name === 'AbortError') {
+            return;
+        }
+
+        console.error('Error loading manual documents:', error);
+        if (showResults) {
+            clearManualSearchResults();
+        }
+        setManualSearchStatus('Could not load documents. Please try again.', true);
+    }
+}
+
+function initializeManualOmnibox() {
+    const input = document.getElementById('manualDocumentSearchInput');
+    const hiddenSelect = document.getElementById('documentSelect');
+    if (!input || !hiddenSelect) return;
+
+    loadManualDocuments('', { showResults: false });
+
+    input.addEventListener('focus', () => {
+        loadManualDocuments(input.value.trim(), { showResults: true });
+    });
+
+    input.addEventListener('input', () => {
+        hiddenSelect.value = '';
+        input.dataset.selectedDocumentId = '';
+        clearTimeout(manualSearchDebounceTimer);
+
+        manualSearchDebounceTimer = setTimeout(() => {
+            const query = input.value.trim();
+            loadManualDocuments(query, { showResults: true });
+        }, MANUAL_SEARCH_DEBOUNCE_MS);
+    });
+
+    input.addEventListener('keydown', (event) => {
+        if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            if (manualSearchResults.length === 0) return;
+            manualActiveSearchIndex = Math.min(manualActiveSearchIndex + 1, manualSearchResults.length - 1);
+            updateManualActiveResultHighlight();
+            return;
+        }
+
+        if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            if (manualSearchResults.length === 0) return;
+            manualActiveSearchIndex = Math.max(manualActiveSearchIndex - 1, 0);
+            updateManualActiveResultHighlight();
+            return;
+        }
+
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            selectManualActiveResult();
+            return;
+        }
+
+        if (event.key === 'Escape') {
+            clearManualSearchResults();
+        }
+    });
+
+    input.addEventListener('blur', () => {
+        window.setTimeout(() => {
+            clearManualSearchResults();
+        }, 120);
+    });
+}
+
 // UI Update Functions
 function updateDocumentSelect(documents) {
-    if (!Array.isArray(documents)) return;
-    const select = document.getElementById('documentSelect');
-    select.innerHTML = '<option value="">Choose a document...</option>';
-    documents.forEach(doc => {
-        const option = document.createElement('option');
-        option.value = doc.id;
-        option.textContent = doc.title || doc.original_filename || `Document ${doc.id}`;
-        select.appendChild(option);
-    });
+    // Legacy function kept for compatibility. Manual view uses omnibox now.
+    return documents;
 }
 
 function updateTagSelect(tags) {
@@ -348,9 +583,7 @@ async function updateDocumentTags() {
 
 
 document.addEventListener('DOMContentLoaded', function() {
-    document.getElementById('documentSelect').addEventListener('change', (e) => {
-        handleDocumentSelection(e.target.value);
-    });
+    initializeManualOmnibox();
 
     document.getElementById('analyzeBtn').addEventListener('click', handleAnalysis);
     document.getElementById('chatBtn').addEventListener('click', handleChat);
@@ -374,7 +607,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     fetchTags();
-    fetchDocuments();
 
     const form = document.querySelector('form');
     if (form) {

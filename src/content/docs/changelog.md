@@ -48,6 +48,7 @@ All improvements and fixes included in this fork, compared to [clusterzx/paperle
 | [NEXT-018](fixes/next-018-terminal-failed-queue/) | Added permanently failed queue with manual reset after AI/OCR hard failures | 2026-02-28 |
 | [NEXT-019](fixes/next-019-settings-tabs-env-editor/) | Reworked settings into System/AI/OCR/Troubleshooting tabs with runtime ENV hints and extended config coverage | 2026-03-01 |
 | [NEXT-020](fixes/next-020-paperless-public-url-discovery/) | Added public Paperless URL discovery plus optional `PAPERLESS_PUBLIC_URL` override for reliable external document links | 2026-03-01 |
+| [NEXT-021](fixes/next-021-chat-document-search/) | Document Chat now supports searchable document selection with API-backed filtering and faster initial page load | 2026-03-04 |
 
 ---
 

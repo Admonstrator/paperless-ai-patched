@@ -1540,6 +1540,343 @@
         }
       }
     },
+    "/api/chat/documents": {
+      "get": {
+        "summary": "Search chat documents",
+        "description": "Returns a paginated list of documents for the Document Chat selector.\nThe endpoint proxies the Paperless document search API and returns a compact payload\noptimized for type-ahead search in the chat UI.\n",
+        "tags": [
+          "Chat",
+          "API"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "General quick-search term across title, id, correspondent, and date",
+            "example": "invoice"
+          },
+          {
+            "in": "query",
+            "name": "title",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Title filter (contains match)",
+            "example": "invoice"
+          },
+          {
+            "in": "query",
+            "name": "date",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Date filter in YYYY-MM-DD format",
+            "example": "2026-03-04"
+          },
+          {
+            "in": "query",
+            "name": "id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Document ID filter (digits)",
+            "example": "42"
+          },
+          {
+            "in": "query",
+            "name": "correspondent",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Correspondent name filter (contains match)",
+            "example": "acme"
+          },
+          {
+            "in": "query",
+            "name": "correspondentId",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Correspondent ID filter (exact match)",
+            "example": 9
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            },
+            "description": "Maximum number of results to return"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Chat documents loaded successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "query": {
+                          "type": "string",
+                          "example": "invoice"
+                        },
+                        "filters": {
+                          "type": "object",
+                          "properties": {
+                            "q": {
+                              "type": "string",
+                              "example": "invoice"
+                            },
+                            "title": {
+                              "type": "string",
+                              "example": "invoice"
+                            },
+                            "date": {
+                              "type": "string",
+                              "example": "2026-03-04"
+                            },
+                            "id": {
+                              "type": "string",
+                              "example": "42"
+                            },
+                            "correspondent": {
+                              "type": "string",
+                              "example": "acme"
+                            },
+                            "correspondentId": {
+                              "type": "integer",
+                              "nullable": true,
+                              "example": 9
+                            }
+                          }
+                        },
+                        "limit": {
+                          "type": "integer",
+                          "example": 25
+                        },
+                        "documents": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "integer",
+                                "example": 123
+                              },
+                              "title": {
+                                "type": "string",
+                                "example": "Invoice 2026-0007"
+                              },
+                              "correspondent": {
+                                "type": "string",
+                                "example": "ACME GmbH"
+                              },
+                              "correspondentId": {
+                                "type": "integer",
+                                "nullable": true,
+                                "example": 9
+                              },
+                              "created": {
+                                "type": "string",
+                                "nullable": true,
+                                "example": "2026-03-04"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/chat/correspondents": {
+      "get": {
+        "summary": "Search correspondents for chat filters",
+        "description": "Returns correspondents for the chat omnibox correspondent filter stage.\nThe endpoint is intended for selecting a correspondent first, then loading matching documents.\n",
+        "tags": [
+          "Chat",
+          "API"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Partial correspondent name",
+            "example": "acme"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            },
+            "description": "Maximum number of results to return"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Correspondents loaded successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "query": {
+                          "type": "string",
+                          "example": "acme"
+                        },
+                        "limit": {
+                          "type": "integer",
+                          "example": 25
+                        },
+                        "correspondents": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "integer",
+                                "example": 9
+                              },
+                              "name": {
+                                "type": "string",
+                                "example": "ACME GmbH"
+                              },
+                              "document_count": {
+                                "type": "integer",
+                                "example": 42
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/chat/init": {
       "get": {
         "summary": "Initialize chat for a document via query parameter",

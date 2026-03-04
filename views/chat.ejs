@@ -20,12 +20,20 @@
                     <!-- Document Selection -->
                     <div class="material-card">
                         <h2 class="card-title">Select Document</h2>
-                        <select id="documentSelect" class="select-input">
-                            <option value="">Please choose...</option>
-                            <% documents.forEach(function(doc) { %>
-                                <option value="<%= doc.id %>" <%= doc.id == open ? 'selected="true"' : '' %>><%= doc.title %></option>
-                            <% }); %>
-                        </select>
+                        <div class="document-search-wrapper">
+                            <% const preselectedDocument = (documents && documents.length > 0) ? documents[0] : null; %>
+                            <input
+                                id="documentSearchInput"
+                                class="select-input"
+                                type="search"
+                                placeholder="Search documents (title, ID, correspondent)..."
+                                value="<%= preselectedDocument ? preselectedDocument.title : '' %>"
+                                data-open-document-id="<%= open || '' %>"
+                                autocomplete="off">
+                            <div id="documentSearchResults" class="search-results hidden" role="listbox" aria-label="Document search results"></div>
+                            <input type="hidden" id="documentSelect" value="<%= open || '' %>">
+                            <p id="documentSearchStatus" class="search-status">Loading recent documents...</p>
+                        </div>
                     </div>
 
                     <!-- Chat Interface -->

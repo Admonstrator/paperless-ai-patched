@@ -9,6 +9,12 @@
     --chat-bg: #ffffff;
     --message-bg: #f1f5f9;
     --user-message-bg: #eff6ff;
+    --pill-correspondent-bg: #dbeafe;
+    --pill-correspondent-text: #1d4ed8;
+    --pill-id-bg: #e2e8f0;
+    --pill-id-text: #1e293b;
+    --pill-date-bg: #dcfce7;
+    --pill-date-text: #166534;
 }
 
 :root[data-theme="dark"] {
@@ -21,6 +27,12 @@
     --chat-bg: #1e293b;
     --message-bg: #334155;
     --user-message-bg: #1e3a8a;
+    --pill-correspondent-bg: #1e3a8a;
+    --pill-correspondent-text: #bfdbfe;
+    --pill-id-bg: #334155;
+    --pill-id-text: #e2e8f0;
+    --pill-date-bg: #14532d;
+    --pill-date-text: #bbf7d0;
 }
 
 body {
@@ -64,6 +76,95 @@ body {
     border: 1px solid var(--border-color);
     background: var(--bg-primary);
     color: var(--text-primary);
+}
+
+.document-search-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    position: relative;
+}
+
+.search-results {
+    max-height: 260px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 0.375rem;
+    background: var(--bg-primary);
+}
+
+.search-result-item {
+    width: 100%;
+    border: none;
+    border-bottom: 1px solid var(--border-color);
+    background: transparent;
+    color: var(--text-primary);
+    text-align: left;
+    padding: 0.625rem 0.75rem;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.search-result-item:last-child {
+    border-bottom: none;
+}
+
+.search-result-item:hover,
+.search-result-item.active {
+    background: var(--message-bg);
+}
+
+.search-result-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.3;
+}
+
+.search-result-meta {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+}
+
+.search-result-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.125rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+
+.search-result-pill.correspondent {
+    background: var(--pill-correspondent-bg);
+    color: var(--pill-correspondent-text);
+}
+
+.search-result-pill.id {
+    background: var(--pill-id-bg);
+    color: var(--pill-id-text);
+}
+
+.search-result-pill.date {
+    background: var(--pill-date-bg);
+    color: var(--pill-date-text);
+}
+
+.search-status {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    min-height: 1.25rem;
+}
+
+.search-status.error {
+    color: #dc2626;
 }
 
 .chat-interface {

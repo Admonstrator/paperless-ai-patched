@@ -62,6 +62,22 @@ const cacheClearLimiter = rateLimit({
   }
 });
 
+const chatDocumentSearchLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 40,
+  message: {
+    success: false,
+    error: 'Too many chat search requests. Please try again shortly.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => {
+    const apiKey = req.headers['x-api-key'];
+    const currentApiKey = config.getApiKey();
+    return currentApiKey && apiKey && apiKey === currentApiKey;
+  }
+});
+
 /**
  * @swagger
  * tags:
@@ -811,12 +827,146 @@ router.get('/thumb/:documentId', async (req, res) => {
 router.get('/chat', async (req, res) => {
   try {
       const {open} = req.query;
-      const documents = await paperlessService.getDocuments();
+      let documents = [];
+
+      // Keep initial payload small; prefill only the requested document if present.
+      if (open) {
+        try {
+          const openDocument = await paperlessService.getDocument(open);
+          if (openDocument?.id) {
+            documents = [{ id: openDocument.id, title: openDocument.title }];
+          }
+        } catch (error) {
+          console.warn(`[WARN] Could not preload document ${open} for chat:`, error.message);
+        }
+      }
+
       const version = configFile.PAPERLESS_AI_VERSION || ' ';
       res.render('chat', { documents, open, version, ragEnabled: process.env.RAG_SERVICE_ENABLED === 'true', chatEnabled: isChatEnabled() });
   } catch (error) {
     console.error('[ERRO] loading documents:', error);
     res.status(500).send('Error loading documents');
+  }
+});
+
+/**
+ * @swagger
+ * /api/chat/documents:
+ *   get:
+ *     summary: Search chat documents
+ *     description: |
+ *       Returns a paginated list of documents for the Document Chat selector.
+ *       The endpoint proxies the Paperless document search API and returns a compact payload
+ *       optimized for type-ahead search in the chat UI.
+ *     tags:
+ *       - Chat
+ *       - API
+ *     security:
+ *       - BearerAuth: []
+ *       - ApiKeyAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         required: false
+ *         schema:
+ *           type: string
+ *         description: Search term for title, id, correspondent, and Paperless full-text query
+ *         example: invoice
+ *       - in: query
+ *         name: limit
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 25
+ *         description: Maximum number of results to return
+ *     responses:
+ *       200:
+ *         description: Chat documents loaded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     query:
+ *                       type: string
+ *                       example: invoice
+ *                     limit:
+ *                       type: integer
+ *                       example: 25
+ *                     documents:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: integer
+ *                             example: 123
+ *                           title:
+ *                             type: string
+ *                             example: Invoice 2026-0007
+ *                           correspondent:
+ *                             type: string
+ *                             example: ACME GmbH
+ *                           correspondentId:
+ *                             type: integer
+ *                             nullable: true
+ *                             example: 9
+ *                           created:
+ *                             type: string
+ *                             nullable: true
+ *                             example: "2026-03-04"
+ *       401:
+ *         description: Unauthorized - authentication required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       429:
+ *         description: Too many requests
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.get('/api/chat/documents', isAuthenticated, chatDocumentSearchLimiter, async (req, res) => {
+  try {
+    const q = typeof req.query.q === 'string' ? req.query.q.trim().slice(0, 200) : '';
+    const requestedLimit = parseInt(req.query.limit, 10);
+    const limit = Number.isInteger(requestedLimit) ? Math.max(1, Math.min(requestedLimit, 100)) : 25;
+
+    const documents = await documentsService.searchDocumentsForChat({
+      query: q,
+      limit
+    });
+
+    res.json({
+      success: true,
+      data: {
+        query: q,
+        limit,
+        documents
+      }
+    });
+  } catch (error) {
+    console.error('[ERROR] loading chat documents:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error loading chat documents'
+    });
   }
 });
 

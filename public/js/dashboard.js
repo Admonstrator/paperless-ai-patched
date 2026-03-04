@@ -52,7 +52,16 @@ class ChartManager {
         } = dashboardData;
         const remainingCount = Math.max(0, documentCount - processedCount - ocrNeededCount - failedCount);
 
-        const ctx = document.getElementById('documentChart').getContext('2d');
+        const chartElement = document.getElementById('documentChart');
+        if (!chartElement || typeof Chart === 'undefined') {
+            return;
+        }
+
+        const ctx = chartElement.getContext('2d');
+        if (!ctx) {
+            return;
+        }
+
         this.documentChart = new Chart(ctx, {
             type: 'doughnut',
             data: {
@@ -482,8 +491,17 @@ async function showCorrespondentDetails() {
 // Initialize everything when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     window.navigationManager = new NavigationManager();
-    window.chartManager = new ChartManager();
-    window.modalManager = new ModalManager();
-    window.dashboardStatsLoader = new DashboardStatsLoader();
-    window.dashboardStatsLoader.load();
+
+    if (document.getElementById('documentChart')) {
+        window.chartManager = new ChartManager();
+    }
+
+    if (document.getElementById('detailsModal')) {
+        window.modalManager = new ModalManager();
+    }
+
+    if (document.getElementById('dashboardDataPayload')) {
+        window.dashboardStatsLoader = new DashboardStatsLoader();
+        window.dashboardStatsLoader.load();
+    }
 });

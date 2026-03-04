@@ -146,12 +146,18 @@ jobs:
         id: base
         run: |
           BASE_IMAGE="${{ env.DOCKERHUB_REPO }}:latest-base-lite"
-          BASE_DIGEST=$(docker buildx imagetools inspect "$BASE_IMAGE" --format '{{.Manifest.Digest}}' || true)
+          BASE_DIGEST=$(docker buildx imagetools inspect "$BASE_IMAGE" --format '{{.Manifest.Digest}}' 2>/dev/null || true)
+          BASE_DIGEST=$(printf '%s\n' "$BASE_DIGEST" | tr -d '\r' | grep -Eo 'sha256:[a-f0-9]{64}' | head -n1 || true)
+          if [ -z "$BASE_DIGEST" ]; then
+            BASE_DIGEST=$(docker buildx imagetools inspect "$BASE_IMAGE" 2>/dev/null | awk '/^Digest:/ {print $2; exit}' || true)
+          fi
           if [ -z "$BASE_DIGEST" ]; then
             BASE_DIGEST="unavailable"
           fi
-          echo "base_image=$BASE_IMAGE" >> $GITHUB_OUTPUT
-          echo "base_digest=$BASE_DIGEST" >> $GITHUB_OUTPUT
+          {
+            echo "base_image=$BASE_IMAGE"
+            echo "base_digest=$BASE_DIGEST"
+          } >> "$GITHUB_OUTPUT"
       
       - name: Build and Push Lite Docker image
         id: push
@@ -211,12 +217,18 @@ jobs:
         id: base
         run: |
           BASE_IMAGE="${{ env.DOCKERHUB_REPO }}:latest-base-full"
-          BASE_DIGEST=$(docker buildx imagetools inspect "$BASE_IMAGE" --format '{{.Manifest.Digest}}' || true)
+          BASE_DIGEST=$(docker buildx imagetools inspect "$BASE_IMAGE" --format '{{.Manifest.Digest}}' 2>/dev/null || true)
+          BASE_DIGEST=$(printf '%s\n' "$BASE_DIGEST" | tr -d '\r' | grep -Eo 'sha256:[a-f0-9]{64}' | head -n1 || true)
+          if [ -z "$BASE_DIGEST" ]; then
+            BASE_DIGEST=$(docker buildx imagetools inspect "$BASE_IMAGE" 2>/dev/null | awk '/^Digest:/ {print $2; exit}' || true)
+          fi
           if [ -z "$BASE_DIGEST" ]; then
             BASE_DIGEST="unavailable"
           fi
-          echo "base_image=$BASE_IMAGE" >> $GITHUB_OUTPUT
-          echo "base_digest=$BASE_DIGEST" >> $GITHUB_OUTPUT
+          {
+            echo "base_image=$BASE_IMAGE"
+            echo "base_digest=$BASE_DIGEST"
+          } >> "$GITHUB_OUTPUT"
       
       - name: Build and Push Full Docker image
         id: push

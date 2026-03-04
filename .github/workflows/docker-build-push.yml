@@ -6,8 +6,8 @@ env:
 on:
   workflow_dispatch:
     inputs:
-      also_tag_latest:
-        description: 'Also tag as "latest"'
+      also_tag_nightly:
+        description: 'Also tag as "nightly"'
         required: false
         default: false
         type: boolean
@@ -139,8 +139,8 @@ jobs:
           tags: |
             type=raw,value=${{ needs.generate-version.outputs.version_tag }}
             type=raw,value=${{ needs.generate-version.outputs.version_tag }}-lite
-            type=raw,value=latest,enable=${{ inputs.also_tag_latest || github.event_name == 'push' }}
-            type=raw,value=latest-lite,enable=${{ inputs.also_tag_latest || github.event_name == 'push' }}
+            type=raw,value=nightly,enable=${{ inputs.also_tag_nightly || github.event_name == 'push' }}
+            type=raw,value=nightly-lite,enable=${{ inputs.also_tag_nightly || github.event_name == 'push' }}
 
       - name: Resolve Lite base digest
         id: base
@@ -205,7 +205,7 @@ jobs:
           images: ${{ env.DOCKERHUB_REPO }}
           tags: |
             type=raw,value=${{ needs.generate-version.outputs.version_tag }}-full
-            type=raw,value=latest-full,enable=${{ inputs.also_tag_latest || github.event_name == 'push' }}
+            type=raw,value=nightly-full,enable=${{ inputs.also_tag_nightly || github.event_name == 'push' }}
 
       - name: Resolve Full base digest
         id: base
@@ -250,7 +250,7 @@ jobs:
           echo "**Version Tag:** \`${{ needs.generate-version.outputs.version_tag }}\`" >> $GITHUB_STEP_SUMMARY
           echo "**Base Version:** \`${{ needs.generate-version.outputs.base_version }}\`" >> $GITHUB_STEP_SUMMARY
           echo "**Build Commit:** \`${{ needs.generate-version.outputs.commit_sha }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "**Also tagged as latest:** ${{ inputs.also_tag_latest || github.event_name == 'push' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Also tagged as nightly:** ${{ inputs.also_tag_nightly || github.event_name == 'push' }}" >> $GITHUB_STEP_SUMMARY
           echo "**ARM64 enabled:** ${{ inputs.build_arm64 }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 

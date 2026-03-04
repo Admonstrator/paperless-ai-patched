@@ -4,7 +4,9 @@ python-dotenv>=1.0.0
 requests>=2.32.4
 urllib3>=2.6.3
 numpy>=1.24.2
-torch>=2.6.0 --index-url https://download.pytorch.org/whl/cpu
+# Prefer CPU-only PyTorch wheels to avoid pulling CUDA runtime packages.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch>=2.6.0
 sentence-transformers>=2.2.2
 chromadb>=0.3.21
 rank-bm25>=0.2.2

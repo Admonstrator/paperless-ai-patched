@@ -109,7 +109,7 @@ console.log('Loaded environment variables:', {
 });
 
 module.exports = {
-  PAPERLESS_AI_VERSION: 'v2026-03-02-01',
+  PAPERLESS_AI_VERSION: 'v2026-03-04-01',
   CONFIGURED: false,
   getApiKey,
   getJwtSecret,

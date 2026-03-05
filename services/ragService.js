@@ -7,6 +7,9 @@ const paperlessService = require('./paperlessService');
 class RagService {
   constructor() {
     this.baseUrl = process.env.RAG_SERVICE_URL || 'http://localhost:8000';
+    this.aiStatusCache = null;
+    this.aiStatusCacheTs = 0;
+    this.aiStatusTtlMs = Number(process.env.RAG_AI_STATUS_TTL_MS || 300000);
   }
 
   /**
@@ -208,14 +211,31 @@ class RagService {
    * Get AI status
    * @returns {Promise<{status: string}>}
    */
-  async getAIStatus() {
+  async getAIStatus({ force = false } = {}) {
+    const now = Date.now();
+    const hasFreshCache =
+      !force &&
+      this.aiStatusCache &&
+      now - this.aiStatusCacheTs < this.aiStatusTtlMs;
+
+    // Avoid expensive provider ping calls on each UI polling interval.
+    if (hasFreshCache) {
+      return this.aiStatusCache;
+    }
+
     try {
       const aiService = AIServiceFactory.getService();
       const status = await aiService.checkStatus();
-      return status;
+      this.aiStatusCache = status || { status: 'unknown' };
+      this.aiStatusCacheTs = now;
+      return this.aiStatusCache;
     } catch (error) {
       console.error('Error checking AI service status:', error);
-      throw error;
+      if (this.aiStatusCache) {
+        return this.aiStatusCache;
+      }
+
+      return { status: 'error', error: error.message || 'AI status unavailable' };
     }
   }
 }

@@ -4,6 +4,7 @@ const {
   truncateToTokenLimit,
   writePromptToFile
 } = require('./serviceUtils');
+const axios = require('axios');
 const OpenAI = require('openai');
 const AzureOpenAI = require('openai').AzureOpenAI;
 const config = require('../config/config');
@@ -407,64 +408,34 @@ class AzureOpenAIService {
       this.initialize();
 
       if (!this.client) {
-        throw new Error('AzureOpenAI client not initialized - missing API key');
-      }
-
-      const model = process.env.AZURE_DEPLOYMENT_NAME;
-
-      const response = await this.client.chat.completions.create({
-        model: model,
-        messages: [
-          {
-            role: "user",
-            content: "Test"
-          }
-        ],
-        temperature: 0.7,
-        max_tokens: 10
-      });
-
-      if (!response?.choices?.[0]?.message?.content) {
-        throw new Error('Invalid API response structure');
-      }
-
-      return { status: 'ok', model: model };
-    } catch (error) {
-      console.error('Error checking AzureOpenAI status:', error);
-      return { status: 'error', error: error.message };
-    }
-  }
-
-  async checkStatus() {
-    try {
-      this.initialize();
-
-      if (!this.client) {
         throw new Error('Azure OpenAI client not initialized - missing API key');
       }
 
       const model = process.env.AZURE_DEPLOYMENT_NAME;
 
-      const response = await this.client.chat.completions.create({
-        model: model,
-        messages: [
-          {
-            role: "user",
-            content: 'Ping'
-          }
-        ],
-        temperature: 0.7,
-        max_tokens: 1000
+      // Token-free health check against deployment metadata endpoint.
+      const endpoint = (config.azure.endpoint || '').replace(/\/$/, '');
+      const apiVersion = config.azure.apiVersion;
+      if (!endpoint || !apiVersion || !model) {
+        throw new Error('Azure endpoint, apiVersion, or deployment name missing');
+      }
+
+      const url = `${endpoint}/openai/deployments/${model}?api-version=${encodeURIComponent(apiVersion)}`;
+      const response = await axios.get(url, {
+        headers: {
+          'api-key': config.azure.apiKey
+        },
+        timeout: 10000
       });
 
-      if (!response?.choices?.[0]?.message?.content) {
+      if (response.status < 200 || response.status >= 300) {
         return { status: 'error' };
       }
 
       return { status: 'ok', model: model };
     } catch (error) {
       console.error('Error generating text with Azure OpenAI:', error);
-      return { status: 'error' };
+      return { status: 'error', error: error.message };
     }
   }
 }

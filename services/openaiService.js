@@ -451,26 +451,15 @@ class OpenAIService {
   }
 
   async checkStatus() {
-    // send test request to OpenAI API and respond with 'ok' or 'error'
+    // Use a token-free endpoint for connectivity/auth checks.
     try {
       this.initialize();
 
       if (!this.client) {
         throw new Error('OpenAI client not initialized - missing API key');
       }
-      const response = await this.client.chat.completions.create({
-        model: process.env.OPENAI_MODEL,
-        messages: [
-          {
-            role: "user",
-            content: "Test"
-          }
-        ],
-        temperature: 0.7
-      });
-      if (!response?.choices?.[0]?.message?.content) {
-        throw new Error('Invalid API response structure');
-      }
+
+      await this.client.models.list();
       return { status: 'ok', model: process.env.OPENAI_MODEL };
     } catch (error) {
       console.error('Error checking OpenAI status:', error);

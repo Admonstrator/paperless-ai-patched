@@ -49,3 +49,4 @@ COPILOT.md
 .DS_Store
 GEMINI.md
 CVE/*
+.todo/*

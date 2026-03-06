@@ -54,6 +54,58 @@ logger.info(f"Loaded PAPERLESS_NGX_URL: {os.getenv('PAPERLESS_NGX_URL')}")
 logger.info(f"Loaded PAPERLESS_HOST: {os.getenv('PAPERLESS_HOST')}")
 logger.info(f"Loaded PAPERLESS_API_TOKEN: {'[SET]' if os.getenv('PAPERLESS_API_TOKEN') else '[NOT SET]'}")
 
+
+def _is_missing_or_placeholder(value: Optional[str]) -> bool:
+    """Return True for empty values and common sample placeholders."""
+    if not value:
+        return True
+
+    normalized = value.strip().lower()
+    if not normalized:
+        return True
+
+    placeholder_values = {
+        "your-api-token",
+        "your-api-key",
+        "your-api-url",
+        "your-paperless-instance",
+        "https://your-paperless-instance",
+        "http://your-paperless-instance",
+        "changeme",
+        "replace-me",
+        "none",
+        "null",
+    }
+    return normalized in placeholder_values
+
+
+def _resolve_paperless_config() -> Tuple[Optional[str], Optional[str]]:
+    """Resolve paperless URL/token from supported env var aliases."""
+    paperless_api_url = (
+        os.getenv("PAPERLESS_API_URL")
+        or os.getenv("PAPERLESS_URL")
+        or os.getenv("PAPERLESS_NGX_URL")
+        or os.getenv("PAPERLESS_HOST")
+    )
+    paperless_token = os.getenv("PAPERLESS_TOKEN") or os.getenv("PAPERLESS_API_TOKEN") or os.getenv("PAPERLESS_APIKEY")
+
+    if paperless_api_url:
+        paperless_api_url = paperless_api_url.strip()
+        if paperless_api_url.endswith('/api'):
+            paperless_api_url = paperless_api_url[:-4]
+            logger.info(f"Removed '/api' suffix from URL: {paperless_api_url}")
+
+    if paperless_token:
+        paperless_token = paperless_token.strip()
+
+    if _is_missing_or_placeholder(paperless_api_url):
+        paperless_api_url = None
+
+    if _is_missing_or_placeholder(paperless_token):
+        paperless_token = None
+
+    return paperless_api_url, paperless_token
+
 # Constants
 DOCUMENTS_FILE = "./data/documents.json"
 CHROMADB_DIR = "./data/chromadb"
@@ -213,16 +265,8 @@ global_state = GlobalState()
 # Data Manager
 class DataManager:
     def __init__(self, initialize_on_start=False):
-        # Flexible Variablennamen für die API-Einstellungen - erweitert um PAPERLESS_API_URL
-        paperless_api_url = os.getenv("PAPERLESS_API_URL") or os.getenv("PAPERLESS_URL") or os.getenv("PAPERLESS_NGX_URL") or os.getenv("PAPERLESS_HOST")
-        
-        # Entfernen des /api Suffix falls vorhanden
-        if paperless_api_url and paperless_api_url.endswith('/api'):
-            paperless_api_url = paperless_api_url[:-4]  # Entfernen der letzten 4 Zeichen (/api)
-            logger.info(f"Removed '/api' suffix from URL: {paperless_api_url}")
-        
-        self.paperless_url = paperless_api_url
-        self.paperless_token = os.getenv("PAPERLESS_TOKEN") or os.getenv("PAPERLESS_API_TOKEN") or os.getenv("PAPERLESS_APIKEY")
+        # Resolve and validate env aliases once so startup can reliably detect invalid config.
+        self.paperless_url, self.paperless_token = _resolve_paperless_config()
         
         # Debug-Informationen ausgeben
         logger.info(f"Environment variables: PAPERLESS_API_URL={os.getenv('PAPERLESS_API_URL')}, PAPERLESS_URL={os.getenv('PAPERLESS_URL')}, PAPERLESS_NGX_URL={os.getenv('PAPERLESS_NGX_URL')}, PAPERLESS_HOST={os.getenv('PAPERLESS_HOST')}")
@@ -1549,6 +1593,15 @@ async def startup_event():
             global_state.save_state()
             return
         
+        paperless_url, paperless_token = _resolve_paperless_config()
+        if not paperless_url or not paperless_token:
+            logger.warning("Paperless API configuration missing or contains placeholder values")
+            logger.warning("Starting with limited functionality due to missing API configuration")
+            global_state.system_status.server_up = True
+            global_state.indexing_status.message = "API configuration missing or invalid in data/.env"
+            global_state.save_state()
+            return
+
         # Initialize DataManager without model loading to keep API responsive
         global_state.data_manager = DataManager(initialize_on_start=False)
         global_state.indexing_status.message = "Waiting for initialization"
@@ -1698,12 +1751,16 @@ async def startup_event():
         global_state.indexing_status.message = f"Error during startup: {str(e)}"
         global_state.save_state()
         
-        # Even if there's an error, try to initialize basic components
-        if not global_state.data_manager:
+        # Even if there's an error, try to initialize basic components when config is valid.
+        paperless_url, paperless_token = _resolve_paperless_config()
+
+        if not global_state.data_manager and paperless_url and paperless_token:
             try:
                 global_state.data_manager = DataManager(initialize_on_start=False)
             except Exception as dm_error:
                 logger.error(f"Failed to initialize DataManager: {str(dm_error)}")
+        elif not paperless_url or not paperless_token:
+            logger.warning("Skipping DataManager initialization because API configuration is missing or invalid")
         
         if not global_state.search_engine and global_state.data_manager:
             try:

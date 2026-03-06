@@ -441,26 +441,13 @@ class CustomOpenAIService {
 
       const model = config.custom.model;
 
-      const response = await this.client.chat.completions.create({
-        model: model,
-        messages: [
-          {
-            role: "user",
-            content: 'Ping'
-          }
-        ],
-        temperature: 0.7,
-        max_tokens: 1000
-      });
-
-      if (!response?.choices?.[0]?.message?.content) {
-        return { status: 'error' };
-      }
+      // Use token-free endpoint where supported by OpenAI-compatible providers.
+      await this.client.models.list();
 
       return { status: 'ok', model: model };
     } catch (error) {
       console.error('Error generating text with Custom OpenAI:', error);
-      return { status: 'error' };
+      return { status: 'error', error: error.message };
     }
   }
 }

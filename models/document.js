@@ -684,6 +684,64 @@ module.exports = {
     }
 },
 
+  async getTokenTrend(days = 7) {
+    try {
+      const safeDays = Math.max(1, Number(days) || 7);
+      const dayOffset = `-${safeDays - 1} days`;
+      return db.prepare(`
+        SELECT
+          date(created_at, 'localtime') as day,
+          COUNT(*) as documents,
+          SUM(totalTokens) as totalTokens
+        FROM openai_metrics
+        WHERE date(created_at, 'localtime') >= date('now', 'localtime', ?)
+        GROUP BY day
+        ORDER BY day ASC
+      `).all(dayOffset);
+    } catch (error) {
+      console.error('[ERROR] getting token trend:', error);
+      return [];
+    }
+  },
+
+  async getRecentHistoryDocuments(limit = 4) {
+    try {
+      const safeLimit = Math.max(1, Math.min(20, Number(limit) || 6));
+      return db.prepare(`
+        SELECT
+          document_id as documentId,
+          title,
+          correspondent,
+          created_at as createdAt,
+          language
+        FROM history_documents
+        ORDER BY created_at DESC
+        LIMIT ?
+      `).all(safeLimit);
+    } catch (error) {
+      console.error('[ERROR] getting recent history documents:', error);
+      return [];
+    }
+  },
+
+  async getLanguageDistribution(limit = 5) {
+    try {
+      const safeLimit = Math.max(1, Math.min(10, Number(limit) || 5));
+      return db.prepare(`
+        SELECT
+          COALESCE(NULLIF(language, ''), 'Unknown') as language,
+          COUNT(*) as count
+        FROM history_documents
+        GROUP BY COALESCE(NULLIF(language, ''), 'Unknown')
+        ORDER BY count DESC
+        LIMIT ?
+      `).all(safeLimit);
+    } catch (error) {
+      console.error('[ERROR] getting language distribution:', error);
+      return [];
+    }
+  },
+
 async setProcessingStatus(documentId, title, status) {
   try {
       if (status === 'complete') {

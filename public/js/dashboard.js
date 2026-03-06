@@ -10,8 +10,15 @@ function resolveDashboardData() {
             processedCount: 0,
             ocrNeededCount: 0,
             failedCount: 0,
+            queueBacklog: 0,
+            processingEfficiencyRate: 0,
+            failedRate: 0,
+            processedToday: 0,
             tokenDistribution: [],
-            documentTypes: []
+            documentTypes: [],
+            tokenTrend: [],
+            recentActivity: [],
+            languageDistribution: []
         };
     }
 
@@ -27,8 +34,15 @@ function resolveDashboardData() {
         processedCount: Number(parsedData.processedDocumentCount || 0),
         ocrNeededCount: Number(parsedData.ocrNeededCount || 0),
         failedCount: Number(parsedData.failedCount || 0),
+        queueBacklog: Number(parsedData.queueBacklog || 0),
+        processingEfficiencyRate: Number(parsedData.processingEfficiencyRate || 0),
+        failedRate: Number(parsedData.failedRate || 0),
+        processedToday: Number(parsedData.processedToday || 0),
         tokenDistribution: Array.isArray(parsedData.tokenDistribution) ? parsedData.tokenDistribution : [],
-        documentTypes: Array.isArray(parsedData.documentTypes) ? parsedData.documentTypes : []
+        documentTypes: Array.isArray(parsedData.documentTypes) ? parsedData.documentTypes : [],
+        tokenTrend: Array.isArray(parsedData.tokenTrend) ? parsedData.tokenTrend : [],
+        recentActivity: Array.isArray(parsedData.recentActivity) ? parsedData.recentActivity : [],
+        languageDistribution: Array.isArray(parsedData.languageDistribution) ? parsedData.languageDistribution : []
     };
 
     window.dashboardData = resolved;
@@ -129,10 +143,17 @@ class DashboardStatsLoader {
                 processedDocumentCount: Number(dashboardData.processedCount || 0),
                 ocrNeededCount: Number(dashboardData.ocrNeededCount || 0),
                 failedCount: Number(dashboardData.failedCount || 0),
+                queueBacklog: Number(dashboardData.queueBacklog || 0),
+                processingEfficiencyRate: Number(dashboardData.processingEfficiencyRate || 0),
+                failedRate: Number(dashboardData.failedRate || 0),
+                processedToday: Number(dashboardData.processedToday || 0),
                 tagCount: Number(dashboardData.tagCount || 0),
                 correspondentCount: Number(dashboardData.correspondentCount || 0),
                 tokenDistribution: Array.isArray(dashboardData.tokenDistribution) ? dashboardData.tokenDistribution : [],
-                documentTypes: Array.isArray(dashboardData.documentTypes) ? dashboardData.documentTypes : []
+                documentTypes: Array.isArray(dashboardData.documentTypes) ? dashboardData.documentTypes : [],
+                tokenTrend: Array.isArray(dashboardData.tokenTrend) ? dashboardData.tokenTrend : [],
+                recentActivity: Array.isArray(dashboardData.recentActivity) ? dashboardData.recentActivity : [],
+                languageDistribution: Array.isArray(dashboardData.languageDistribution) ? dashboardData.languageDistribution : []
             },
             openai_data: {
                 averagePromptTokens: Number(dashboardData.averagePromptTokens || 0),
@@ -179,6 +200,19 @@ class DashboardStatsLoader {
             skeleton.setAttribute('aria-hidden', isLoading ? 'false' : 'true');
             skeleton.setAttribute('aria-busy', isLoading ? 'true' : 'false');
         });
+
+        const listSkeletonElements = document.querySelectorAll('[data-dashboard-list-skeleton]');
+        listSkeletonElements.forEach((skeletonElement) => {
+            skeletonElement.classList.toggle('hidden', !isLoading);
+            skeletonElement.setAttribute('aria-hidden', isLoading ? 'false' : 'true');
+            skeletonElement.setAttribute('aria-busy', isLoading ? 'true' : 'false');
+        });
+
+        const listContentElements = document.querySelectorAll('[data-dashboard-list-content]');
+        listContentElements.forEach((contentElement) => {
+            contentElement.classList.toggle('hidden', isLoading);
+            contentElement.setAttribute('aria-hidden', isLoading ? 'true' : 'false');
+        });
     }
 
     formatNumber(value) {
@@ -220,6 +254,132 @@ class DashboardStatsLoader {
             typesChart.data.datasets[0].data = documentTypes.map(type => type.count);
             typesChart.update();
         }
+
+        const trendChart = window.dashboardCharts?.tokenTrend;
+        if (trendChart) {
+            const trend = Array.isArray(stats.paperless_data.tokenTrend)
+                ? stats.paperless_data.tokenTrend
+                : [];
+            trendChart.data.labels = trend.map(point => point.day);
+            trendChart.data.datasets[0].data = trend.map(point => point.totalTokens);
+            trendChart.update();
+        }
+    }
+
+    renderRecentActivity(items) {
+        const container = document.getElementById('recentActivityList');
+        if (!container) return;
+
+        const safeItems = Array.isArray(items) ? items : [];
+        if (safeItems.length === 0) {
+            container.innerHTML = '<div class="activity-item"><span class="activity-item-title">No recent processing activity available.</span></div>';
+            return;
+        }
+
+        container.innerHTML = safeItems.map((item) => {
+            const title = this.escapeHtml(item.title || 'Untitled document');
+            const docId = Number(item.documentId || 0);
+            const correspondent = this.escapeHtml(item.correspondent || 'Unknown correspondent');
+            const datePill = this.escapeHtml(this.formatDateForPill(item.createdAt));
+            const idPill = docId > 0 ? `#${docId}` : '#n/a';
+            return `
+                <div class="activity-item">
+                    <div>
+                        <div class="activity-item-title">${title}</div>
+                        <div class="manual-search-meta mt-2">
+                            <span class="manual-search-pill correspondent">${correspondent}</span>
+                            <span class="manual-search-pill date">${datePill}</span>
+                            <span class="manual-search-pill id">${idPill}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    formatDateForPill(inputDate) {
+        if (!inputDate) {
+            return 'Unknown date';
+        }
+
+        const normalizedDate = String(inputDate).includes(' ')
+            ? String(inputDate).replace(' ', 'T')
+            : String(inputDate);
+        const parsed = new Date(normalizedDate);
+        if (Number.isNaN(parsed.getTime())) {
+            return 'Unknown date';
+        }
+
+        return parsed.toLocaleDateString('de-DE', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        });
+    }
+
+    escapeHtml(value) {
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    renderLanguageDistribution(items) {
+        const container = document.getElementById('languageDistributionList');
+        if (!container) return;
+
+        const safeItems = Array.isArray(items) ? items : [];
+        if (safeItems.length === 0) {
+            container.innerHTML = '<div class="language-row"><div class="language-name">No language data available.</div></div>';
+            return;
+        }
+
+        const maxCount = Math.max(...safeItems.map((item) => Number(item.count || 0)), 1);
+        container.innerHTML = safeItems.map((item) => {
+            const name = String(item.language || 'Unknown').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            const count = Number(item.count || 0);
+            const width = Math.max(8, Math.round((count / maxCount) * 100));
+            return `
+                <div class="language-row">
+                    <div class="language-head">
+                        <span class="language-name">${name}</span>
+                        <span class="language-count">${this.formatNumber(count)} docs</span>
+                    </div>
+                    <div class="language-track">
+                        <div class="language-fill" style="width: ${width}%;"></div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    formatRelativeDate(inputDate) {
+        if (!inputDate) {
+            return 'Unknown time';
+        }
+
+        const normalizedDate = String(inputDate).includes(' ')
+            ? String(inputDate).replace(' ', 'T')
+            : String(inputDate);
+        const parsed = new Date(normalizedDate);
+        if (Number.isNaN(parsed.getTime())) {
+            return 'Unknown time';
+        }
+
+        const diffSeconds = Math.max(0, Math.floor((Date.now() - parsed.getTime()) / 1000));
+        if (diffSeconds < 60) return 'just now';
+        if (diffSeconds < 3600) {
+            const minutes = Math.floor(diffSeconds / 60);
+            return `${minutes}m ago`;
+        }
+        if (diffSeconds < 86400) {
+            const hours = Math.floor(diffSeconds / 3600);
+            return `${hours}h ago`;
+        }
+        const days = Math.floor(diffSeconds / 86400);
+        return `${days}d ago`;
     }
 
     updateCards(stats) {
@@ -227,6 +387,10 @@ class DashboardStatsLoader {
         const processedCount = Math.min(stats.paperless_data.processedDocumentCount, documentCount);
         const ocrNeededCount = Math.max(0, stats.paperless_data.ocrNeededCount || 0);
         const failedCount = Math.max(0, stats.paperless_data.failedCount || 0);
+        const queueBacklog = Math.max(0, stats.paperless_data.queueBacklog || 0);
+        const efficiencyRate = Math.max(0, Number(stats.paperless_data.processingEfficiencyRate || 0));
+        const failedRate = Math.max(0, Number(stats.paperless_data.failedRate || 0));
+        const processedToday = Math.max(0, Number(stats.paperless_data.processedToday || 0));
         const unprocessedCount = Math.max(0, documentCount - processedCount - ocrNeededCount - failedCount);
 
         this.setText('processedCountValue', this.formatNumber(processedCount));
@@ -243,6 +407,14 @@ class DashboardStatsLoader {
         this.setText('avgTotalTokensValue', this.formatNumber(stats.openai_data.averageTotalTokens));
         this.setText('tokensOverallValue', this.formatNumber(stats.openai_data.tokensOverall));
         this.setText('documentsProcessedValue', this.formatNumber(processedCount));
+
+        this.setText('efficiencyRateValue', `${efficiencyRate}%`);
+        this.setText('queueBacklogValue', this.formatNumber(queueBacklog));
+        this.setText('failedRateValue', `${failedRate}%`);
+        this.setText('processedTodayValue', this.formatNumber(processedToday));
+
+        this.renderRecentActivity(stats.paperless_data.recentActivity);
+        this.renderLanguageDistribution(stats.paperless_data.languageDistribution);
     }
 
     async load() {
@@ -273,7 +445,14 @@ class DashboardStatsLoader {
                 ocrNeededCount: payload.paperless_data.ocrNeededCount,
                 failedCount: payload.paperless_data.failedCount,
                 tokenDistribution: payload.paperless_data.tokenDistribution,
-                documentTypes: payload.paperless_data.documentTypes
+                documentTypes: payload.paperless_data.documentTypes,
+                tokenTrend: payload.paperless_data.tokenTrend,
+                recentActivity: payload.paperless_data.recentActivity,
+                languageDistribution: payload.paperless_data.languageDistribution,
+                queueBacklog: payload.paperless_data.queueBacklog,
+                processingEfficiencyRate: payload.paperless_data.processingEfficiencyRate,
+                failedRate: payload.paperless_data.failedRate,
+                processedToday: payload.paperless_data.processedToday
             };
 
             this.updateCards(payload);
@@ -414,7 +593,7 @@ class NavigationManager {
     initialize() {
         this.sidebarLinks.forEach(link => {
             link.addEventListener('click', (e) => {
-                // Nur für Links ohne echtes Ziel preventDefault aufrufen
+                // Prevent default only for placeholder links.
                 if (link.getAttribute('href') === '#') {
                     e.preventDefault();
                 }
@@ -428,63 +607,6 @@ class NavigationManager {
             link.classList.remove('active');
         });
         activeLink.classList.add('active');
-    }
-}
-
-// API Functions
-async function showTagDetails() {
-    modalManager.showModal('Tag Overview');
-    modalManager.showLoader();
-
-    try {
-        const response = await fetch('/api/tags');
-        const tags = await response.json();
-
-        let content = '<div class="detail-list">';
-        tags.forEach(tag => {
-            content += `
-                <div class="detail-item">
-                    <span class="detail-item-name">${tag.name}</span>
-                    <span class="detail-item-info">${tag.document_count || 0} documents</span>
-                </div>
-            `;
-        });
-        content += '</div>';
-
-        modalManager.setContent(content);
-    } catch (error) {
-        console.error('Error loading tags:', error);
-        modalManager.setContent('<div class="text-red-500 p-4">Error loading tags. Please try again later.</div>');
-    } finally {
-        modalManager.hideLoader();
-    }
-}
-
-async function showCorrespondentDetails() {
-    modalManager.showModal('Correspondent Overview');
-    modalManager.showLoader();
-
-    try {
-        const response = await fetch('/api/correspondents');
-        const correspondents = await response.json();
-
-        let content = '<div class="detail-list">';
-        correspondents.forEach(correspondent => {
-            content += `
-                <div class="detail-item">
-                    <span class="detail-item-name">${correspondent.name}</span>
-                    <span class="detail-item-info">${correspondent.document_count || 0} documents</span>
-                </div>
-            `;
-        });
-        content += '</div>';
-
-        modalManager.setContent(content);
-    } catch (error) {
-        console.error('Error loading correspondents:', error);
-        modalManager.setContent('<div class="text-red-500 p-4">Error loading correspondents. Please try again later.</div>');
-    } finally {
-        modalManager.hideLoader();
     }
 }
 

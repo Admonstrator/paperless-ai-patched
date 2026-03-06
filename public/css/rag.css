@@ -264,10 +264,26 @@
 .rag-page .rag-model-chip {
     background-color: var(--token-usage-bg);
     border-color: var(--stats-border);
+    white-space: nowrap;
 }
+
+.rag-page .rag-status-chip {
+    white-space: nowrap;
+}
+
 
 .rag-page .rag-model-text {
     color: var(--accent-primary);
+}
+
+.rag-page .rag-header-badges {
+    margin-right: 0.25rem;
+}
+
+@media (max-width: 768px) {
+    .rag-page .rag-header-badges {
+        margin-right: 0;
+    }
 }
 
 .rag-page .rag-section-title {

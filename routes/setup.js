@@ -3572,9 +3572,16 @@ router.get('/dashboard', async (req, res) => {
       processedDocumentCount: 0,
       ocrNeededCount: 0,
       failedCount: 0,
+      queueBacklog: 0,
+      processingEfficiencyRate: 0,
+      failedRate: 0,
+      processedToday: 0,
       processingTimeStats: [],
       tokenDistribution: [],
-      documentTypes: []
+      documentTypes: [],
+      tokenTrend: [],
+      recentActivity: [],
+      languageDistribution: []
     }, 
     openai_data: { 
       averagePromptTokens: 0,
@@ -3601,7 +3608,11 @@ router.get('/api/dashboard/stats', async (req, res) => {
       metrics,
       processingTimeStats,
       tokenDistribution,
-      documentTypes
+      documentTypes,
+      tokenTrend,
+      recentActivity,
+      languageDistribution,
+      processingStatus
     ] = await Promise.all([
       paperlessService.getTagCount(),
       paperlessService.getCorrespondentCount(),
@@ -3613,16 +3624,54 @@ router.get('/api/dashboard/stats', async (req, res) => {
       documentModel.getMetrics(),
       documentModel.getProcessingTimeStats(),
       documentModel.getTokenDistribution(),
-      documentModel.getDocumentTypeStats()
+      documentModel.getDocumentTypeStats(),
+      documentModel.getTokenTrend(7),
+      documentModel.getRecentHistoryDocuments(6),
+      documentModel.getLanguageDistribution(5),
+      documentModel.getCurrentProcessingStatus()
     ]);
 
     const processedDocumentCount = Math.min(rawProcessedDocumentCount, documentCount);
     const failedCount = ocrFailedCount + processingFailedCount;
+    const queueBacklog = Math.max(0, ocrNeededCount + failedCount);
+    const processingAttemptCount = processedDocumentCount + failedCount;
+    const processingEfficiencyRate = processingAttemptCount > 0
+      ? Math.round((processedDocumentCount / processingAttemptCount) * 100)
+      : 0;
+    const failedRate = processingAttemptCount > 0
+      ? Math.round((failedCount / processingAttemptCount) * 100)
+      : 0;
+    const processedToday = Number(processingStatus?.processedToday || 0);
 
     const averagePromptTokens = metrics.length > 0 ? Math.round(metrics.reduce((acc, cur) => acc + cur.promptTokens, 0) / metrics.length) : 0;
     const averageCompletionTokens = metrics.length > 0 ? Math.round(metrics.reduce((acc, cur) => acc + cur.completionTokens, 0) / metrics.length) : 0;
     const averageTotalTokens = metrics.length > 0 ? Math.round(metrics.reduce((acc, cur) => acc + cur.totalTokens, 0) / metrics.length) : 0;
     const tokensOverall = metrics.length > 0 ? metrics.reduce((acc, cur) => acc + cur.totalTokens, 0) : 0;
+
+    const normalizedTokenTrend = Array.isArray(tokenTrend)
+      ? tokenTrend.map((entry) => ({
+          day: entry.day,
+          documents: Number(entry.documents || 0),
+          totalTokens: Number(entry.totalTokens || 0)
+        }))
+      : [];
+
+    const normalizedRecentActivity = Array.isArray(recentActivity)
+      ? recentActivity.map((entry) => ({
+          documentId: Number(entry.documentId || 0),
+          title: entry.title || 'Untitled document',
+          correspondent: entry.correspondent || 'Unknown correspondent',
+          createdAt: entry.createdAt,
+          language: entry.language || 'Unknown'
+        }))
+      : [];
+
+    const normalizedLanguageDistribution = Array.isArray(languageDistribution)
+      ? languageDistribution.map((entry) => ({
+          language: entry.language || 'Unknown',
+          count: Number(entry.count || 0)
+        }))
+      : [];
 
     res.json({
       success: true,
@@ -3633,9 +3682,16 @@ router.get('/api/dashboard/stats', async (req, res) => {
         processedDocumentCount,
         ocrNeededCount,
         failedCount,
+        queueBacklog,
+        processingEfficiencyRate,
+        failedRate,
+        processedToday,
         processingTimeStats,
         tokenDistribution,
-        documentTypes
+        documentTypes,
+        tokenTrend: normalizedTokenTrend,
+        recentActivity: normalizedRecentActivity,
+        languageDistribution: normalizedLanguageDistribution
       },
       openai_data: {
         averagePromptTokens,

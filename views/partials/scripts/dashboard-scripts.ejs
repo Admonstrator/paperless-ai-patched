@@ -22,10 +22,17 @@
     const paperlessData = dashboardPayload.paperlessData || {
         tokenDistribution: [],
         documentTypes: [],
+        tokenTrend: [],
+        recentActivity: [],
+        languageDistribution: [],
         documentCount: 0,
         processedDocumentCount: 0,
         ocrNeededCount: 0,
         failedCount: 0,
+        queueBacklog: 0,
+        processingEfficiencyRate: 0,
+        failedRate: 0,
+        processedToday: 0,
     };
 
     document.addEventListener('DOMContentLoaded', function() {
@@ -50,7 +57,7 @@
             },
             options: {
                 responsive: true,
-                maintainAspectRatio: true,
+                maintainAspectRatio: false,
                 scales: {
                     x: {
                         ticks: {
@@ -59,7 +66,11 @@
                     },
                     y: {
                         ticks: {
-                            color: getAxisTextColor()
+                            color: getAxisTextColor(),
+                            stepSize: 1,
+                            callback: function(value) {
+                                return Number.isInteger(value) ? value : null;
+                            }
                         }
                     }
                 },
@@ -84,7 +95,7 @@
             },
             options: {
                 responsive: true,
-                maintainAspectRatio: true,
+                maintainAspectRatio: false,
                 plugins: {
                     legend: {
                         display: false
@@ -95,6 +106,51 @@
                 }
             }
         });
+
+        const tokenTrendElement = document.getElementById('tokenTrend');
+        if (tokenTrendElement) {
+            window.dashboardCharts.tokenTrend = new Chart(tokenTrendElement, {
+                type: 'line',
+                data: {
+                    labels: (paperlessData.tokenTrend || []).map(point => point.day),
+                    datasets: [{
+                        label: 'Tokens per Day',
+                        data: (paperlessData.tokenTrend || []).map(point => point.totalTokens),
+                        borderColor: '#0ea5e9',
+                        backgroundColor: 'rgba(14, 165, 233, 0.12)',
+                        fill: true,
+                        tension: 0.32,
+                        pointRadius: 3,
+                        pointHoverRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            ticks: {
+                                color: getAxisTextColor()
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                color: getAxisTextColor(),
+                                stepSize: 1,
+                                callback: function(value) {
+                                    return Number.isInteger(value) ? value : null;
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        }
     });
 
     async function checkForUpdates() {
@@ -143,7 +199,14 @@
         ocrNeededCount: paperlessData.ocrNeededCount || 0,
         failedCount: paperlessData.failedCount || 0,
         tokenDistribution: paperlessData.tokenDistribution || [],
-        documentTypes: paperlessData.documentTypes || []
+        documentTypes: paperlessData.documentTypes || [],
+        tokenTrend: paperlessData.tokenTrend || [],
+        recentActivity: paperlessData.recentActivity || [],
+        languageDistribution: paperlessData.languageDistribution || [],
+        queueBacklog: paperlessData.queueBacklog || 0,
+        processingEfficiencyRate: paperlessData.processingEfficiencyRate || 0,
+        failedRate: paperlessData.failedRate || 0,
+        processedToday: paperlessData.processedToday || 0
     };
 </script>
 <script>

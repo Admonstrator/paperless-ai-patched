@@ -1,49 +1,4 @@
-/* Theme Variables */
-:root[data-theme="light"] {
-    --bg-primary: #ffffff;
-    --bg-secondary: #f8fafc;
-    --text-primary: #0f172a;
-    --text-secondary: #475569;
-    --accent-primary: #3b82f6;
-    --border-color: #e2e8f0;
-    --chat-bg: #ffffff;
-    --message-bg: #f1f5f9;
-    --user-message-bg: #eff6ff;
-    --pill-correspondent-bg: #dbeafe;
-    --pill-correspondent-text: #1d4ed8;
-    --pill-id-bg: #e2e8f0;
-    --pill-id-text: #1e293b;
-    --pill-date-bg: #dcfce7;
-    --pill-date-text: #166534;
-}
-
-:root[data-theme="dark"] {
-    --bg-primary: #0f172a;
-    --bg-secondary: #1e293b;
-    --text-primary: #f8fafc;
-    --text-secondary: #e2e8f0;
-    --accent-primary: #60a5fa;
-    --border-color: #334155;
-    --chat-bg: #1e293b;
-    --message-bg: #334155;
-    --user-message-bg: #1e3a8a;
-    --pill-correspondent-bg: #1e3a8a;
-    --pill-correspondent-text: #bfdbfe;
-    --pill-id-bg: #334155;
-    --pill-id-text: #e2e8f0;
-    --pill-date-bg: #14532d;
-    --pill-date-text: #bbf7d0;
-}
-
-body {
-    background-color: var(--bg-secondary);
-    color: var(--text-primary);
-    min-height: 100vh;
-    transition: background-color 0.3s ease;
-    font-family: Arial, sans-serif; 
-    margin: 0;
-    line-height: 1.6;
-}
+/* Chat-specific styles — variables from dashboard.css */
 
 .chat-container {
     max-width: none;
@@ -52,21 +7,6 @@ body {
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
-}
-
-.document-select-card {
-    background: var(--chat-bg);
-    border-radius: 0.5rem;
-    padding: 1.5rem;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    border: 1px solid var(--border-color);
-}
-
-.card-title {
-    font-size: 1.25rem;
-    font-weight: 600;
-    margin-bottom: 1rem;
-    color: var(--text-primary);
 }
 
 .select-input {
@@ -114,7 +54,7 @@ body {
 
 .search-result-item:hover,
 .search-result-item.active {
-    background: var(--message-bg);
+    background: var(--hover-bg);
 }
 
 .search-result-title {
@@ -142,18 +82,18 @@ body {
 }
 
 .search-result-pill.correspondent {
-    background: var(--pill-correspondent-bg);
-    color: var(--pill-correspondent-text);
+    background: var(--manual-pill-correspondent-bg);
+    color: var(--manual-pill-correspondent-text);
 }
 
 .search-result-pill.id {
-    background: var(--pill-id-bg);
-    color: var(--pill-id-text);
+    background: var(--manual-pill-id-bg);
+    color: var(--manual-pill-id-text);
 }
 
 .search-result-pill.date {
-    background: var(--pill-date-bg);
-    color: var(--pill-date-text);
+    background: var(--manual-pill-date-bg);
+    color: var(--manual-pill-date-text);
 }
 
 .search-status {
@@ -168,7 +108,7 @@ body {
 }
 
 .chat-interface {
-    background: var(--chat-bg);
+    background: var(--card-bg);
     border-radius: 0.5rem;
     border: 1px solid var(--border-color);
     display: flex;
@@ -197,11 +137,11 @@ body {
     max-width: 80%;
     padding: 1rem;
     border-radius: 0.5rem;
-    background: var(--message-bg);
+    background: var(--hover-bg);
 }
 
 .user-message {
-    background: var(--user-message-bg);
+    background: var(--token-usage-bg);
     align-self: flex-end;
 }
 
@@ -236,28 +176,6 @@ body {
 
 .send-button:hover {
     opacity: 0.9;
-}
-
-.theme-toggle {
-    position: fixed;
-    top: 1rem;
-    right: 1rem;
-    padding: 0.5rem;
-    border-radius: 0.5rem;
-    background: var(--bg-primary);
-    border: 1px solid var(--border-color);
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-}
-
-.theme-icon {
-    width: 1.5rem;
-    height: 1.5rem;
-    color: var(--text-primary);
-}
-
-.hidden {
-    display: none !important;
 }
 
 @media (max-width: 768px) {

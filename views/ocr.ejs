@@ -12,6 +12,10 @@
             border-radius: 9999px;
             font-size: 0.75rem;
             font-weight: 600;
+            white-space: nowrap;
+        }
+        .ocr-header-badges {
+            margin-right: 0.25rem;
         }
         .status-pending   { background: #fef3c7; color: #92400e; }
         .status-processing{ background: #dbeafe; color: #1e40af; }
@@ -77,6 +81,35 @@
             text-align: center;
             padding: 3rem 2rem;
         }
+
+        .ocr-env-codeblock {
+            display: block;
+            width: min(100%, 34rem);
+            margin: 0 auto 1rem;
+            text-align: left;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            font-size: 0.82rem;
+            line-height: 1.45;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            padding: 0.85rem 1rem;
+            overflow-x: auto;
+            white-space: pre;
+        }
+
+        @media (max-width: 640px) {
+            .disabled-overlay {
+                padding: 1.5rem 1rem;
+            }
+
+            .ocr-env-codeblock {
+                width: 100%;
+                font-size: 0.75rem;
+                line-height: 1.35;
+                padding: 0.7rem 0.75rem;
+            }
+        }
     </style>
 <%- include('partials/shell/head-end') %>
 <%- include('partials/shell/body-open', {
@@ -86,14 +119,14 @@
 }) %>
 
             <div class="content-wrapper">
-                <div class="content-header flex justify-between items-center mb-6">
-                    <div>
-                        <h1 class="content-title">OCR Queue</h1>
-                        <p class="text-sm text-gray-500 mt-1">
+                <div class="content-header">
+                    <div class="content-header-main min-w-0">
+                        <h1 class="content-title truncate">OCR Queue</h1>
+                        <p class="content-subtitle">
                             Documents with missing or insufficient OCR text queued for Mistral OCR reprocessing.
                         </p>
                     </div>
-                    <div class="flex gap-3 items-center flex-wrap">
+                    <div class="content-header-actions ocr-header-badges">
                         <!-- Stats badges -->
                         <span id="statPending" class="status-badge status-pending"><i class="fas fa-hourglass-half"></i> <span id="statPendingCount">…</span> pending</span>
                         <span id="statDone" class="status-badge status-done"><i class="fas fa-check"></i> <span id="statDoneCount">…</span> done</span>
@@ -110,7 +143,7 @@
                         <p class="text-gray-500 mb-4 max-w-lg mx-auto">
                             To use this feature, set the following variables in your <strong>data/.env</strong> file and restart the service:
                         </p>
-                        <pre class="text-left inline-block bg-gray-100 dark:bg-gray-800 rounded-lg px-5 py-3 text-sm font-mono mb-4">MISTRAL_OCR_ENABLED=yes
+                        <pre class="ocr-env-codeblock">MISTRAL_OCR_ENABLED=yes
 MISTRAL_API_KEY=your_key_here
 MISTRAL_OCR_MODEL=mistral-ocr-latest</pre>
                         <p class="text-gray-400 text-xs">You can get a Mistral API key at <a href="https://console.mistral.ai" target="_blank" class="text-blue-500 hover:underline">console.mistral.ai</a></p>

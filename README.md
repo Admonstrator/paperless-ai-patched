@@ -7,7 +7,7 @@
 **An integration fork of Paperless-AI – picking up where the original left off.**
 
 [![Latest Release](https://img.shields.io/github/v/release/admonstrator/paperless-ai-next?style=for-the-badge&logo=github&color=blue)](https://github.com/admonstrator/paperless-ai-next/releases/latest)
-[![Docker Pulls](https://img.shields.io/badge/docker%20pulls-1.0k-brightgreen?style=for-the-badge&logo=docker)](https://hub.docker.com/r/admonstrator/paperless-ai-next)
+[![Docker Pulls](https://img.shields.io/badge/docker%20pulls-1.8k-brightgreen?style=for-the-badge&logo=docker)](https://hub.docker.com/r/admonstrator/paperless-ai-next)
 [![License](https://img.shields.io/github/license/admonstrator/paperless-ai-next?style=for-the-badge)](LICENSE)
 [![Stars](https://img.shields.io/github/stars/admonstrator/paperless-ai-next?style=for-the-badge)](https://github.com/admonstrator/paperless-ai-next/stargazers)
 [![Docs](https://img.shields.io/badge/docs-paperless--ai--next.admon.me-blue?style=for-the-badge&logo=readthedocs)](https://paperless-ai-next.admon.me/)
@@ -164,6 +164,6 @@ Then open [http://localhost:3000](http://localhost:3000) to complete setup.
 
 <div align="center">
 
-_Last updated: 2026-03-03_
+_Last updated: 2026-03-06_
 
 </div>

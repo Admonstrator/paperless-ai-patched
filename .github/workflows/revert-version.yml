@@ -1,0 +1,163 @@
+name: Revert Published Version
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to remove (e.g. v2026-03-05-01 or 2026-03-05-01)'
+        required: true
+        type: string
+      delete_github_release:
+        description: 'Delete GitHub release'
+        required: false
+        default: true
+        type: boolean
+      delete_git_tag:
+        description: 'Delete Git tag on GitHub'
+        required: false
+        default: true
+        type: boolean
+      delete_docker_tags:
+        description: 'Delete Docker Hub tags (version, version-lite, version-full)'
+        required: false
+        default: true
+        type: boolean
+      dry_run:
+        description: 'Dry run only (show actions, do not delete)'
+        required: false
+        default: true
+        type: boolean
+
+env:
+  DOCKERHUB_REPO: admonstrator/paperless-ai-next
+
+permissions:
+  contents: write
+
+jobs:
+  revert:
+    name: Revert version from GitHub and Docker Hub
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Normalize input version
+        id: normalize
+        run: |
+          RAW_VERSION="${{ inputs.version }}"
+
+          if [[ "$RAW_VERSION" =~ ^v ]]; then
+            VERSION="$RAW_VERSION"
+          else
+            VERSION="v$RAW_VERSION"
+          fi
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Target version: $VERSION"
+
+      - name: Show plan
+        run: |
+          VERSION="${{ steps.normalize.outputs.version }}"
+          echo "Planned actions for version: $VERSION"
+          echo "- GitHub release: ${{ inputs.delete_github_release }}"
+          echo "- Git tag:        ${{ inputs.delete_git_tag }}"
+          echo "- Docker tags:    ${{ inputs.delete_docker_tags }}"
+          echo "- Dry run:        ${{ inputs.dry_run }}"
+          echo ""
+          echo "Docker tags considered:"
+          echo "- $VERSION"
+          echo "- ${VERSION}-lite"
+          echo "- ${VERSION}-full"
+
+      - name: Delete GitHub release
+        if: ${{ inputs.delete_github_release }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.normalize.outputs.version }}"
+
+          if gh release view "$VERSION" >/dev/null 2>&1; then
+            if [ "${{ inputs.dry_run }}" = "true" ]; then
+              echo "[DRY RUN] Would delete GitHub release: $VERSION"
+            else
+              gh release delete "$VERSION" --yes
+              echo "Deleted GitHub release: $VERSION"
+            fi
+          else
+            echo "GitHub release not found: $VERSION (nothing to do)"
+          fi
+
+      - name: Delete git tag
+        if: ${{ inputs.delete_git_tag }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.normalize.outputs.version }}"
+
+          if gh api "repos/${{ github.repository }}/git/ref/tags/$VERSION" >/dev/null 2>&1; then
+            if [ "${{ inputs.dry_run }}" = "true" ]; then
+              echo "[DRY RUN] Would delete git tag: $VERSION"
+            else
+              gh api -X DELETE "repos/${{ github.repository }}/git/refs/tags/$VERSION"
+              echo "Deleted git tag: $VERSION"
+            fi
+          else
+            echo "Git tag not found: $VERSION (nothing to do)"
+          fi
+
+      - name: Authenticate against Docker Hub
+        if: ${{ inputs.delete_docker_tags }}
+        run: |
+          token=$(curl -s -X POST \
+            -H "Content-Type: application/json" \
+            -d "{\"username\": \"${{ secrets.DOCKER_HUB_USERNAME }}\", \"password\": \"${{ secrets.DOCKER_HUB_TOKEN }}\"}" \
+            "https://hub.docker.com/v2/users/login/" | jq -r '.token')
+
+          if [ -z "$token" ] || [ "$token" = "null" ]; then
+            echo "Docker Hub authentication failed"
+            exit 1
+          fi
+
+          echo "HUB_TOKEN=$token" >> "$GITHUB_ENV"
+          echo "Docker Hub auth successful"
+
+      - name: Delete Docker Hub tags
+        if: ${{ inputs.delete_docker_tags }}
+        run: |
+          VERSION="${{ steps.normalize.outputs.version }}"
+          TAGS=("$VERSION" "${VERSION}-lite" "${VERSION}-full")
+
+          for tag in "${TAGS[@]}"; do
+            status=$(curl -s -o /dev/null -w "%{http_code}" \
+              -H "Authorization: Bearer $HUB_TOKEN" \
+              "https://hub.docker.com/v2/repositories/$DOCKERHUB_REPO/tags/$tag/")
+
+            if [ "$status" = "200" ]; then
+              if [ "${{ inputs.dry_run }}" = "true" ]; then
+                echo "[DRY RUN] Would delete Docker tag: $DOCKERHUB_REPO:$tag"
+              else
+                delete_status=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE \
+                  -H "Authorization: Bearer $HUB_TOKEN" \
+                  "https://hub.docker.com/v2/repositories/$DOCKERHUB_REPO/tags/$tag/")
+
+                if [ "$delete_status" = "204" ]; then
+                  echo "Deleted Docker tag: $DOCKERHUB_REPO:$tag"
+                else
+                  echo "Failed to delete Docker tag: $DOCKERHUB_REPO:$tag (HTTP $delete_status)"
+                  exit 1
+                fi
+              fi
+            else
+              echo "Docker tag not found: $DOCKERHUB_REPO:$tag (HTTP $status, nothing to do)"
+            fi
+          done
+
+      - name: Summary
+        run: |
+          VERSION="${{ steps.normalize.outputs.version }}"
+          echo "## Revert Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Version: \`$VERSION\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- delete_github_release: \`${{ inputs.delete_github_release }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- delete_git_tag: \`${{ inputs.delete_git_tag }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- delete_docker_tags: \`${{ inputs.delete_docker_tags }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- dry_run: \`${{ inputs.dry_run }}\`" >> "$GITHUB_STEP_SUMMARY"

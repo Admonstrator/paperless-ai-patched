@@ -93,9 +93,11 @@
     ragEnabled: typeof ragEnabled !== 'undefined' ? ragEnabled : false
 }) %>
             <div class="content-wrapper">
-                <div class="content-header flex justify-between items-center px-6 py-4 bg-white dark:bg-gray-800 shadow-sm">
-                    <h2 class="content-title text-2xl font-semibold text-gray-800 dark:text-white">Configuration</h2>
-                    <div class="relative flex items-center space-x-4">API-KEY:
+                <div class="content-header">
+                    <div class="content-header-main">
+                        <h2 class="content-title">Configuration</h2>
+                    </div>
+                    <div class="content-header-actions relative">API-KEY:
                         <div id="apiKeyContainer" 
                              class="relative w-48 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded cursor-pointer select-none filter blur-sm hover:blur-none transition-all duration-200 truncate"
                              data-api-key="<%= config.API_KEY %>"

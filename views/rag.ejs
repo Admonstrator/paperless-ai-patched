@@ -10,9 +10,11 @@
     bodyClass: 'h-full rag-page'
 }) %>
             <div class="content-wrapper">
-                <div class="content-header flex items-center justify-between">
-                    <h2 class="content-title">RAG Chat</h2>
-                    <div class="flex items-center gap-4">
+                <div class="content-header">
+                    <div class="content-header-main">
+                        <h2 class="content-title min-w-0 truncate">RAG Chat</h2>
+                    </div>
+                    <div class="content-header-actions rag-header-badges">
                         <div class="rag-status-chip flex items-center gap-2 px-3 py-1.5 rounded-lg border shadow-sm">
                             <div class="status-dot offline" id="status-indicator"></div>
                             <span id="status-text" class="rag-status-text text-[10px] font-bold uppercase tracking-wider">Connecting</span>

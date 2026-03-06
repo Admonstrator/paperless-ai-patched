@@ -63,7 +63,28 @@
         const sidebarOverlay = document.getElementById('sidebarOverlay');
         const shellFooter = document.querySelector('.shell-footer');
         const mainContent = document.querySelector('.main-content');
+        const sidebarNav = document.querySelector('.sidebar-nav');
         const mobileMediaQuery = window.matchMedia('(max-width: 900px)');
+
+        if (sidebarNav) {
+            let scrollVisibilityTimer = null;
+
+            function setSidebarScrollbarVisible() {
+                sidebarNav.classList.add('is-scrolling');
+
+                if (scrollVisibilityTimer) {
+                    window.clearTimeout(scrollVisibilityTimer);
+                }
+
+                scrollVisibilityTimer = window.setTimeout(function () {
+                    sidebarNav.classList.remove('is-scrolling');
+                }, 520);
+            }
+
+            sidebarNav.addEventListener('scroll', setSidebarScrollbarVisible, { passive: true });
+            sidebarNav.addEventListener('wheel', setSidebarScrollbarVisible, { passive: true });
+            sidebarNav.addEventListener('touchmove', setSidebarScrollbarVisible, { passive: true });
+        }
 
         function setMobileSidebarState(isOpen) {
             const shouldOpen = Boolean(isOpen) && mobileMediaQuery.matches;

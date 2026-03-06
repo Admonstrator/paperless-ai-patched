@@ -305,6 +305,9 @@
 
 .rag-page .rag-loading-overlay {
     background-color: color-mix(in srgb, var(--bg-primary) 95%, transparent);
+    padding: 1rem;
+    justify-content: flex-start;
+    overflow-y: auto;
 }
 
 .rag-page .rag-spinner-track {
@@ -318,6 +321,47 @@
 .rag-page .rag-loading-status,
 .rag-page .rag-step-label {
     color: var(--text-muted);
+}
+
+.rag-page .rag-loading-status {
+    padding: 0 0.75rem;
+    line-height: 1.4;
+    max-width: 34rem;
+    margin: 0 auto;
+    text-wrap: balance;
+}
+
+.rag-page .rag-loading-overlay > div {
+    margin: 1.25rem auto;
+}
+
+.rag-page .typing-indicator {
+    margin: 0 0.75rem 0.5rem;
+    padding: 0.625rem 0.875rem;
+    border-radius: 0.75rem;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+}
+
+@media (max-width: 768px) {
+    .rag-page .rag-loading-overlay {
+        padding: 0.75rem;
+        justify-content: flex-start;
+    }
+
+    .rag-page .rag-loading-status {
+        padding: 0 0.5rem;
+        max-width: 100%;
+    }
+
+    .rag-page .typing-indicator {
+        margin: 0 0.5rem 0.5rem;
+        padding: 0.5rem 0.75rem;
+    }
+
+    .rag-page .rag-loading-overlay > div {
+        margin: 0.75rem auto;
+    }
 }
 
 .rag-page .rag-progress-track {

@@ -82,16 +82,14 @@
                         <textarea 
                             id="analysisPrompt"
                             placeholder="Enter your analysis prompt here..."
-                            style="width: 100%; min-height: 128px; padding: 1rem; background: var(--bg-primary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 8px; resize: vertical;"
+                            class="toolbar-input"
+                            style="min-height: 128px; resize: vertical;"
                         ></textarea>
-                        <button 
-                            id="analyzeButton"
-                            style="padding: 0.75rem 1.5rem; background: var(--accent-primary); color: white; border-radius: 8px; border: none; cursor: pointer; transition: all 0.2s ease;"
-                            onmouseover="this.style.background = 'var(--accent-secondary)'"
-                            onmouseout="this.style.background = 'var(--accent-primary)'"
-                        >
-                            Analyze Documents
-                        </button>
+                        <div id="analysisActions" class="flex flex-wrap items-center gap-2">
+                                <button id="analyzeButton" class="toolbar-btn toolbar-btn--primary toolbar-btn--sm">
+                                Analyze Documents
+                            </button>
+                        </div>
                     </div>
                 </div>
 

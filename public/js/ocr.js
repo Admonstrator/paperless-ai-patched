@@ -11,6 +11,7 @@
     let currentSearch = '';
     let currentStatus = '';
     let loadTimeout = null;
+    let manualDocumentOmnibox = null;
 
     // ── DOM refs ───────────────────────────────────────────────────────────
     const tableBody       = document.getElementById('ocrTableBody');
@@ -20,6 +21,9 @@
     const statusFilter    = document.getElementById('statusFilter');
     const addManualBtn    = document.getElementById('addManualBtn');
     const manualDocId     = document.getElementById('manualDocId');
+    const manualDocSearchInput = document.getElementById('manualDocSearchInput');
+    const manualDocSearchResults = document.getElementById('manualDocSearchResults');
+    const manualDocSearchStatus = document.getElementById('manualDocSearchStatus');
     const processAllBtn   = document.getElementById('processAllBtn');
     const autoAnalyze     = document.getElementById('autoAnalyzeToggle');
 
@@ -40,6 +44,7 @@
             if (statusFilter) statusFilter.value = initialStatus;
         }
 
+        initializeManualDocumentSearch();
         loadQueue();
         loadStats();
 
@@ -50,9 +55,6 @@
         });
 
         if (addManualBtn) addManualBtn.addEventListener('click', addManual);
-        if (manualDocId) manualDocId.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter') addManual();
-        });
 
         if (processAllBtn) processAllBtn.addEventListener('click', processAll);
         if (prevBtn) prevBtn.addEventListener('click', function () { if (currentPage > 0) { currentPage--; loadQueue(); } });
@@ -239,22 +241,80 @@
         if (el) el.textContent = val ?? '0';
     }
 
+    function setManualSearchStatus(message, isError) {
+        if (!manualDocSearchStatus) return;
+        manualDocSearchStatus.textContent = message;
+        manualDocSearchStatus.classList.toggle('error', !!isError);
+    }
+
+    function setSelectedManualDocument(doc) {
+        if (!doc || !manualDocSearchInput || !manualDocId) return;
+
+        manualDocId.value = String(doc.id);
+        manualDocSearchInput.value = doc.title || `Document ${doc.id}`;
+    }
+
+    function selectActiveManualResult() {
+        const selectedDoc = manualDocumentOmnibox ? manualDocumentOmnibox.selectActiveResult({ trigger: 'manual-add' }) : null;
+        return !!selectedDoc;
+    }
+
+    async function loadManualSearchDocuments(searchTerm, options) {
+        if (!manualDocumentOmnibox) return;
+        await manualDocumentOmnibox.load(searchTerm || '', options || {});
+    }
+
+    function initializeManualDocumentSearch() {
+        if (!manualDocSearchInput || !manualDocId) return;
+
+        manualDocumentOmnibox = window.createDocumentOmnibox({
+            preset: 'ocr',
+            inputId: 'manualDocSearchInput',
+            resultsId: 'manualDocSearchResults',
+            statusId: 'manualDocSearchStatus',
+            hiddenInputId: 'manualDocId',
+            limit: 100,
+            debounceMs: 250,
+            resultItemClass: 'manual-search-item',
+            resultTitleClass: 'manual-search-title',
+            resultMetaClass: 'manual-search-meta',
+            resultPillClass: 'manual-search-pill',
+            onSelect: (doc) => {
+                setSelectedManualDocument(doc);
+            },
+            onEnterAfterSelect: () => {
+                addManual();
+            }
+        });
+    }
+
     // ── Add manual ─────────────────────────────────────────────────────────
     async function addManual() {
-        const docId = manualDocId ? manualDocId.value.trim() : '';
-        if (!docId) { showToast('Please enter a document ID', 'error'); return; }
+        let docId = manualDocId ? manualDocId.value.trim() : '';
+        if (!docId && selectActiveManualResult() && manualDocId) {
+            docId = manualDocId.value.trim();
+        }
+        if (!docId) { showToast('Please select a document from the search results', 'error'); return; }
+
+        if (!/^\d+$/.test(docId) || Number(docId) <= 0) {
+            showToast('Document ID must be a positive integer', 'error');
+            return;
+        }
 
         try {
             addManualBtn.disabled = true;
             const resp = await fetch('/api/ocr/queue/add', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ documentId: parseInt(docId, 10) })
+                body: JSON.stringify({ documentId: Number(docId) })
             });
             const data = await resp.json();
             if (data.success) {
                 showToast(data.message || 'Added to queue');
                 if (manualDocId) manualDocId.value = '';
+                if (manualDocSearchInput) manualDocSearchInput.value = '';
+                setManualSearchStatus('Loading recent documents...');
+                loadManualSearchDocuments('', { showResults: false });
                 loadQueue();
                 loadStats();
             } else {

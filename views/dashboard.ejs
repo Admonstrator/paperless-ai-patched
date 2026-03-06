@@ -43,17 +43,16 @@
                 </div>
 
                 <div id="dashboardLoadingBlock"
-                    class="absolute inset-0 z-40 flex items-center justify-center rounded-xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm transition-opacity duration-300 opacity-100"
-                    role="status" aria-live="polite" aria-busy="true">
-                    <div class="material-card w-full max-w-md">
-                        <div class="flex items-center gap-3">
-                            <i class="fas fa-spinner fa-spin text-blue-500 text-xl" aria-hidden="true"></i>
-                            <div>
-                                <div class="font-medium">Loading dashboard data...</div>
-                                <div class="text-sm text-gray-600">Fetching latest statistics and charts.</div>
-                            </div>
-                        </div>
+                    class="dashboard-loading-banner hidden mb-5 rounded-xl border px-4 py-3 transition-opacity duration-300 opacity-0"
+                    role="status" aria-live="polite" aria-busy="false">
+                    <div class="dashboard-loading-head">
+                        <div id="dashboardLoadingMessage" class="dashboard-loading-title">Loading dashboard data...</div>
+                        <div id="dashboardLoadingPercent" class="dashboard-loading-percent">15%</div>
                     </div>
+                    <div class="dashboard-loading-track" aria-hidden="true">
+                        <div id="dashboardLoadingProgress" class="dashboard-loading-bar" style="width: 15%"></div>
+                    </div>
+                    <div id="dashboardLoadingSubtext" class="dashboard-loading-subtext">Preparing cards, metrics, and charts.</div>
                 </div>
 
                 <div class="dashboard-grid">
@@ -400,6 +399,9 @@
             <div id="dashboardDataPayload" class="hidden" data-version="<%= version %>">
                 <%= JSON.stringify(paperless_data) %>
             </div>
+            <script>
+                window.paperlessPublicUrl = <%- JSON.stringify(typeof paperlessUrl !== 'undefined' ? paperlessUrl : '') %>;
+            </script>
             <%- include('partials/scripts/dashboard-scripts') %>
                 <script src="js/dashboard.js"></script>
                 <%- include('partials/shell/footer') %>

@@ -1,11 +1,5 @@
 let currentDocumentId = null;
-let searchDebounceTimer = null;
-let documentSearchController = null;
-let activeSearchResults = [];
-let activeSearchIndex = -1;
-
-const CHAT_SEARCH_LIMIT = 25;
-const CHAT_SEARCH_DEBOUNCE_MS = 250;
+let chatDocumentOmnibox = null;
 
 // Initialize marked with options for code highlighting
 marked.setOptions({
@@ -211,63 +205,8 @@ function setupTextareaAutoResize() {
     });
 }
 
-function setDocumentSearchStatus(message, isError = false) {
-    const statusElement = document.getElementById('documentSearchStatus');
-    if (!statusElement) return;
-
-    statusElement.textContent = message;
-    statusElement.classList.toggle('error', isError);
-}
-
 function getDocumentTitle(doc) {
     return doc?.title || `Document ${doc?.id || ''}`;
-}
-
-function formatDocumentOptionLabel(doc) {
-    return getDocumentTitle(doc);
-}
-
-function formatDocumentDate(createdValue) {
-    if (!createdValue) {
-        return 'Unknown date';
-    }
-
-    const parsedDate = new Date(createdValue);
-    if (Number.isNaN(parsedDate.getTime())) {
-        return String(createdValue).slice(0, 10) || 'Unknown date';
-    }
-
-    const year = parsedDate.getFullYear();
-    const month = String(parsedDate.getMonth() + 1).padStart(2, '0');
-    const day = String(parsedDate.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-}
-
-function createSearchMetaPill(text, type) {
-    const pill = document.createElement('span');
-    pill.className = `search-result-pill ${type}`;
-    pill.textContent = text;
-    return pill;
-}
-
-function clearSearchResults() {
-    const resultsElement = document.getElementById('documentSearchResults');
-    if (!resultsElement) return;
-
-    resultsElement.innerHTML = '';
-    resultsElement.classList.add('hidden');
-    activeSearchResults = [];
-    activeSearchIndex = -1;
-}
-
-function updateActiveResultHighlight() {
-    const resultsElement = document.getElementById('documentSearchResults');
-    if (!resultsElement) return;
-
-    const resultItems = resultsElement.querySelectorAll('.search-result-item');
-    resultItems.forEach((item, index) => {
-        item.classList.toggle('active', index === activeSearchIndex);
-    });
 }
 
 function setSelectedDocument(doc, startChat = true) {
@@ -276,129 +215,11 @@ function setSelectedDocument(doc, startChat = true) {
     if (!hiddenSelect || !searchInput || !doc) return;
 
     hiddenSelect.value = String(doc.id);
-    searchInput.value = formatDocumentOptionLabel(doc);
+    searchInput.value = getDocumentTitle(doc);
     searchInput.dataset.selectedDocumentId = String(doc.id);
-    clearSearchResults();
-    setDocumentSearchStatus(`Selected: ${getDocumentTitle(doc)}`);
 
     if (startChat) {
         initializeChat(doc.id);
-    }
-}
-
-function renderSearchResults(documents = []) {
-    const resultsElement = document.getElementById('documentSearchResults');
-    if (!resultsElement) return;
-
-    resultsElement.innerHTML = '';
-    activeSearchResults = documents;
-    activeSearchIndex = -1;
-
-    if (documents.length === 0) {
-        resultsElement.classList.add('hidden');
-        return;
-    }
-
-    documents.forEach((doc, index) => {
-        const item = document.createElement('button');
-        item.type = 'button';
-        item.className = 'search-result-item';
-        item.setAttribute('role', 'option');
-        item.setAttribute('aria-selected', 'false');
-        item.dataset.index = String(index);
-
-        const titleElement = document.createElement('div');
-        titleElement.className = 'search-result-title';
-        titleElement.textContent = getDocumentTitle(doc);
-
-        const metaRow = document.createElement('div');
-        metaRow.className = 'search-result-meta';
-
-        const correspondentLabel = doc?.correspondent || 'No correspondent';
-        const dateLabel = formatDocumentDate(doc?.created);
-        const idLabel = `ID ${doc?.id || '-'}`;
-        metaRow.appendChild(createSearchMetaPill(correspondentLabel, 'correspondent'));
-        metaRow.appendChild(createSearchMetaPill(dateLabel, 'date'));
-        metaRow.appendChild(createSearchMetaPill(idLabel, 'id'));
-
-        item.appendChild(titleElement);
-        item.appendChild(metaRow);
-
-        item.addEventListener('mousedown', (event) => {
-            event.preventDefault();
-            setSelectedDocument(doc, true);
-        });
-
-        resultsElement.appendChild(item);
-    });
-
-    resultsElement.classList.remove('hidden');
-}
-
-function selectActiveResult() {
-    if (activeSearchIndex >= 0 && activeSearchIndex < activeSearchResults.length) {
-        setSelectedDocument(activeSearchResults[activeSearchIndex], true);
-        return true;
-    }
-
-    if (activeSearchResults.length === 1) {
-        setSelectedDocument(activeSearchResults[0], true);
-        return true;
-    }
-
-    return false;
-}
-
-async function loadChatDocuments(searchTerm = '', options = {}) {
-    const { showResults = true } = options;
-
-    if (documentSearchController) {
-        documentSearchController.abort();
-    }
-
-    documentSearchController = new AbortController();
-    const params = new URLSearchParams({
-        q: searchTerm,
-        limit: String(CHAT_SEARCH_LIMIT)
-    });
-
-    setDocumentSearchStatus('Searching documents...');
-
-    try {
-        const response = await fetch(`/api/chat/documents?${params.toString()}`, {
-            method: 'GET',
-            signal: documentSearchController.signal
-        });
-
-        if (!response.ok) {
-            throw new Error('Failed to fetch chat documents');
-        }
-
-        const payload = await response.json();
-        const documents = Array.isArray(payload?.data?.documents) ? payload.data.documents : [];
-
-        if (showResults) {
-            renderSearchResults(documents);
-        }
-
-        if (documents.length === 0) {
-            if (showResults) {
-                clearSearchResults();
-            }
-            setDocumentSearchStatus('No matching documents found.');
-        } else {
-            setDocumentSearchStatus(`Currently ${documents.length} document${documents.length === 1 ? '' : 's'} available`);
-        }
-    } catch (error) {
-        if (error.name === 'AbortError') {
-            return;
-        }
-
-        console.error('Error loading chat documents:', error);
-        if (showResults) {
-            clearSearchResults();
-        }
-        setDocumentSearchStatus('Could not load documents. Please try again.', true);
     }
 }
 
@@ -416,55 +237,21 @@ function initializeDocumentSearch() {
         searchInput.dataset.selectedDocumentId = initialDocumentId;
     }
 
-    loadChatDocuments('', { showResults: false });
-
-    searchInput.addEventListener('focus', () => {
-        loadChatDocuments(searchInput.value.trim(), { showResults: true });
-    });
-
-    searchInput.addEventListener('input', () => {
-        hiddenSelect.value = '';
-        searchInput.dataset.selectedDocumentId = '';
-        clearTimeout(searchDebounceTimer);
-
-        searchDebounceTimer = setTimeout(() => {
-            const query = searchInput.value.trim();
-            loadChatDocuments(query, { showResults: true });
-        }, CHAT_SEARCH_DEBOUNCE_MS);
-    });
-
-    searchInput.addEventListener('keydown', (event) => {
-        if (event.key === 'ArrowDown') {
-            event.preventDefault();
-            if (activeSearchResults.length === 0) return;
-            activeSearchIndex = Math.min(activeSearchIndex + 1, activeSearchResults.length - 1);
-            updateActiveResultHighlight();
-            return;
+    chatDocumentOmnibox = window.createDocumentOmnibox({
+        preset: 'chat',
+        inputId: 'documentSearchInput',
+        resultsId: 'documentSearchResults',
+        statusId: 'documentSearchStatus',
+        hiddenInputId: 'documentSelect',
+        limit: 100,
+        debounceMs: 250,
+        resultItemClass: 'search-result-item',
+        resultTitleClass: 'search-result-title',
+        resultMetaClass: 'search-result-meta',
+        resultPillClass: 'search-result-pill',
+        onSelect: (doc) => {
+            setSelectedDocument(doc, true);
         }
-
-        if (event.key === 'ArrowUp') {
-            event.preventDefault();
-            if (activeSearchResults.length === 0) return;
-            activeSearchIndex = Math.max(activeSearchIndex - 1, 0);
-            updateActiveResultHighlight();
-            return;
-        }
-
-        if (event.key === 'Enter') {
-            event.preventDefault();
-            selectActiveResult();
-            return;
-        }
-
-        if (event.key === 'Escape') {
-            clearSearchResults();
-        }
-    });
-
-    searchInput.addEventListener('blur', () => {
-        window.setTimeout(() => {
-            clearSearchResults();
-        }, 120);
     });
 
     if (initialDocumentId) {

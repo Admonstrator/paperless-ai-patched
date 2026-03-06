@@ -49,6 +49,8 @@ function resolveDashboardData() {
     return resolved;
 }
 
+const dashboardPaperlessPublicUrl = (typeof window.paperlessPublicUrl === 'string' ? window.paperlessPublicUrl : '').replace(/\/$/, '');
+
 // Chart Initialization
 class ChartManager {
     constructor() {
@@ -132,7 +134,41 @@ class DashboardStatsLoader {
     constructor() {
         this.minimumLoadingTimeMs = 400;
         this.requestTimeoutMs = 15000;
+        this.loadingBannerDelayMs = 1000;
         this.loadingBlock = document.getElementById('dashboardLoadingBlock');
+        this.loadingProgress = document.getElementById('dashboardLoadingProgress');
+        this.loadingPercent = document.getElementById('dashboardLoadingPercent');
+        this.loadingMessage = document.getElementById('dashboardLoadingMessage');
+        this.loadingSubtext = document.getElementById('dashboardLoadingSubtext');
+        this.loadingBannerTimer = null;
+        this.loadingBannerVisible = false;
+    }
+
+    setLoadingProgress(percent, message = '', subtext = '', options = {}) {
+        const safePercent = Math.max(0, Math.min(100, Number(percent || 0)));
+        const keepIndeterminate = Boolean(options.keepIndeterminate);
+
+        if (this.loadingProgress) {
+            if (keepIndeterminate) {
+                this.loadingProgress.classList.add('is-indeterminate');
+                this.loadingProgress.style.width = '38%';
+            } else {
+                this.loadingProgress.classList.remove('is-indeterminate');
+                this.loadingProgress.style.width = `${safePercent}%`;
+            }
+        }
+
+        if (this.loadingPercent) {
+            this.loadingPercent.textContent = keepIndeterminate ? '...' : `${Math.round(safePercent)}%`;
+        }
+
+        if (this.loadingMessage && message) {
+            this.loadingMessage.textContent = message;
+        }
+
+        if (this.loadingSubtext && subtext) {
+            this.loadingSubtext.textContent = subtext;
+        }
     }
 
     getFallbackStats() {
@@ -167,17 +203,40 @@ class DashboardStatsLoader {
     setLoadingState(isLoading) {
         if (this.loadingBlock) {
             if (isLoading) {
-                this.loadingBlock.classList.remove('hidden');
-                requestAnimationFrame(() => {
-                    this.loadingBlock.classList.remove('opacity-0');
-                    this.loadingBlock.classList.add('opacity-100');
-                });
+                if (this.loadingBannerTimer) {
+                    clearTimeout(this.loadingBannerTimer);
+                    this.loadingBannerTimer = null;
+                }
+
+                if (!this.loadingBannerVisible) {
+                    this.loadingBannerTimer = setTimeout(() => {
+                        this.loadingBlock.classList.remove('hidden');
+                        requestAnimationFrame(() => {
+                            this.loadingBlock.classList.remove('opacity-0');
+                            this.loadingBlock.classList.add('opacity-100');
+                        });
+                        this.loadingBannerVisible = true;
+                        this.loadingBannerTimer = null;
+                    }, this.loadingBannerDelayMs);
+                }
             } else {
-                this.loadingBlock.classList.remove('opacity-100');
-                this.loadingBlock.classList.add('opacity-0');
-                setTimeout(() => {
+                if (this.loadingBannerTimer) {
+                    clearTimeout(this.loadingBannerTimer);
+                    this.loadingBannerTimer = null;
+                }
+
+                if (this.loadingBannerVisible) {
+                    this.loadingBlock.classList.remove('opacity-100');
+                    this.loadingBlock.classList.add('opacity-0');
+                    setTimeout(() => {
+                        this.loadingBlock.classList.add('hidden');
+                        this.loadingBannerVisible = false;
+                    }, 300);
+                } else {
                     this.loadingBlock.classList.add('hidden');
-                }, 300);
+                    this.loadingBlock.classList.remove('opacity-100');
+                    this.loadingBlock.classList.add('opacity-0');
+                }
             }
             this.loadingBlock.setAttribute('aria-busy', isLoading ? 'true' : 'false');
         }
@@ -281,7 +340,11 @@ class DashboardStatsLoader {
             const docId = Number(item.documentId || 0);
             const correspondent = this.escapeHtml(item.correspondent || 'Unknown correspondent');
             const datePill = this.escapeHtml(this.formatDateForPill(item.createdAt));
+            const docUrl = this.getPaperlessDocumentUrl(docId);
             const idPill = docId > 0 ? `#${docId}` : '#n/a';
+            const idPillHtml = docUrl
+                ? `<a href="${this.escapeHtml(docUrl)}" class="manual-search-pill id dashboard-doc-link" title="Open in Paperless">${idPill}</a>`
+                : `<span class="manual-search-pill id">${idPill}</span>`;
             return `
                 <div class="activity-item">
                     <div>
@@ -289,12 +352,21 @@ class DashboardStatsLoader {
                         <div class="manual-search-meta mt-2">
                             <span class="manual-search-pill correspondent">${correspondent}</span>
                             <span class="manual-search-pill date">${datePill}</span>
-                            <span class="manual-search-pill id">${idPill}</span>
+                            ${idPillHtml}
                         </div>
                     </div>
                 </div>
             `;
         }).join('');
+    }
+
+    getPaperlessDocumentUrl(documentId) {
+        const docId = Number(documentId || 0);
+        if (!Number.isInteger(docId) || docId <= 0 || !dashboardPaperlessPublicUrl) {
+            return '';
+        }
+
+        return `${dashboardPaperlessPublicUrl}/documents/${docId}/details`;
     }
 
     formatDateForPill(inputDate) {
@@ -420,6 +492,7 @@ class DashboardStatsLoader {
     async load() {
         const loadingStartedAt = Date.now();
         this.setLoadingState(true);
+        this.setLoadingProgress(15, 'Loading dashboard data...', 'Fetching latest statistics from API.', { keepIndeterminate: true });
         const fallbackStats = this.getFallbackStats();
         try {
             const abortController = new AbortController();
@@ -439,6 +512,8 @@ class DashboardStatsLoader {
                 throw new Error(payload?.error || 'Invalid dashboard stats response');
             }
 
+            this.setLoadingProgress(58, 'Applying statistics...', 'Updating cards and activity feeds.');
+
             window.dashboardData = {
                 documentCount: payload.paperless_data.documentCount,
                 processedCount: payload.paperless_data.processedDocumentCount,
@@ -456,10 +531,13 @@ class DashboardStatsLoader {
             };
 
             this.updateCards(payload);
+            this.setLoadingProgress(82, 'Rendering visualizations...', 'Drawing charts and trend graphs.');
             this.updateCharts(payload);
+            this.setLoadingProgress(96, 'Finishing up...', 'Finalizing dashboard layout.');
         } catch (error) {
             console.error('Error loading dashboard stats:', error);
 
+            this.setLoadingProgress(60, 'Using fallback data...', 'Dashboard remains usable while stats API is unavailable.');
             this.updateCards(fallbackStats);
             this.updateCharts(fallbackStats);
         } finally {
@@ -467,6 +545,7 @@ class DashboardStatsLoader {
             if (elapsedMs < this.minimumLoadingTimeMs) {
                 await new Promise(resolve => setTimeout(resolve, this.minimumLoadingTimeMs - elapsedMs));
             }
+            this.setLoadingProgress(100, 'Dashboard ready', 'Live updates will continue in the background.');
             this.setLoadingState(false);
         }
     }

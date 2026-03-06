@@ -5330,7 +5330,8 @@
                 ],
                 "properties": {
                   "documentId": {
-                    "type": "integer"
+                    "type": "integer",
+                    "minimum": 1
                   }
                 }
               }
@@ -5343,6 +5344,9 @@
           },
           "400": {
             "description": "Invalid payload"
+          },
+          "404": {
+            "description": "Document not found in Paperless-ngx"
           },
           "500": {
             "description": "Server error"

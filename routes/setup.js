@@ -3563,6 +3563,13 @@ router.post('/api/webhook/document', async (req, res) => {
  */
 router.get('/dashboard', async (req, res) => {
   const version = configFile.PAPERLESS_AI_VERSION || ' ';
+  let paperlessUrl = '';
+
+  try {
+    paperlessUrl = await paperlessService.getPublicBaseUrl();
+  } catch (error) {
+    console.warn('[WARN] Could not resolve Paperless public URL for dashboard links:', error.message);
+  }
 
   res.render('dashboard', { 
     paperless_data: { 
@@ -3590,6 +3597,7 @@ router.get('/dashboard', async (req, res) => {
       tokensOverall: 0
     }, 
     version,
+    paperlessUrl,
     ragEnabled: process.env.RAG_SERVICE_ENABLED === 'true',
     chatEnabled: isChatEnabled()
   });
@@ -3626,7 +3634,7 @@ router.get('/api/dashboard/stats', async (req, res) => {
       documentModel.getTokenDistribution(),
       documentModel.getDocumentTypeStats(),
       documentModel.getTokenTrend(7),
-      documentModel.getRecentHistoryDocuments(6),
+      documentModel.getRecentHistoryDocuments(3),
       documentModel.getLanguageDistribution(5),
       documentModel.getCurrentProcessingStatus()
     ]);
@@ -5967,20 +5975,37 @@ router.get('/api/ocr/queue', isAuthenticated, async (req, res) => {
 router.post('/api/ocr/queue/add', isAuthenticated, async (req, res) => {
   try {
     const { documentId } = req.body;
-    if (!documentId) {
+    if (documentId === undefined || documentId === null || documentId === '') {
       return res.status(400).json({ success: false, error: 'documentId is required' });
     }
-    const docIdNum = parseInt(documentId, 10);
-    if (isNaN(docIdNum)) {
-      return res.status(400).json({ success: false, error: 'documentId must be a number' });
+
+    const normalizedDocumentId = String(documentId).trim();
+    if (!/^\d+$/.test(normalizedDocumentId)) {
+      return res.status(400).json({ success: false, error: 'documentId must be a positive integer' });
     }
 
-    // Fetch title from Paperless
-    let title = `Document ${docIdNum}`;
+    const docIdNum = Number(normalizedDocumentId);
+    if (!Number.isInteger(docIdNum) || docIdNum <= 0) {
+      return res.status(400).json({ success: false, error: 'documentId must be a positive integer' });
+    }
+
+    let doc;
     try {
-      const doc = await paperlessService.getDocument(docIdNum);
-      title = doc?.title || title;
-    } catch (_) { /* ignore – use fallback title */ }
+      doc = await paperlessService.getDocument(docIdNum);
+    } catch (error) {
+      if (error.response?.status === 404) {
+        return res.status(404).json({ success: false, error: `Document ${docIdNum} was not found in Paperless-ngx` });
+      }
+      throw error;
+    }
+
+    if (!doc || !Number.isInteger(Number(doc.id))) {
+      return res.status(404).json({ success: false, error: `Document ${docIdNum} was not found in Paperless-ngx` });
+    }
+
+    const title = (typeof doc.title === 'string' && doc.title.trim())
+      ? doc.title.trim()
+      : `Document ${docIdNum}`;
 
     const added = await documentModel.addToOcrQueue(docIdNum, title, 'manual');
     if (!added) {
@@ -6015,11 +6040,14 @@ router.post('/api/ocr/queue/add', isAuthenticated, async (req, res) => {
  *             properties:
  *               documentId:
  *                 type: integer
+ *                 minimum: 1
  *     responses:
  *       200:
  *         description: Add operation result
  *       400:
  *         description: Invalid payload
+ *       404:
+ *         description: Document not found in Paperless-ngx
  *       500:
  *         description: Server error
  */

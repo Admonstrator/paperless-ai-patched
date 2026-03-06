@@ -32,9 +32,10 @@ class PromptRatingSystem {
 
             const rateButton = document.createElement('button');
             rateButton.id = 'rateButton';
-            rateButton.className = 'hidden ml-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all duration-200';
+            rateButton.className = 'hidden toolbar-btn toolbar-btn--success toolbar-btn--sm';
             rateButton.innerHTML = '<i class="fas fa-star mr-2"></i>Rate Prompt';
-            analyzeButton.parentNode.appendChild(rateButton);
+            const actionsContainer = document.getElementById('analysisActions') || analyzeButton.parentNode;
+            actionsContainer.appendChild(rateButton);
 
             // Saved Prompts Section erstellen
             this.createSavedPromptsSection();
@@ -145,7 +146,7 @@ class PromptRatingSystem {
                                 style="background: var(--bg-primary); border: 1px solid var(--border-color);"
                                 rows="3"
                             ></textarea>
-                            <button id="saveRating" class="w-full mt-4 px-4 py-2 text-white rounded hover:opacity-90 transition-opacity" style="background: var(--accent-primary)">
+                            <button id="saveRating" class="w-full mt-4 toolbar-btn toolbar-btn--primary">
                                 Save Rating
                             </button>
                         </div>
@@ -168,7 +169,7 @@ class PromptRatingSystem {
         promptsSection.innerHTML = `
             <h2 class="card-title flex justify-between items-center">
                 Saved Prompts
-                <button id="clearPrompts" class="text-sm px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700">
+                <button id="clearPrompts" class="toolbar-btn toolbar-btn--danger toolbar-btn--sm text-sm">
                     Clear All
                 </button>
             </h2>
@@ -344,12 +345,12 @@ class PromptRatingSystem {
                 <div class="mt-2 text-xs text-gray-500">${new Date(prompt.date).toLocaleString()}</div>
                 <div class="absolute top-2 right-2 flex gap-2">
                     <button onclick="window.promptRating.usePrompt(${prompt.id})" 
-                            class="px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+                            class="toolbar-btn toolbar-btn--primary toolbar-btn--sm"
                             title="Use this prompt">
                         <i class="fas fa-play"></i>
                     </button>
                     <button onclick="window.promptRating.deletePrompt(${prompt.id})"
-                            class="px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700"
+                            class="toolbar-btn toolbar-btn--danger toolbar-btn--sm"
                             title="Delete this prompt">
                         <i class="fas fa-trash"></i>
                     </button>

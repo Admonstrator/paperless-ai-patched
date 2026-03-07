@@ -153,9 +153,9 @@ Then open [http://localhost:3000](http://localhost:3000) to complete setup.
 
 **Short answer:** I use it every day for my actual documents. If it breaks, my own life becomes a chaotic mess of untagged invoices—so I have a very strong biological incentive to keep it stable.
 
-**Long answer:** It's not _vibe-coded_ in the sense of being random; it's _vibe-coded_ in the sense that I prioritize how the tool _actually feels_ to use over rigid corporate specs. I test every feature and try to automate as much of the testing as possible. And _NO!_ it's not just one pile of AI-generated code inside a main.js file. Since I work as an IT architect, I understand the importance of maintainable code.
+**Long answer:** It's not _vibe-coded_ in the sense of being random; I test every feature and try to automate as much of the testing as possible. And _NO!_ it's not just one pile of AI-generated code inside a main.js file. Since I work as an IT architect, I understand the importance of maintainable code.
 
-### "So you don't read the ocod? Should I be worried?"
+### "So you don't read the code? Should I be worried?"
 
 I don't read it like a monk reading ancient scrolls, but I do understand the **logic**. I treat AI like a more or less talented, slightly erratic junior dev. I tell it what to build, I test the hell out of it, and if it fails, we go back to the drawing board. I am the filter. No "AI-slop" gets merged without passing my "Does this actually solve the problem?" test. Or at least, it doesn't stay merged if I encounter issues in production.
 

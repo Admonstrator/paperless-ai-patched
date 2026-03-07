@@ -226,6 +226,23 @@ const MIGRATIONS = [
         )
       `);
     }
+  },
+  {
+    version: 5,
+    description: 'Add MFA columns to users table',
+    up: (database) => {
+      const userColumns = database.prepare("PRAGMA table_info('users')").all();
+      const hasMfaEnabled = userColumns.some((col) => col.name === 'mfa_enabled');
+      const hasMfaSecret = userColumns.some((col) => col.name === 'mfa_secret');
+
+      if (!hasMfaEnabled) {
+        database.exec('ALTER TABLE users ADD COLUMN mfa_enabled INTEGER DEFAULT 0');
+      }
+
+      if (!hasMfaSecret) {
+        database.exec('ALTER TABLE users ADD COLUMN mfa_secret TEXT DEFAULT NULL');
+      }
+    }
   }
 ];
 
@@ -626,6 +643,18 @@ module.exports = {
     } catch (error) {
       console.error('[ERROR] getting users:', error);
       return [];
+    }
+  },
+
+  async setUserMfaSettings(username, enabled, secret = null) {
+    try {
+      const result = db.prepare(
+        'UPDATE users SET mfa_enabled = ?, mfa_secret = ? WHERE username = ?'
+      ).run(enabled ? 1 : 0, secret, username);
+      return result.changes > 0;
+    } catch (error) {
+      console.error('[ERROR] updating user MFA settings:', error);
+      return false;
     }
   },
 

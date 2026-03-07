@@ -15,9 +15,11 @@ const documentsService = require('../services/documentsService.js');
 const RAGService = require('../services/ragService.js');
 const fs = require('fs').promises;
 const path = require('path');
+const crypto = require('crypto');
 const { validateCustomFieldValue, shouldQueueForOcrOnAiError, classifyOcrQueueReasonFromAiError } = require('../services/serviceUtils');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const QRCode = require('qrcode');
 const cookieParser = require('cookie-parser');
 const { authenticateJWT, isAuthenticated } = require('./auth.js');
 const customService = require('../services/customService.js');
@@ -75,6 +77,18 @@ const chatDocumentSearchLimiter = rateLimit({
     const apiKey = req.headers['x-api-key'];
     const currentApiKey = config.getApiKey();
     return currentApiKey && apiKey && apiKey === currentApiKey;
+  }
+});
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: parseInt(process.env.LOGIN_RATE_LIMIT_MAX || '10', 10),
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (_req, res) => {
+    return renderLoginView(res, {
+      error: 'Too many login attempts. Please wait a few minutes and try again.'
+    });
   }
 });
 
@@ -307,13 +321,140 @@ const protectApiRoute = (req, res, next) => {
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
+const MFA_CHALLENGE_COOKIE = 'mfa_challenge';
+const MFA_SETUP_COOKIE = 'mfa_setup';
+const TOTP_STEP_SECONDS = 30;
+const TOTP_DIGITS = 6;
+const TOTP_WINDOW = 1;
+
+function decodeBase32Secret(secret) {
+  const normalized = String(secret || '')
+    .toUpperCase()
+    .replace(/=+$/g, '')
+    .replace(/[^A-Z2-7]/g, '');
+
+  if (!normalized) {
+    return null;
+  }
+
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  let bits = '';
+
+  for (const char of normalized) {
+    const value = alphabet.indexOf(char);
+    if (value === -1) {
+      return null;
+    }
+    bits += value.toString(2).padStart(5, '0');
+  }
+
+  const bytes = [];
+  for (let i = 0; i + 8 <= bits.length; i += 8) {
+    bytes.push(parseInt(bits.slice(i, i + 8), 2));
+  }
+
+  return bytes.length > 0 ? Buffer.from(bytes) : null;
+}
+
+function generateTotpToken(secret, unixTimeSeconds) {
+  const key = decodeBase32Secret(secret);
+  if (!key) {
+    return null;
+  }
+
+  const counter = Math.floor(unixTimeSeconds / TOTP_STEP_SECONDS);
+  const buffer = Buffer.alloc(8);
+  buffer.writeBigUInt64BE(BigInt(counter));
+
+  const hmac = crypto.createHmac('sha1', key).update(buffer).digest();
+  const offset = hmac[hmac.length - 1] & 0x0f;
+  const code =
+    ((hmac[offset] & 0x7f) << 24) |
+    ((hmac[offset + 1] & 0xff) << 16) |
+    ((hmac[offset + 2] & 0xff) << 8) |
+    (hmac[offset + 3] & 0xff);
+
+  return String(code % (10 ** TOTP_DIGITS)).padStart(TOTP_DIGITS, '0');
+}
+
+function generateBase32Secret(length = 32) {
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  const bytes = crypto.randomBytes(length);
+  let output = '';
+
+  for (let i = 0; i < length; i += 1) {
+    output += alphabet[bytes[i] % alphabet.length];
+  }
+
+  return output;
+}
+
+function buildOtpAuthUri(secret, username) {
+  const issuer = 'Paperless-AI next';
+  const accountLabel = `${issuer}:${username}`;
+  const params = new URLSearchParams({
+    secret,
+    issuer,
+    algorithm: 'SHA1',
+    digits: String(TOTP_DIGITS),
+    period: String(TOTP_STEP_SECONDS)
+  });
+
+  return `otpauth://totp/${encodeURIComponent(accountLabel)}?${params.toString()}`;
+}
+
+function getAuthenticatedSettingsUsername(req) {
+  if (!req.user || req.user.apiKey) {
+    return null;
+  }
+
+  if (typeof req.user.username === 'string' && req.user.username.trim()) {
+    return req.user.username.trim();
+  }
+
+  return null;
+}
+
+function verifyTotpToken(secret, inputToken) {
+  const normalizedInput = String(inputToken || '').replace(/\s+/g, '');
+  if (!/^\d{6,8}$/.test(normalizedInput)) {
+    return false;
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  for (let offset = -TOTP_WINDOW; offset <= TOTP_WINDOW; offset += 1) {
+    const expected = generateTotpToken(secret, now + offset * TOTP_STEP_SECONDS);
+    if (!expected || expected.length !== normalizedInput.length) {
+      continue;
+    }
+
+    if (crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(normalizedInput))) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function renderLoginView(res, options = {}) {
+  return res.render('login', {
+    error: options.error || null,
+    mfaRequired: Boolean(options.mfaRequired),
+    username: options.username || ''
+  });
+}
+
+function isMfaEnabledForUser(user) {
+  return Boolean(user && (user.mfa_enabled || user.mfaEnabled));
+}
+
 router.get('/login', (req, res) => {
   //check if a user exists beforehand
   documentModel.getUsers().then((users) => {
     if(users.length === 0) {
       res.redirect('setup');
     } else {
-      res.render('login', { error: null });
+      renderLoginView(res);
     }
   });
 });
@@ -326,6 +467,9 @@ router.get('/login', (req, res) => {
  *     summary: Authenticate user with username and password
  *     description: |
  *       Authenticates a user using their username and password credentials.
+ *       The endpoint supports a preparation flow for MFA:
+ *       first step validates credentials and starts an MFA challenge,
+ *       second step accepts a TOTP authentication code and completes sign-in.
  *       If authentication is successful, a JWT token is generated and stored in a secure HTTP-only
  *       cookie for subsequent requests.
  *       
@@ -336,12 +480,9 @@ router.get('/login', (req, res) => {
  *     requestBody:
  *       required: true
  *       content:
- *         application/json:
+ *         application/x-www-form-urlencoded:
  *           schema:
  *             type: object
- *             required:
- *               - username
- *               - password
  *             properties:
  *               username:
  *                 type: string
@@ -351,43 +492,26 @@ router.get('/login', (req, res) => {
  *                 type: string
  *                 description: User's password
  *                 example: "securepassword"
- *               rememberMe:
- *                 type: boolean
- *                 description: Whether to extend the session lifetime
- *                 example: false
+ *               mfaStep:
+ *                 type: string
+ *                 description: Set to '1' when submitting the MFA step
+ *                 example: "0"
+ *               mfaToken:
+ *                 type: string
+ *                 description: One-time code entered in the MFA verification step
+ *                 example: "123456"
  *     responses:
- *       200:
- *         description: Authentication successful
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 redirect:
- *                   type: string
- *                   description: URL to redirect to after successful login
- *                   example: "/dashboard"
+ *       302:
+ *         description: Authentication successful and redirected to dashboard
  *         headers:
  *           Set-Cookie:
  *             schema:
  *               type: string
  *               description: HTTP-only cookie containing JWT token
- *       401:
- *         description: Authentication failed
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Invalid username or password"
+ *       200:
+ *         description: Login page rendered again for invalid credentials, pending MFA verification, or invalid MFA code
+ *       429:
+ *         description: Too many login attempts; login temporarily rate-limited
  *       500:
  *         description: Server error
  *         content:
@@ -395,18 +519,88 @@ router.get('/login', (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/login', async (req, res) => {
-  const { username, password } = req.body;
+router.post('/login', loginLimiter, async (req, res) => {
+  const { username, password, mfaStep, mfaToken } = req.body;
+  const submittingMfaStep = mfaStep === '1' || Boolean(mfaToken);
 
   try {
-    console.log('Login attempt for user:', username);   
-    // Get user data - returns a single user object
+    const jwtSecret = config.getJwtSecret();
+    if (!jwtSecret) {
+      return res.status(500).render('login', { error: 'Server misconfiguration: JWT secret missing' });
+    }
+
+    if (submittingMfaStep) {
+      if (!mfaToken || !String(mfaToken).trim()) {
+        return renderLoginView(res, {
+          error: 'Authentication code is required.',
+          mfaRequired: true,
+          username
+        });
+      }
+
+      const mfaChallengeToken = req.cookies[MFA_CHALLENGE_COOKIE];
+      if (!mfaChallengeToken) {
+        return renderLoginView(res, {
+          error: 'Your verification session expired. Please sign in again.'
+        });
+      }
+
+      let challengePayload;
+      try {
+        challengePayload = jwt.verify(mfaChallengeToken, jwtSecret);
+        if (challengePayload.challengeType !== 'mfa-login') {
+          throw new Error('Invalid challenge type');
+        }
+      } catch (challengeError) {
+        res.clearCookie(MFA_CHALLENGE_COOKIE);
+        return renderLoginView(res, {
+          error: 'Your verification session expired. Please sign in again.'
+        });
+      }
+
+      const user = await documentModel.getUser(challengePayload.username);
+      const mfaSecret = user?.mfa_secret;
+
+      if (!user || !isMfaEnabledForUser(user) || !mfaSecret) {
+        res.clearCookie(MFA_CHALLENGE_COOKIE);
+        return renderLoginView(res, {
+          error: 'MFA is not configured for this user. Please sign in again.'
+        });
+      }
+
+      if (!verifyTotpToken(mfaSecret, mfaToken)) {
+        return renderLoginView(res, {
+          error: 'Invalid authentication code. Please try again.',
+          mfaRequired: true,
+          username: challengePayload.username
+        });
+      }
+
+      const token = jwt.sign(
+        {
+          id: user.id,
+          username: user.username
+        },
+        jwtSecret,
+        { expiresIn: '24h' }
+      );
+      res.cookie('jwt', token, {
+        httpOnly: true,
+        secure: false,
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 24 * 60 * 60 * 1000
+      });
+      res.clearCookie(MFA_CHALLENGE_COOKIE);
+      return res.redirect('/dashboard');
+    }
+
+    console.log('Login attempt for user:', username);
     const user = await documentModel.getUser(username);
-    
-    // Check if user was found and has required fields
+
     if (!user || !user.password) {
       console.log('[FAILED LOGIN] User not found or invalid data:', username);
-      return res.render('login', { error: 'Invalid credentials' });
+      return renderLoginView(res, { error: 'Invalid credentials', username });
     }
 
     // Compare passwords
@@ -414,9 +608,27 @@ router.post('/login', async (req, res) => {
     console.log('Password validation result:', isValidPassword);
 
     if (isValidPassword) {
-      const jwtSecret = config.getJwtSecret();
-      if (!jwtSecret) {
-        return res.status(500).render('login', { error: 'Server misconfiguration: JWT secret missing' });
+      if (isMfaEnabledForUser(user)) {
+        const challengeToken = jwt.sign(
+          {
+            id: user.id,
+            username: user.username,
+            challengeType: 'mfa-login'
+          },
+          jwtSecret,
+          { expiresIn: '5m' }
+        );
+        res.cookie(MFA_CHALLENGE_COOKIE, challengeToken, {
+          httpOnly: true,
+          secure: false,
+          sameSite: 'lax',
+          path: '/'
+        });
+
+        return renderLoginView(res, {
+          mfaRequired: true,
+          username: user.username
+        });
       }
 
       const token = jwt.sign(
@@ -437,11 +649,12 @@ router.post('/login', async (req, res) => {
 
       return res.redirect('/dashboard');
     }else{
-      return res.render('login', { error: 'Invalid credentials' });
+      return renderLoginView(res, { error: 'Invalid credentials', username });
     }
   } catch (error) {
     console.error('Login error:', error);
-    res.render('login', { error: 'An error occurred during login' });
+    res.clearCookie(MFA_CHALLENGE_COOKIE);
+    renderLoginView(res, { error: 'An error occurred during login', username });
   }
 });
 
@@ -482,6 +695,8 @@ router.post('/login', async (req, res) => {
  */
 router.get('/logout', (req, res) => {
   res.clearCookie('jwt');
+  res.clearCookie(MFA_CHALLENGE_COOKIE);
+  res.clearCookie(MFA_SETUP_COOKIE);
   res.redirect('/login');
 });
 
@@ -3921,6 +4136,28 @@ router.get('/settings', async (req, res) => {
   });
 
   const version = configFile.PAPERLESS_AI_VERSION || ' ';
+  let mfaSettings = {
+    available: false,
+    username: '',
+    enabled: false
+  };
+
+  const settingsUsername = getAuthenticatedSettingsUsername(req);
+  if (settingsUsername) {
+    try {
+      const settingsUser = await documentModel.getUser(settingsUsername);
+      if (settingsUser) {
+        mfaSettings = {
+          available: true,
+          username: settingsUser.username,
+          enabled: isMfaEnabledForUser(settingsUser)
+        };
+      }
+    } catch (mfaContextError) {
+      console.error('[WARN] Failed to resolve MFA settings context:', mfaContextError);
+    }
+  }
+
   res.render('settings', { 
     version,
     ragEnabled: process.env.RAG_SERVICE_ENABLED === 'true',
@@ -3929,6 +4166,7 @@ router.get('/settings', async (req, res) => {
     configuredSecrets,
     runtimeOverrideKeys: Array.from(runtimeOverrideKeys),
     runtimeOverrideDetails,
+    mfaSettings,
     success: isConfigured ? 'The application is already configured. You can update the configuration below.' : undefined,
     settingsError: showErrorCheckSettings ? 'Please check your settings. Something is not working correctly.' : undefined
   });
@@ -3945,6 +4183,348 @@ router.get('/api/settings/paperless-public-url', isAuthenticated, async (req, re
   } catch (error) {
     console.error('[ERROR] GET /api/settings/paperless-public-url:', error);
     return res.status(500).json({ success: false, error: 'Failed to detect Paperless public URL' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/settings/mfa/status:
+ *   get:
+ *     summary: Get MFA status for current user
+ *     description: Returns whether TOTP MFA is enabled for the authenticated settings user.
+ *     tags:
+ *       - Settings
+ *       - Authentication
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: MFA status loaded successfully
+ *       403:
+ *         description: Forbidden - unsupported authentication context
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Server error
+ */
+router.get('/api/settings/mfa/status', isAuthenticated, async (req, res) => {
+  try {
+    const username = getAuthenticatedSettingsUsername(req);
+    if (!username) {
+      return res.status(403).json({ success: false, error: 'MFA settings require a signed-in user session.' });
+    }
+
+    const user = await documentModel.getUser(username);
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found.' });
+    }
+
+    return res.json({
+      success: true,
+      enabled: isMfaEnabledForUser(user),
+      username: user.username
+    });
+  } catch (error) {
+    console.error('[ERROR] GET /api/settings/mfa/status:', error);
+    return res.status(500).json({ success: false, error: 'Failed to load MFA status.' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/settings/mfa/setup:
+ *   post:
+ *     summary: Start MFA setup and return provisioning data
+ *     description: Validates current password and creates a temporary TOTP setup challenge including local QR image data.
+ *     tags:
+ *       - Settings
+ *       - Authentication
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: MFA setup challenge created
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Invalid current password
+ *       403:
+ *         description: Forbidden
+ *       500:
+ *         description: Server error
+ */
+router.post('/api/settings/mfa/setup', isAuthenticated, express.json(), async (req, res) => {
+  try {
+    const username = getAuthenticatedSettingsUsername(req);
+    if (!username) {
+      return res.status(403).json({ success: false, error: 'MFA settings require a signed-in user session.' });
+    }
+
+    const currentPassword = String(req.body?.currentPassword || '').trim();
+    if (!currentPassword) {
+      return res.status(400).json({ success: false, error: 'Current password is required.' });
+    }
+
+    const user = await documentModel.getUser(username);
+    if (!user || !user.password) {
+      return res.status(404).json({ success: false, error: 'User not found.' });
+    }
+
+    const validPassword = await bcrypt.compare(currentPassword, user.password);
+    if (!validPassword) {
+      return res.status(401).json({ success: false, error: 'Current password is invalid.' });
+    }
+
+    const jwtSecret = config.getJwtSecret();
+    if (!jwtSecret) {
+      return res.status(500).json({ success: false, error: 'Server misconfiguration: JWT secret missing.' });
+    }
+
+    const secret = generateBase32Secret(32);
+    const setupToken = jwt.sign(
+      {
+        username: user.username,
+        secret,
+        setupType: 'mfa-setup'
+      },
+      jwtSecret,
+      { expiresIn: '10m' }
+    );
+
+    res.cookie(MFA_SETUP_COOKIE, setupToken, {
+      httpOnly: true,
+      secure: false,
+      sameSite: 'lax',
+      path: '/'
+    });
+
+    return res.json({
+      success: true,
+      secret,
+      otpauthUri: buildOtpAuthUri(secret, user.username),
+      qrDataUrl: await QRCode.toDataURL(buildOtpAuthUri(secret, user.username), {
+        errorCorrectionLevel: 'M',
+        margin: 1,
+        width: 220,
+        color: {
+          dark: '#0f172a',
+          light: '#ffffff'
+        }
+      }),
+      expiresInSeconds: 600
+    });
+  } catch (error) {
+    console.error('[ERROR] POST /api/settings/mfa/setup:', error);
+    return res.status(500).json({ success: false, error: 'Failed to start MFA setup.' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/settings/mfa/enable:
+ *   post:
+ *     summary: Enable MFA after validating TOTP code
+ *     description: Validates current password and setup token, verifies TOTP code, then enables MFA.
+ *     tags:
+ *       - Settings
+ *       - Authentication
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: MFA enabled successfully
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Invalid credentials or token
+ *       403:
+ *         description: Forbidden
+ *       500:
+ *         description: Server error
+ */
+router.post('/api/settings/mfa/enable', isAuthenticated, express.json(), async (req, res) => {
+  try {
+    const username = getAuthenticatedSettingsUsername(req);
+    if (!username) {
+      return res.status(403).json({ success: false, error: 'MFA settings require a signed-in user session.' });
+    }
+
+    const currentPassword = String(req.body?.currentPassword || '').trim();
+    const token = String(req.body?.token || '').trim();
+    if (!currentPassword || !token) {
+      return res.status(400).json({ success: false, error: 'Current password and authentication code are required.' });
+    }
+
+    const user = await documentModel.getUser(username);
+    if (!user || !user.password) {
+      return res.status(404).json({ success: false, error: 'User not found.' });
+    }
+
+    const validPassword = await bcrypt.compare(currentPassword, user.password);
+    if (!validPassword) {
+      return res.status(401).json({ success: false, error: 'Current password is invalid.' });
+    }
+
+    const setupToken = req.cookies[MFA_SETUP_COOKIE];
+    if (!setupToken) {
+      return res.status(401).json({ success: false, error: 'No active MFA setup challenge found. Start setup again.' });
+    }
+
+    const jwtSecret = config.getJwtSecret();
+    if (!jwtSecret) {
+      return res.status(500).json({ success: false, error: 'Server misconfiguration: JWT secret missing.' });
+    }
+
+    let payload;
+    try {
+      payload = jwt.verify(setupToken, jwtSecret);
+      if (payload.setupType !== 'mfa-setup' || payload.username !== username) {
+        throw new Error('Invalid setup payload');
+      }
+    } catch (tokenError) {
+      res.clearCookie(MFA_SETUP_COOKIE);
+      return res.status(401).json({ success: false, error: 'MFA setup session expired. Start setup again.' });
+    }
+
+    if (!verifyTotpToken(payload.secret, token)) {
+      return res.status(400).json({ success: false, error: 'Invalid authentication code.' });
+    }
+
+    const updated = await documentModel.setUserMfaSettings(username, true, payload.secret);
+    if (!updated) {
+      return res.status(500).json({ success: false, error: 'Failed to enable MFA for user.' });
+    }
+
+    res.clearCookie(MFA_SETUP_COOKIE);
+    return res.json({ success: true, message: 'MFA has been enabled.' });
+  } catch (error) {
+    console.error('[ERROR] POST /api/settings/mfa/enable:', error);
+    return res.status(500).json({ success: false, error: 'Failed to enable MFA.' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/settings/mfa/verify:
+ *   post:
+ *     summary: Verify a TOTP code for an already enabled MFA setup
+ *     description: Validates an entered TOTP code against the stored user MFA secret.
+ *     tags:
+ *       - Settings
+ *       - Authentication
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: TOTP code validated successfully
+ *       400:
+ *         description: Validation error
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Server error
+ */
+router.post('/api/settings/mfa/verify', isAuthenticated, express.json(), async (req, res) => {
+  try {
+    const username = getAuthenticatedSettingsUsername(req);
+    if (!username) {
+      return res.status(403).json({ success: false, error: 'MFA settings require a signed-in user session.' });
+    }
+
+    const token = String(req.body?.token || '').trim();
+    if (!token) {
+      return res.status(400).json({ success: false, error: 'Authentication code is required.' });
+    }
+
+    const user = await documentModel.getUser(username);
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found.' });
+    }
+
+    if (!isMfaEnabledForUser(user) || !user.mfa_secret) {
+      return res.status(400).json({ success: false, error: 'MFA is not enabled for this user.' });
+    }
+
+    const validCode = verifyTotpToken(user.mfa_secret, token);
+    if (!validCode) {
+      return res.status(400).json({ success: false, error: 'Invalid authentication code.' });
+    }
+
+    return res.json({ success: true, message: 'Authentication code is valid.' });
+  } catch (error) {
+    console.error('[ERROR] POST /api/settings/mfa/verify:', error);
+    return res.status(500).json({ success: false, error: 'Failed to verify authentication code.' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/settings/mfa/disable:
+ *   post:
+ *     summary: Disable MFA for current user
+ *     description: Validates current password and a valid TOTP code, then disables MFA for the user.
+ *     tags:
+ *       - Settings
+ *       - Authentication
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: MFA disabled successfully
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Invalid credentials
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Server error
+ */
+router.post('/api/settings/mfa/disable', isAuthenticated, express.json(), async (req, res) => {
+  try {
+    const username = getAuthenticatedSettingsUsername(req);
+    if (!username) {
+      return res.status(403).json({ success: false, error: 'MFA settings require a signed-in user session.' });
+    }
+
+    const currentPassword = String(req.body?.currentPassword || '').trim();
+    const token = String(req.body?.token || '').trim();
+    if (!currentPassword || !token) {
+      return res.status(400).json({ success: false, error: 'Current password and authentication code are required.' });
+    }
+
+    const user = await documentModel.getUser(username);
+    if (!user || !user.password) {
+      return res.status(404).json({ success: false, error: 'User not found.' });
+    }
+
+    const validPassword = await bcrypt.compare(currentPassword, user.password);
+    if (!validPassword) {
+      return res.status(401).json({ success: false, error: 'Current password is invalid.' });
+    }
+
+    if (!isMfaEnabledForUser(user) || !user.mfa_secret) {
+      return res.status(400).json({ success: false, error: 'MFA is not enabled for this user.' });
+    }
+
+    if (!verifyTotpToken(user.mfa_secret, token)) {
+      return res.status(400).json({ success: false, error: 'Invalid authentication code.' });
+    }
+
+    const updated = await documentModel.setUserMfaSettings(username, false, null);
+    if (!updated) {
+      return res.status(500).json({ success: false, error: 'Failed to disable MFA for user.' });
+    }
+
+    res.clearCookie(MFA_SETUP_COOKIE);
+    return res.json({ success: true, message: 'MFA has been disabled.' });
+  } catch (error) {
+    console.error('[ERROR] POST /api/settings/mfa/disable:', error);
+    return res.status(500).json({ success: false, error: 'Failed to disable MFA.' });
   }
 });
 

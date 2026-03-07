@@ -1413,6 +1413,395 @@ function initializeCustomFieldsManagement() {
     });
 }
 
+class MfaSettingsManager {
+    constructor() {
+        this.section = document.getElementById('mfaSettingsSection');
+        if (!this.section) {
+            return;
+        }
+
+        this.available = this.section.dataset.mfaAvailable === 'yes';
+        this.enabled = this.section.dataset.mfaEnabled === 'yes';
+        this.username = this.section.dataset.mfaUsername || '';
+
+        this.statusBadge = document.getElementById('mfaStatusBadge');
+        this.currentPasswordInput = document.getElementById('mfaCurrentPassword');
+        this.tokenInput = document.getElementById('mfaToken');
+        this.secretInput = document.getElementById('mfaSecretKey');
+        this.uriInput = document.getElementById('mfaOtpAuthUri');
+        this.qrImage = document.getElementById('mfaQrImage');
+        this.provisioningBox = document.getElementById('mfaProvisioningBox');
+        this.resultMessage = document.getElementById('mfaResultMessage');
+        this.copySecretBtn = document.getElementById('mfaCopySecretBtn');
+        this.downloadQrBtn = document.getElementById('mfaDownloadQrBtn');
+
+        this.startSetupBtn = document.getElementById('mfaStartSetupBtn');
+        this.enableBtn = document.getElementById('mfaEnableBtn');
+        this.verifyBtn = document.getElementById('mfaVerifyBtn');
+        this.disableBtn = document.getElementById('mfaDisableBtn');
+
+        this.setupReady = false;
+
+        this.initialize();
+    }
+
+    initialize() {
+        if (!this.available) {
+            return;
+        }
+
+        this.startSetupBtn?.addEventListener('click', () => this.startSetup());
+        this.enableBtn?.addEventListener('click', () => this.enableMfa());
+        this.verifyBtn?.addEventListener('click', () => this.verifyCode());
+        this.disableBtn?.addEventListener('click', () => this.disableMfa());
+        this.copySecretBtn?.addEventListener('click', () => this.copySecret());
+        this.downloadQrBtn?.addEventListener('click', () => this.downloadQr());
+
+        this.refreshStatus();
+        this.renderState();
+    }
+
+    setMessage(type, text) {
+        if (!this.resultMessage) {
+            return;
+        }
+
+        this.resultMessage.className = 'rounded-lg p-3 text-sm';
+        if (type === 'success') {
+            this.resultMessage.classList.add('theme-alert-success', 'border');
+        } else if (type === 'error') {
+            this.resultMessage.classList.add('theme-alert-error', 'border');
+        } else {
+            this.resultMessage.classList.add('bg-blue-50', 'text-blue-800', 'border', 'border-blue-200');
+        }
+
+        this.resultMessage.textContent = text;
+        this.resultMessage.classList.remove('hidden');
+    }
+
+    clearMessage() {
+        if (this.resultMessage) {
+            this.resultMessage.classList.add('hidden');
+        }
+    }
+
+    setLoading(button, loading, loadingText) {
+        if (!button) {
+            return;
+        }
+
+        if (loading) {
+            if (!button.dataset.originalHtml) {
+                button.dataset.originalHtml = button.innerHTML;
+            }
+            button.disabled = true;
+            button.innerHTML = `<i class="fas fa-spinner fa-spin"></i><span>${loadingText}</span>`;
+            return;
+        }
+
+        button.disabled = false;
+        if (button.dataset.originalHtml) {
+            button.innerHTML = button.dataset.originalHtml;
+        }
+    }
+
+    renderState() {
+        if (!this.available) {
+            return;
+        }
+
+        if (this.statusBadge) {
+            this.statusBadge.textContent = this.enabled ? 'Enabled' : 'Disabled';
+            this.statusBadge.className = `px-2 py-1 rounded-full text-xs font-semibold ${
+                this.enabled ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700'
+            }`;
+        }
+
+        if (this.disableBtn) {
+            this.disableBtn.disabled = !this.enabled;
+        }
+
+        if (this.enableBtn) {
+            this.enableBtn.disabled = this.enabled || !this.setupReady;
+        }
+
+        if (this.provisioningBox) {
+            this.provisioningBox.classList.toggle('hidden', !this.setupReady || this.enabled);
+        }
+
+        if (this.copySecretBtn) {
+            this.copySecretBtn.disabled = !this.setupReady || this.enabled;
+        }
+
+        if (this.downloadQrBtn) {
+            this.downloadQrBtn.disabled = !this.setupReady || this.enabled || !this.qrImage?.src;
+        }
+    }
+
+    async request(url, payload) {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload || {})
+        });
+
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || !data.success) {
+            throw new Error(data.error || 'Request failed.');
+        }
+
+        return data;
+    }
+
+    getCurrentPassword() {
+        return String(this.currentPasswordInput?.value || '').trim();
+    }
+
+    getCurrentToken() {
+        return String(this.tokenInput?.value || '').trim();
+    }
+
+    async refreshStatus() {
+        if (!this.available) {
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/settings/mfa/status');
+            const result = await response.json();
+            if (response.ok && result.success) {
+                this.enabled = Boolean(result.enabled);
+                this.username = result.username || this.username;
+            }
+        } catch (error) {
+            console.warn('Unable to refresh MFA status:', error);
+        } finally {
+            this.renderState();
+        }
+    }
+
+    async startSetup() {
+        const password = this.getCurrentPassword();
+        this.clearMessage();
+
+        if (!password) {
+            this.setMessage('error', 'Enter your current password to start MFA setup.');
+            return;
+        }
+
+        this.setLoading(this.startSetupBtn, true, 'Starting...');
+        try {
+            const result = await this.request('/api/settings/mfa/setup', {
+                currentPassword: password
+            });
+
+            if (this.secretInput) {
+                this.secretInput.value = result.secret || '';
+            }
+            if (this.uriInput) {
+                this.uriInput.value = result.otpauthUri || '';
+            }
+            if (this.qrImage) {
+                this.qrImage.src = result.qrDataUrl || '';
+                this.qrImage.classList.toggle('hidden', !result.qrDataUrl);
+            }
+            this.setupReady = true;
+            this.setMessage('info', 'Setup started. Add the secret in your authenticator and enter a code to enable MFA.');
+        } catch (error) {
+            this.setupReady = false;
+            if (this.qrImage) {
+                this.qrImage.removeAttribute('src');
+                this.qrImage.classList.add('hidden');
+            }
+            this.setMessage('error', error.message);
+        } finally {
+            this.setLoading(this.startSetupBtn, false);
+            this.renderState();
+        }
+    }
+
+    async enableMfa() {
+        const password = this.getCurrentPassword();
+        const token = this.getCurrentToken();
+        this.clearMessage();
+
+        if (!password || !token) {
+            this.setMessage('error', 'Current password and authenticator code are required.');
+            return;
+        }
+
+        this.setLoading(this.enableBtn, true, 'Enabling...');
+        try {
+            const result = await this.request('/api/settings/mfa/enable', {
+                currentPassword: password,
+                token
+            });
+            this.enabled = true;
+            this.setupReady = false;
+            if (this.secretInput) {
+                this.secretInput.value = '';
+            }
+            if (this.uriInput) {
+                this.uriInput.value = '';
+            }
+            if (this.qrImage) {
+                this.qrImage.removeAttribute('src');
+                this.qrImage.classList.add('hidden');
+            }
+            if (this.tokenInput) {
+                this.tokenInput.value = '';
+            }
+            this.setMessage('success', result.message || 'MFA enabled successfully.');
+        } catch (error) {
+            this.setMessage('error', error.message);
+        } finally {
+            this.setLoading(this.enableBtn, false);
+            this.renderState();
+        }
+    }
+
+    async verifyCode() {
+        const token = this.getCurrentToken();
+        this.clearMessage();
+
+        if (!token) {
+            this.setMessage('error', 'Enter an authenticator code to validate.');
+            return;
+        }
+
+        this.setLoading(this.verifyBtn, true, 'Validating...');
+        try {
+            const result = await this.request('/api/settings/mfa/verify', { token });
+            this.setMessage('success', result.message || 'Authentication code is valid.');
+        } catch (error) {
+            this.setMessage('error', error.message);
+        } finally {
+            this.setLoading(this.verifyBtn, false);
+            this.renderState();
+        }
+    }
+
+    async disableMfa() {
+        const password = this.getCurrentPassword();
+        const token = this.getCurrentToken();
+        this.clearMessage();
+
+        if (!password || !token) {
+            this.setMessage('error', 'Current password and authenticator code are required to disable MFA.');
+            return;
+        }
+
+        const confirmResult = await Swal.fire({
+            icon: 'warning',
+            title: 'Disable MFA?',
+            text: 'Your account will no longer require a TOTP code at login.',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Disable MFA'
+        });
+
+        if (!confirmResult.isConfirmed) {
+            return;
+        }
+
+        this.setLoading(this.disableBtn, true, 'Disabling...');
+        try {
+            const result = await this.request('/api/settings/mfa/disable', {
+                currentPassword: password,
+                token
+            });
+            this.enabled = false;
+            this.setupReady = false;
+            if (this.secretInput) {
+                this.secretInput.value = '';
+            }
+            if (this.uriInput) {
+                this.uriInput.value = '';
+            }
+            if (this.qrImage) {
+                this.qrImage.removeAttribute('src');
+                this.qrImage.classList.add('hidden');
+            }
+            if (this.tokenInput) {
+                this.tokenInput.value = '';
+            }
+            this.setMessage('success', result.message || 'MFA disabled.');
+        } catch (error) {
+            this.setMessage('error', error.message);
+        } finally {
+            this.setLoading(this.disableBtn, false);
+            this.renderState();
+        }
+    }
+
+    async copySecret() {
+        this.clearMessage();
+
+        if (!this.setupReady || this.enabled) {
+            this.setMessage('error', 'Start MFA setup first to copy the secret.');
+            return;
+        }
+
+        const secret = String(this.secretInput?.value || '').trim();
+        if (!secret) {
+            this.setMessage('error', 'No secret key available to copy.');
+            return;
+        }
+
+        try {
+            if (navigator?.clipboard?.writeText) {
+                await navigator.clipboard.writeText(secret);
+            } else {
+                this.secretInput?.focus();
+                this.secretInput?.select();
+                const copied = document.execCommand('copy');
+                if (!copied) {
+                    throw new Error('Copy command was not accepted by the browser.');
+                }
+                this.secretInput?.setSelectionRange(0, 0);
+                this.secretInput?.blur();
+            }
+
+            this.setMessage('success', 'Secret key copied to clipboard.');
+        } catch (error) {
+            this.setMessage('error', error.message || 'Unable to copy the secret key.');
+        }
+    }
+
+    downloadQr() {
+        this.clearMessage();
+
+        if (!this.setupReady || this.enabled) {
+            this.setMessage('error', 'Start MFA setup first to download the QR code.');
+            return;
+        }
+
+        const qrDataUrl = String(this.qrImage?.src || '').trim();
+        if (!qrDataUrl) {
+            this.setMessage('error', 'No QR code available to download.');
+            return;
+        }
+
+        try {
+            const fileBase = this.username || 'paperless-ai-user';
+            const fileName = `${fileBase}-mfa-qr.png`;
+            const link = document.createElement('a');
+            link.href = qrDataUrl;
+            link.download = fileName;
+            link.rel = 'noopener';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            this.setMessage('success', 'QR code downloaded.');
+        } catch (error) {
+            this.setMessage('error', error.message || 'Unable to download the QR code.');
+        }
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     normalizeSystemPromptNewlines();
     initializeCoreSettings();
@@ -1421,6 +1810,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeRuntimeOverridePills();
     initializePublicUrlStatus();
     initializeCustomFieldsManagement();
+    new MfaSettingsManager();
 });
 
 function updateThemeClasses(isDark) {

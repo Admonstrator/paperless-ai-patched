@@ -300,6 +300,87 @@
                                     <p class="text-xs text-gray-500">ENV: DISABLE_AUTOMATIC_PROCESSING · Restart required</p>
                                 </div>
                             </section>
+
+                            <section class="space-y-4 border-t pt-4" id="mfaSettingsSection" data-mfa-available="<%= mfaSettings && mfaSettings.available ? 'yes' : 'no' %>" data-mfa-enabled="<%= mfaSettings && mfaSettings.enabled ? 'yes' : 'no' %>" data-mfa-username="<%= mfaSettings && mfaSettings.username ? mfaSettings.username : '' %>">
+                                <h3 class="text-lg font-semibold">Account Security (TOTP)</h3>
+
+                                <% if (!(mfaSettings && mfaSettings.available)) { %>
+                                    <div class="theme-alert-warning border rounded-lg p-4 text-sm">
+                                        MFA controls are available only for interactive user sessions (not API key authentication).
+                                    </div>
+                                <% } else { %>
+                                    <div class="rounded-lg border p-4 space-y-4">
+                                        <div class="flex flex-wrap items-center justify-between gap-2">
+                                            <div>
+                                                <p class="text-sm font-medium">User: <span id="mfaSettingsUser"><%= mfaSettings.username %></span></p>
+                                                <p class="text-xs text-gray-500">Configure two-factor authentication for this account.</p>
+                                            </div>
+                                            <span id="mfaStatusBadge" class="px-2 py-1 rounded-full text-xs font-semibold <%= mfaSettings.enabled ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700' %>">
+                                                <%= mfaSettings.enabled ? 'Enabled' : 'Disabled' %>
+                                            </span>
+                                        </div>
+
+                                        <div class="space-y-2">
+                                            <label for="mfaCurrentPassword" class="text-sm font-medium">Current Password</label>
+                                            <input type="password" id="mfaCurrentPassword" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Enter current password">
+                                            <p class="text-xs text-gray-500">Required for enabling and disabling MFA.</p>
+                                        </div>
+
+                                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                            <button type="button" id="mfaStartSetupBtn" class="toolbar-btn toolbar-btn--primary flex items-center justify-center gap-2">
+                                                <i class="fas fa-key"></i>
+                                                <span>Start Setup</span>
+                                            </button>
+                                            <button type="button" id="mfaEnableBtn" class="toolbar-btn toolbar-btn--primary flex items-center justify-center gap-2">
+                                                <i class="fas fa-shield-check"></i>
+                                                <span>Enable MFA</span>
+                                            </button>
+                                            <button type="button" id="mfaDisableBtn" class="toolbar-btn toolbar-btn--danger flex items-center justify-center gap-2">
+                                                <i class="fas fa-shield"></i>
+                                                <span>Disable MFA</span>
+                                            </button>
+                                        </div>
+
+                                        <div id="mfaProvisioningBox" class="space-y-3 p-3 border rounded-lg hidden">
+                                            <div class="flex justify-center">
+                                                <img id="mfaQrImage" class="w-44 h-44 rounded border border-gray-200 bg-white p-2 hidden" alt="MFA provisioning QR code" />
+                                            </div>
+                                            <div class="space-y-1">
+                                                <label for="mfaSecretKey" class="text-sm font-medium">Secret Key</label>
+                                                <input type="text" id="mfaSecretKey" class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50" readonly>
+                                            </div>
+                                            <div class="space-y-1">
+                                                <label for="mfaOtpAuthUri" class="text-sm font-medium">OTP URI</label>
+                                                <textarea id="mfaOtpAuthUri" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-xs" readonly></textarea>
+                                            </div>
+                                            <div class="flex flex-col sm:flex-row gap-2">
+                                                <button type="button" id="mfaCopySecretBtn" class="toolbar-btn flex items-center justify-center gap-2">
+                                                    <i class="fas fa-copy"></i>
+                                                    <span>Copy Secret</span>
+                                                </button>
+                                                <button type="button" id="mfaDownloadQrBtn" class="toolbar-btn flex items-center justify-center gap-2">
+                                                    <i class="fas fa-download"></i>
+                                                    <span>Download QR</span>
+                                                </button>
+                                            </div>
+                                            <p class="text-xs text-gray-500">Use either the key or URI in your authenticator app, then enter a code below.</p>
+                                        </div>
+
+                                        <div class="space-y-2">
+                                            <label for="mfaToken" class="text-sm font-medium">Authenticator Code</label>
+                                            <div class="flex flex-col sm:flex-row gap-2">
+                                                <input type="text" id="mfaToken" inputmode="numeric" autocomplete="one-time-code" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Enter 6-digit code">
+                                                <button type="button" id="mfaVerifyBtn" class="toolbar-btn toolbar-btn--warning flex items-center justify-center gap-2">
+                                                    <i class="fas fa-vial"></i>
+                                                    <span>Validate Code</span>
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div id="mfaResultMessage" class="hidden rounded-lg p-3 text-sm"></div>
+                                    </div>
+                                <% } %>
+                            </section>
                         </div>
 
                         <div id="ai-tab" class="settings-tab-content space-y-6 hidden">

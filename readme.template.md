@@ -29,7 +29,7 @@
 | Global API + SSE rate limiting              | ❌            | ✅                                                                                           |
 | MFA login support                           | ❌            | ✅                                                                                           |
 | **OCR and recovery workflows**              |              |                                                                                             |
-| Works with blurry documents and images      | ✅            | ✅                                                                                           |
+| Works with blurry documents and images      | ❌            | ✅                                                                                           |
 | **UX and operations**                       |              |                                                                                             |
 | Searchable document picker in chat          | ❌            | ✅                                                                                           |
 | Settings tabs with runtime ENV hints        | ❌            | ✅                                                                                           |

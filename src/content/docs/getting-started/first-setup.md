@@ -12,6 +12,11 @@ The setup assistant is not yet complete for all configuration paths.
 In Docker environments, you should define the key variables directly via `environment:` / `.env` (at minimum `PAPERLESS_API_URL`, `PAPERLESS_API_TOKEN`, `AI_PROVIDER`, and matching provider credentials).
 :::
 
+:::note[MFA lockout recovery]
+If you later enable MFA and lose access to your authenticator, use the in-container MFA reset CLI.
+See [Troubleshooting -> MFA lockout recovery](troubleshooting/#mfa-lockout-recovery).
+:::
+
 ---
 
 ## Step 1: Create an Admin Account

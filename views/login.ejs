@@ -92,6 +92,17 @@
                     <div class="text-sm p-3 rounded-md theme-alert-error border login-alert" role="alert">
                         <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
                         <%= error %>
+                        <% if (mfaRequired) { %>
+                            <p class="mt-2 text-xs">
+                                Recovery help:
+                                <a
+                                    href="https://paperless-ai-next.admon.me/getting-started/troubleshooting/#mfa-lockout-recovery"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    class="underline"
+                                >Open MFA troubleshooting guide</a>
+                            </p>
+                        <% } %>
                     </div>
                 <% } %>
 

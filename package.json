@@ -7,7 +7,8 @@
     "test": "nodemon server.js",
     "docs:dev": "astro dev --host",
     "docs:build": "astro build",
-    "docs:preview": "astro preview --host"
+    "docs:preview": "astro preview --host",
+    "mfa:reset": "node scripts/mfa-reset.js"
   },
   "keywords": [
     "paperless-ngx",

@@ -1427,6 +1427,7 @@ class MfaSettingsManager {
         this.statusBadge = document.getElementById('mfaStatusBadge');
         this.currentPasswordInput = document.getElementById('mfaCurrentPassword');
         this.tokenInput = document.getElementById('mfaToken');
+        this.tokenHint = document.getElementById('mfaTokenHint');
         this.secretInput = document.getElementById('mfaSecretKey');
         this.uriInput = document.getElementById('mfaOtpAuthUri');
         this.qrImage = document.getElementById('mfaQrImage');
@@ -1441,6 +1442,7 @@ class MfaSettingsManager {
         this.disableBtn = document.getElementById('mfaDisableBtn');
 
         this.setupReady = false;
+        this.invalidTotpAttempts = 0;
 
         this.initialize();
     }
@@ -1455,6 +1457,7 @@ class MfaSettingsManager {
         this.disableBtn?.addEventListener('click', () => this.disableMfa());
         this.copySecretBtn?.addEventListener('click', () => this.copySecret());
         this.downloadQrBtn?.addEventListener('click', () => this.downloadQr());
+        this.tokenInput?.addEventListener('input', () => this.clearTokenHint());
 
         this.refreshStatus();
         this.renderState();
@@ -1482,6 +1485,68 @@ class MfaSettingsManager {
         if (this.resultMessage) {
             this.resultMessage.classList.add('hidden');
         }
+    }
+
+    setTokenHint(type, text) {
+        if (!this.tokenHint) {
+            return;
+        }
+
+        this.tokenHint.className = 'text-xs';
+        if (type === 'error') {
+            this.tokenHint.classList.add('text-red-600');
+            this.tokenInput?.classList.add('border-red-500', 'focus:border-red-500', 'focus:ring-red-500');
+            this.tokenInput?.classList.remove('border-gray-300', 'focus:border-blue-500', 'focus:ring-blue-500');
+        } else if (type === 'success') {
+            this.tokenHint.classList.add('text-green-600');
+            this.tokenInput?.classList.remove('border-red-500', 'focus:border-red-500', 'focus:ring-red-500');
+            this.tokenInput?.classList.add('border-green-500', 'focus:border-green-500', 'focus:ring-green-500');
+            this.tokenInput?.classList.remove('border-gray-300', 'focus:border-blue-500', 'focus:ring-blue-500');
+        } else {
+            this.tokenHint.classList.add('text-gray-500');
+            this.tokenInput?.classList.remove('border-red-500', 'focus:border-red-500', 'focus:ring-red-500');
+            this.tokenInput?.classList.remove('border-green-500', 'focus:border-green-500', 'focus:ring-green-500');
+            this.tokenInput?.classList.add('border-gray-300', 'focus:border-blue-500', 'focus:ring-blue-500');
+        }
+
+        this.tokenHint.textContent = text;
+        this.tokenHint.classList.remove('hidden');
+    }
+
+    clearTokenHint() {
+        if (this.tokenHint) {
+            this.tokenHint.classList.add('hidden');
+        }
+        this.tokenInput?.classList.remove('border-red-500', 'focus:border-red-500', 'focus:ring-red-500');
+        this.tokenInput?.classList.remove('border-green-500', 'focus:border-green-500', 'focus:ring-green-500');
+        this.tokenInput?.classList.add('border-gray-300', 'focus:border-blue-500', 'focus:ring-blue-500');
+    }
+
+    isInvalidTotpError(error) {
+        return /invalid authentication code/i.test(String(error?.message || ''));
+    }
+
+    getMfaTroubleshootingUrl() {
+        return 'https://paperless-ai-next.admon.me/getting-started/troubleshooting/#mfa-lockout-recovery';
+    }
+
+    handleInvalidTotpAttempt() {
+        this.invalidTotpAttempts += 1;
+
+        if (this.invalidTotpAttempts >= 3) {
+            const troubleshootingUrl = this.getMfaTroubleshootingUrl();
+            this.setTokenHint(
+                'error',
+                `Invalid or expired code (${this.invalidTotpAttempts} attempts). Recovery guide: ${troubleshootingUrl}`
+            );
+            this.setMessage(
+                'error',
+                `Authentication code is invalid. See troubleshooting: ${troubleshootingUrl}`
+            );
+            return;
+        }
+
+        this.setTokenHint('error', 'Invalid or expired code. Wait for the next code and check your device time.');
     }
 
     setLoading(button, loading, loadingText) {
@@ -1592,6 +1657,7 @@ class MfaSettingsManager {
     async startSetup() {
         const password = this.getCurrentPassword();
         this.clearMessage();
+        this.clearTokenHint();
 
         if (!password) {
             this.setMessage('error', 'Enter your current password to start MFA setup.');
@@ -1637,9 +1703,11 @@ class MfaSettingsManager {
         const password = this.getCurrentPassword();
         const token = this.getCurrentToken();
         this.clearMessage();
+        this.clearTokenHint();
 
         if (!token) {
             this.setMessage('error', 'Enter an authenticator code to validate.');
+            this.setTokenHint('error', 'Please enter the 6-digit code from your authenticator app.');
             return;
         }
 
@@ -1675,13 +1743,24 @@ class MfaSettingsManager {
                 if (this.tokenInput) {
                     this.tokenInput.value = '';
                 }
+                this.invalidTotpAttempts = 0;
+                this.setTokenHint('success', 'Code accepted. MFA is now active.');
                 this.setMessage('success', result.message || 'MFA enabled successfully.');
             } else {
                 const result = await this.request('/api/settings/mfa/verify', { token });
+                this.invalidTotpAttempts = 0;
+                this.setTokenHint('success', 'Code is valid.');
                 this.setMessage('success', result.message || 'Authentication code is valid.');
             }
         } catch (error) {
-            this.setMessage('error', error.message);
+            if (this.isInvalidTotpError(error)) {
+                this.handleInvalidTotpAttempt();
+            } else {
+                this.setTokenHint('error', 'Validation failed. Please try again.');
+            }
+            if (this.invalidTotpAttempts < 3 || !this.isInvalidTotpError(error)) {
+                this.setMessage('error', error.message);
+            }
         } finally {
             this.setLoading(this.verifyBtn, false);
             this.renderState();
@@ -1692,6 +1771,7 @@ class MfaSettingsManager {
         const password = this.getCurrentPassword();
         const token = this.getCurrentToken();
         this.clearMessage();
+        this.clearTokenHint();
 
         if (!password || !token) {
             this.setMessage('error', 'Current password and authenticator code are required to disable MFA.');
@@ -1718,6 +1798,7 @@ class MfaSettingsManager {
                 currentPassword: password,
                 token
             });
+            this.invalidTotpAttempts = 0;
             this.enabled = false;
             this.setupReady = false;
             if (this.secretInput) {
@@ -1735,6 +1816,12 @@ class MfaSettingsManager {
             }
             this.setMessage('success', result.message || 'MFA disabled.');
         } catch (error) {
+            if (this.isInvalidTotpError(error)) {
+                this.handleInvalidTotpAttempt();
+                if (this.invalidTotpAttempts >= 3) {
+                    return;
+                }
+            }
             this.setMessage('error', error.message);
         } finally {
             this.setLoading(this.disableBtn, false);

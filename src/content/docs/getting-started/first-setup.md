@@ -6,7 +6,7 @@ After starting the container for the first time, open [http://localhost:3000](ht
 
 Paperless-AI next now uses a guided **7-step initial installer** with built-in validation for Paperless and AI connectivity.
 
-Need all available Docker environment variables? See the [Configuration reference](configuration/#docker-environment-variables).
+Need all available Docker environment variables? See the [Configuration reference](/getting-started/configuration/#docker-environment-variables).
 
 ## Before you start
 
@@ -23,7 +23,7 @@ If Paperless-ngx and Paperless-AI next run in the same Docker network, use the s
 
 :::note[MFA lockout recovery]
 If you later enable MFA and lose access to your authenticator, use the in-container MFA reset CLI.
-See [Troubleshooting -> MFA lockout recovery](troubleshooting/#mfa-lockout-recovery).
+See [Troubleshooting -> MFA lockout recovery](/getting-started/troubleshooting/#mfa-lockout-recovery).
 :::
 
 ---
@@ -71,4 +71,4 @@ After successful setup:
 
 ## You're Done
 
-Paperless-AI next will now automatically pick up new documents added to Paperless-ngx, analyze them, and assign metadata based on your selected rules. Check [History](../features/history/) to see what has been processed.
+Paperless-AI next will now automatically pick up new documents added to Paperless-ngx, analyze them, and assign metadata based on your selected rules. Check [History](/features/history/) to see what has been processed.

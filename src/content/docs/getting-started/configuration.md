@@ -70,7 +70,7 @@ For DeepSeek, OpenRouter, Perplexity, Gemini, LiteLLM, and others: enter the bas
 | **Enable OCR Queue** | Activates the OCR rescue feature for poorly scanned documents |
 | **Mistral API Key** | Your [Mistral AI](https://mistral.ai) API key |
 
-See [OCR Queue](../features/ocr-queue/) for details.
+See [OCR Queue](/features/ocr-queue/) for details.
 
 ---
 

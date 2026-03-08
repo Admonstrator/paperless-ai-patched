@@ -35,12 +35,12 @@ If you want the AI to stay within your current tag structure and not invent new 
 
 If the AI fails to process a document (e.g. the text is too short or the AI is unavailable), it retries up to 3 times before giving up and moving on. No document blocks the queue permanently.
 
-You can always re-process a document manually from the [History](history/) page.
+You can always re-process a document manually from the [History](/features/history/) page.
 
 ---
 
 ## Tips
 
-- **Better results**: The more text a document contains, the better the AI can classify it. Scanned documents with poor OCR quality may produce poor results – see [OCR Queue](ocr-queue/).
+- **Better results**: The more text a document contains, the better the AI can classify it. Scanned documents with poor OCR quality may produce poor results - see [OCR Queue](/features/ocr-queue/).
 - **Custom field support**: Date and Boolean custom fields defined in Paperless-ngx are also populated by the AI.
 - **Token usage**: Processing costs are tracked per document and visible in the History Info-Modal.

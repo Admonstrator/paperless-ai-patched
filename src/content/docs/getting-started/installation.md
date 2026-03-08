@@ -70,9 +70,9 @@ It is highly recommended to use an reverse proxy (e.g. Nginx, Caddy) in front of
 docker compose up -d
 ```
 
-Then open [http://localhost:3000](http://localhost:3000) and follow the [First Setup](first-setup/) guide.
+Then open [http://localhost:3000](http://localhost:3000) and follow the [First Setup](/getting-started/first-setup/) guide.
 
-Need all available Docker environment variables? See the [Configuration reference](configuration/#docker-environment-variables).
+Need all available Docker environment variables? See the [Configuration reference](/getting-started/configuration/#docker-environment-variables).
 
 :::note[Installer + env workflow]
 The new installer covers the complete first-run path (admin, optional MFA, Paperless test, metadata rules, AI test, optional OCR, and review/finish).

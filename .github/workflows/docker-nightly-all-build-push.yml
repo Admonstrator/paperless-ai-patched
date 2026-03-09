@@ -1,0 +1,211 @@
+name: Docker Nightly Full Pipeline
+
+env:
+  DOCKERHUB_REPO: admonstrator/paperless-ai-next
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_arm64:
+        description: 'Also build ARM64 (slower, more expensive)'
+        required: false
+        default: false
+        type: boolean
+      build_lite_base:
+        description: 'Build/push nightly lite base image'
+        required: false
+        default: true
+        type: boolean
+      build_full_base:
+        description: 'Build/push nightly full base image'
+        required: false
+        default: true
+        type: boolean
+      build_lite_app:
+        description: 'Build/push nightly lite app image'
+        required: false
+        default: true
+        type: boolean
+      build_full_app:
+        description: 'Build/push nightly full app image'
+        required: false
+        default: true
+        type: boolean
+
+concurrency:
+  group: docker-nightly-all
+  cancel-in-progress: true
+
+jobs:
+  validate-options:
+    name: Validate Nightly Inputs
+    runs-on: ubuntu-latest
+    if: ${{ github.ref_name == 'nightly' }}
+
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+
+      - name: Validate base/app build dependencies
+        run: |
+          if [ "${{ inputs.build_lite_app }}" = "true" ] && [ "${{ inputs.build_lite_base }}" != "true" ]; then
+            echo "Lite app requested without lite base rebuild. Checking existing nightly-base-lite tag..."
+            if ! docker buildx imagetools inspect "${{ env.DOCKERHUB_REPO }}:nightly-base-lite" >/dev/null 2>&1; then
+              echo "Invalid inputs: build_lite_app=true needs either build_lite_base=true or existing image ${{ env.DOCKERHUB_REPO }}:nightly-base-lite"
+              exit 1
+            fi
+          fi
+
+          if [ "${{ inputs.build_full_app }}" = "true" ] && [ "${{ inputs.build_full_base }}" != "true" ]; then
+            echo "Full app requested without full base rebuild. Checking existing nightly-base-full tag..."
+            if ! docker buildx imagetools inspect "${{ env.DOCKERHUB_REPO }}:nightly-base-full" >/dev/null 2>&1; then
+              echo "Invalid inputs: build_full_app=true needs either build_full_base=true or existing image ${{ env.DOCKERHUB_REPO }}:nightly-base-full"
+              exit 1
+            fi
+          fi
+
+  build-base-lite:
+    name: Build Nightly Lite Base
+    runs-on: ubuntu-latest
+    needs: [validate-options]
+    if: ${{ github.ref_name == 'nightly' && inputs.build_lite_base }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+
+      - name: Build and Push Nightly Lite Base Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile.base.lite
+          push: true
+          tags: ${{ env.DOCKERHUB_REPO }}:nightly-base-lite
+          platforms: ${{ inputs.build_arm64 && 'linux/amd64,linux/arm64' || 'linux/amd64' }}
+          cache-from: type=registry,ref=${{ env.DOCKERHUB_REPO }}:buildcache-base-nightly-lite
+          cache-to: type=registry,ref=${{ env.DOCKERHUB_REPO }}:buildcache-base-nightly-lite,mode=min
+        timeout-minutes: 60
+
+  build-base-full:
+    name: Build Nightly Full Base
+    runs-on: ubuntu-latest
+    needs: [validate-options]
+    if: ${{ github.ref_name == 'nightly' && inputs.build_full_base }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+
+      - name: Build and Push Nightly Full Base Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile.base.full
+          push: true
+          tags: ${{ env.DOCKERHUB_REPO }}:nightly-base-full
+          platforms: ${{ inputs.build_arm64 && 'linux/amd64,linux/arm64' || 'linux/amd64' }}
+          cache-from: type=registry,ref=${{ env.DOCKERHUB_REPO }}:buildcache-base-nightly-full
+          cache-to: type=registry,ref=${{ env.DOCKERHUB_REPO }}:buildcache-base-nightly-full,mode=min
+        timeout-minutes: 120
+
+  build-app-lite:
+    name: Build Nightly Lite App
+    runs-on: ubuntu-latest
+    needs: [validate-options, build-base-lite]
+    if: ${{ github.ref_name == 'nightly' && inputs.build_lite_app && ((inputs.build_lite_base && needs.build-base-lite.result == 'success') || !inputs.build_lite_base) }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set version in config.js for image build
+        run: |
+          sed -i "s|PAPERLESS_AI_VERSION: '.*'|PAPERLESS_AI_VERSION: 'nightly'|" config/config.js
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+
+      - name: Build and Push Nightly Lite Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile.lite
+          build-args: |
+            BASE_IMAGE=${{ env.DOCKERHUB_REPO }}:nightly-base-lite
+            PAPERLESS_AI_COMMIT_SHA=${{ github.sha }}
+          push: true
+          tags: |
+            ${{ env.DOCKERHUB_REPO }}:nightly
+            ${{ env.DOCKERHUB_REPO }}:nightly-lite
+          platforms: ${{ inputs.build_arm64 && 'linux/amd64,linux/arm64' || 'linux/amd64' }}
+          cache-from: type=registry,ref=${{ env.DOCKERHUB_REPO }}:buildcache-app-nightly-lite
+          cache-to: type=registry,ref=${{ env.DOCKERHUB_REPO }}:buildcache-app-nightly-lite,mode=min
+        timeout-minutes: 45
+
+  build-app-full:
+    name: Build Nightly Full App
+    runs-on: ubuntu-latest
+    needs: [validate-options, build-base-full]
+    if: ${{ github.ref_name == 'nightly' && inputs.build_full_app && ((inputs.build_full_base && needs.build-base-full.result == 'success') || !inputs.build_full_base) }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set version in config.js for image build
+        run: |
+          sed -i "s|PAPERLESS_AI_VERSION: '.*'|PAPERLESS_AI_VERSION: 'nightly'|" config/config.js
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+
+      - name: Build and Push Nightly Full Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          build-args: |
+            BASE_IMAGE=${{ env.DOCKERHUB_REPO }}:nightly-base-full
+            PAPERLESS_AI_COMMIT_SHA=${{ github.sha }}
+          push: true
+          tags: ${{ env.DOCKERHUB_REPO }}:nightly-full
+          platforms: ${{ inputs.build_arm64 && 'linux/amd64,linux/arm64' || 'linux/amd64' }}
+          cache-from: type=registry,ref=${{ env.DOCKERHUB_REPO }}:buildcache-app-nightly-full
+          cache-to: type=registry,ref=${{ env.DOCKERHUB_REPO }}:buildcache-app-nightly-full,mode=min
+        timeout-minutes: 60

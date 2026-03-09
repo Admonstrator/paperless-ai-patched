@@ -1,7 +1,7 @@
 /**
  * Test script to demonstrate the new restriction prompt service functionality
  */
-const RestrictionPromptService = require('./services/restrictionPromptService');
+const RestrictionPromptService = require('../services/restrictionPromptService');
 
 // Mock data for testing
 const existingTags = [

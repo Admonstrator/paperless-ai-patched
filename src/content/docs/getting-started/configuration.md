@@ -164,7 +164,19 @@ These are useful mostly for scaling and hardening.
 
 ### `COOKIE_SECURE_MODE`
 
-Controls the `Secure` attribute for cookies used by login and CSRF protection.
+This decides if login cookies are allowed on plain HTTP.
+
+Quick rule:
+
+- Use `never` if you open Paperless-AI with `http://...` in your browser (local LAN, no TLS).
+- Use `auto` if you open Paperless-AI with `https://...` (reverse proxy/TLS).
+- Use `always` only if your setup is HTTPS-only and you want to enforce it.
+
+:::caution[Common pitfall on local HTTP]
+If your instance is reachable via plain HTTP and login fails with `Invalid CSRF token`, do not assume `auto` is correct for your setup.
+
+Use `COOKIE_SECURE_MODE=never` for local HTTP access and restart the service.
+:::
 
 | Value | Behavior | Typical use |
 |---|---|---|
@@ -172,15 +184,17 @@ Controls the `Secure` attribute for cookies used by login and CSRF protection.
 | `always` | Always set secure cookies | Strict HTTPS-only deployments |
 | `never` | Never set secure cookies | Local HTTP development without TLS |
 
-Important:
-- `false` is **not** a valid value for `COOKIE_SECURE_MODE`.
-- If an invalid value is set, Paperless-AI falls back to `auto`.
-
 ### `TRUST_PROXY`
 
-Controls Express `trust proxy` behavior.
+This tells Paperless-AI if it should trust proxy headers (like `X-Forwarded-Proto`).
+
+Quick rule:
+
+- No reverse proxy in front of Paperless-AI: use `false`.
+- Reverse proxy in front (Nginx, Traefik, Caddy): use `1` (or another value matching your proxy chain).
 
 Supported values:
+
 - Empty or unset: disabled (`false`)
 - Boolean-like: `true`, `false`, `yes`, `no`, `on`, `off`
 - Numeric hop count: for example `1`, `2`
@@ -211,4 +225,3 @@ services:
 :::note
 Many boolean-style variables accept `yes/no`, `true/false`, and `1/0`. For consistency, prefer `yes` or `no`.
 :::
-

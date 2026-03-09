@@ -26,6 +26,11 @@ If you later enable MFA and lose access to your authenticator, use the in-contai
 See [Troubleshooting -> MFA lockout recovery](/getting-started/troubleshooting/#mfa-lockout-recovery).
 :::
 
+:::note[HTTP / HTTPS usage]
+If you run Paperless-AI next locally over plain HTTP (no reverse proxy/TLS), set `COOKIE_SECURE_MODE=never` before starting the container to avoid login issues.
+For details and all supported cookie/proxy flag values, see [Configuration](/getting-started/configuration/#cookie-and-proxy-flags-all-supported-values).
+:::
+
 ---
 
 ## Installer steps

@@ -37,6 +37,25 @@
                         ? 'Use the authentication code to complete sign in.'
                         : 'Sign in to continue processing your documents with AI.' %>
                 </p>
+
+                <% if (typeof loginCookieSecurityWarning === 'string' && loginCookieSecurityWarning) { %>
+                    <div class="text-sm p-3 rounded-md theme-alert-error border login-alert mt-4" role="alert">
+                        <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+                        <div class="text-left leading-relaxed">
+                            <p><strong>Connection warning</strong></p>
+                            <p><%= loginCookieSecurityWarning %></p>
+                            <p class="mt-2 text-xs">
+                                More information:<br>
+                                <a
+                                    href="https://paperless-ai-next.admon.me/getting-started/configuration/#cookie-and-proxy-flags-all-supported-values"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    class="underline"
+                                >Cookie and proxy flags documentation</a>
+                            </p>
+                        </div>
+                    </div>
+                <% } %>
             </div>
 
             <% const isMfaStep = !!mfaRequired; %>
@@ -91,18 +110,31 @@
                 <% if (error) { %>
                     <div class="text-sm p-3 rounded-md theme-alert-error border login-alert" role="alert">
                         <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
-                        <%= error %>
-                        <% if (mfaRequired) { %>
-                            <p class="mt-2 text-xs">
-                                Recovery help:
-                                <a
-                                    href="https://paperless-ai-next.admon.me/getting-started/troubleshooting/#mfa-lockout-recovery"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    class="underline"
-                                >Open MFA troubleshooting guide</a>
-                            </p>
-                        <% } %>
+                        <div class="text-left leading-relaxed">
+                            <p><%= error %></p>
+                            <% if (typeof error === 'string' && error.includes('Invalid CSRF token')) { %>
+                                <p class="mt-2 text-xs">
+                                    Help:<br>
+                                    <a
+                                        href="https://paperless-ai-next.admon.me/getting-started/configuration/#cookie-and-proxy-flags-all-supported-values"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        class="underline"
+                                    >Cookie and proxy flags documentation</a>
+                                </p>
+                            <% } %>
+                            <% if (mfaRequired) { %>
+                                <p class="mt-2 text-xs">
+                                    Recovery help:<br>
+                                    <a
+                                        href="https://paperless-ai-next.admon.me/getting-started/troubleshooting/#mfa-lockout-recovery"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        class="underline"
+                                    >Open MFA troubleshooting guide</a>
+                                </p>
+                            <% } %>
+                        </div>
                     </div>
                 <% } %>
 

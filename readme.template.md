@@ -94,6 +94,8 @@ Because **Paperless-AI <span style="font-size: 0.62em; color: #2563eb; font-weig
 
 Please check the docker variables [here](https://paperless-ai-next.admon.me/getting-started/configuration/#docker-environment-variables) for all configuration options.
 
+> If you are using plain HTTP (like running **Paperless-AI <span style="font-size: 0.62em; color: #2563eb; font-weight: 700;">next</span>** locally on your NAS, your PC, or in your home network), make sure to set `COOKIE_SECURE_MODE=never` to avoid login issues! See [Configuration](/getting-started/configuration/#cookie-and-proxy-flags-all-supported-values) for details. Using a reverse proxy like Nginx or Caddy with HTTPS is highly recommended for security and performance, especially if you expose the service to the internet.
+
 **Lite version** – AI tagging & OCR only (~500–700 MB):
 
 ```yaml

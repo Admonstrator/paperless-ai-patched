@@ -190,6 +190,14 @@ function shouldUseSecureCookies(req) {
   return String(process.env.NODE_ENV || '').toLowerCase() === 'production';
 }
 
+function isHttpsRequest(req) {
+  const forwardedProto = String(req.headers['x-forwarded-proto'] || '')
+    .split(',')[0]
+    .trim()
+    .toLowerCase();
+  return Boolean(req.secure || forwardedProto === 'https');
+}
+
 const csrfCookieSecure = shouldUseSecureCookies();
 
 // Retry tracking to prevent infinite retry loops
@@ -301,6 +309,12 @@ app.use((req, res, next) => {
   res.locals.appAzureKeySet = Boolean(config.azure?.apiKey);
   res.locals.appMistralKeySet = Boolean(config.mistralOcr?.apiKey);
   res.locals.appApiKeySet = Boolean(config.getApiKey && config.getApiKey());
+  res.locals.loginCookieSecurityWarning = null;
+
+  if (req.path === '/login' && csrfCookieSecure && !isHttpsRequest(req)) {
+    res.locals.loginCookieSecurityWarning = 'You are accessing the login page over HTTP while the system is configured to use HTTPS by default. To resolve this, either switch to HTTPS or set COOKIE_SECURE_MODE=never in your .env or docker-compose.yml file and restart the container.';
+  }
+
   next();
 });
 
@@ -350,6 +364,19 @@ app.use((req, res, next) => {
   doubleCsrfProtection(req, res, (err) => {
     if (err) {
       if (err === invalidCsrfTokenError) {
+        if (req.method === 'POST' && req.path === '/login') {
+          const baseError = 'Invalid CSRF token. The login page may have expired or your browser did not send the CSRF cookie.';
+          const guidance = res.locals.loginCookieSecurityWarning
+            ? ' This is commonly caused by HTTP access with secure cookies enabled. Set COOKIE_SECURE_MODE=never for local HTTP and restart, or switch to HTTPS. See: https://paperless-ai-next.admon.me/getting-started/configuration/#cookie-and-proxy-flags-all-supported-values'
+            : ' Refresh the login page and try again.';
+
+          return res.status(403).render('login', {
+            error: `${baseError}${guidance}`,
+            mfaRequired: false,
+            username: String(req.body?.username || '')
+          });
+        }
+
         return res.status(403).json({ error: "Invalid CSRF token" });
       }
       return next(err);

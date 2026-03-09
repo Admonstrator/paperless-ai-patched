@@ -1580,8 +1580,15 @@ async searchForExistingDocumentType(documentType) {
   }
 }
 
-async getOrCreateDocumentType(name) {
+async getOrCreateDocumentType(name, options = {}) {
   this.initialize();
+
+  // Explicit option value wins; otherwise fall back to env config.
+  const restrictToExistingDocumentTypes = options.restrictToExistingDocumentTypes === true ||
+                                        (options.restrictToExistingDocumentTypes === undefined &&
+                                         process.env.RESTRICT_TO_EXISTING_DOCUMENT_TYPES === 'yes');
+
+  console.log(`[DEBUG] Processing document type with restrictToExistingDocumentTypes=${restrictToExistingDocumentTypes}`);
   
   try {
       // Suche nach existierendem document_type
@@ -1592,6 +1599,11 @@ async getOrCreateDocumentType(name) {
           console.log(`[DEBUG] Found existing document type "${name}" with ID ${existingDocType.id}`);
           return existingDocType;
       }
+
+        if (restrictToExistingDocumentTypes) {
+          console.log(`[DEBUG] Document type "${name}" does not exist and restrictions are enabled, returning null`);
+          return null;
+        }
   
       // Erstelle neuen document_type
       try {

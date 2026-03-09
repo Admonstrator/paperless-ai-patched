@@ -2799,10 +2799,11 @@ async function buildUpdateData(analysis, doc) {
   // Create options object with restriction settings
   const options = {
     restrictToExistingTags: config.restrictToExistingTags === 'yes' ? true : false,
-    restrictToExistingCorrespondents: config.restrictToExistingCorrespondents === 'yes' ? true : false
+    restrictToExistingCorrespondents: config.restrictToExistingCorrespondents === 'yes' ? true : false,
+    restrictToExistingDocumentTypes: config.restrictToExistingDocumentTypes === 'yes' ? true : false
   };
 
-  console.log(`[DEBUG] Building update data with restrictions: tags=${options.restrictToExistingTags}, correspondents=${options.restrictToExistingCorrespondents}`);
+  console.log(`[DEBUG] Building update data with restrictions: tags=${options.restrictToExistingTags}, correspondents=${options.restrictToExistingCorrespondents}, documentTypes=${options.restrictToExistingDocumentTypes}`);
 
   // Only process tags if tagging is activated
   if (config.limitFunctions?.activateTagging !== 'no') {
@@ -2835,7 +2836,7 @@ async function buildUpdateData(analysis, doc) {
   // Only process document type if document type classification is activated
   if (config.limitFunctions?.activateDocumentType !== 'no' && analysis.document.document_type) {
     try {
-      const documentType = await paperlessService.getOrCreateDocumentType(analysis.document.document_type);
+      const documentType = await paperlessService.getOrCreateDocumentType(analysis.document.document_type, options);
       if (documentType) {
         updateData.document_type = documentType.id;
       }
@@ -5940,6 +5941,12 @@ router.post('/manual/playground', express.json(), async (req, res) => {
 router.post('/manual/updateDocument', express.json(), async (req, res) => {
   try {
     var { documentId, tags, correspondent, title } = req.body;
+    const options = {
+      restrictToExistingTags: config.restrictToExistingTags === 'yes',
+      restrictToExistingCorrespondents: config.restrictToExistingCorrespondents === 'yes',
+      restrictToExistingDocumentTypes: config.restrictToExistingDocumentTypes === 'yes'
+    };
+
     console.log("TITLE: ", title);
     // Convert all tags to names if they are IDs
     tags = await Promise.all(tags.map(async tag => {
@@ -5956,13 +5963,13 @@ router.post('/manual/updateDocument', express.json(), async (req, res) => {
     tags = tags.filter(tag => tag != null);
 
     // Process new tags to get their IDs
-    const { tagIds, errors } = await paperlessService.processTags(tags);
+    const { tagIds, errors } = await paperlessService.processTags(tags, options);
     if (errors.length > 0) {
       return res.status(400).json({ errors });
     }
 
     // Process correspondent if provided
-    const correspondentData = correspondent ? await paperlessService.getOrCreateCorrespondent(correspondent) : null;
+    const correspondentData = correspondent ? await paperlessService.getOrCreateCorrespondent(correspondent, options) : null;
 
 
     await paperlessService.removeUnusedTagsFromDocument(documentId, tagIds);

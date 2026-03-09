@@ -66,7 +66,7 @@ ensure_docker() {
 build_base_full() {
   echo "\n[1/1] Building full base image: ${BASE_FULL_IMAGE}"
   "$DOCKER_BIN" build \
-    "${BUILD_FLAGS[@]}" \
+    "${BUILD_FLAGS[@]+"${BUILD_FLAGS[@]}"}" \
     -f Dockerfile.base.full \
     -t "${BASE_FULL_IMAGE}" \
     .
@@ -76,7 +76,7 @@ build_base_full() {
 build_base_lite() {
   echo "\n[1/1] Building lite base image: ${BASE_LITE_IMAGE}"
   "$DOCKER_BIN" build \
-    "${BUILD_FLAGS[@]}" \
+    "${BUILD_FLAGS[@]+"${BUILD_FLAGS[@]}"}" \
     -f Dockerfile.base.lite \
     -t "${BASE_LITE_IMAGE}" \
     .
@@ -86,7 +86,7 @@ build_base_lite() {
 build_app_full() {
   echo "\n[1/1] Building full app image: ${APP_FULL_IMAGE}"
   "$DOCKER_BIN" build \
-    "${BUILD_FLAGS[@]}" \
+    "${BUILD_FLAGS[@]+"${BUILD_FLAGS[@]}"}" \
     -f Dockerfile \
     --build-arg BASE_IMAGE="${BASE_FULL_IMAGE}" \
     --build-arg PAPERLESS_AI_COMMIT_SHA="${COMMIT_SHA}" \
@@ -98,7 +98,7 @@ build_app_full() {
 build_app_lite() {
   echo "\n[1/1] Building lite app image: ${APP_LITE_IMAGE}"
   "$DOCKER_BIN" build \
-    "${BUILD_FLAGS[@]}" \
+    "${BUILD_FLAGS[@]+"${BUILD_FLAGS[@]}"}" \
     -f Dockerfile.lite \
     --build-arg BASE_IMAGE="${BASE_LITE_IMAGE}" \
     --build-arg PAPERLESS_AI_COMMIT_SHA="${COMMIT_SHA}" \

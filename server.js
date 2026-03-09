@@ -564,12 +564,17 @@ async function processDocument(doc, existingTags, existingCorrespondentList, exi
 
 async function buildUpdateData(analysis, doc) {
   const updateData = {};
+  const options = {
+    restrictToExistingTags: config.restrictToExistingTags === 'yes',
+    restrictToExistingCorrespondents: config.restrictToExistingCorrespondents === 'yes',
+    restrictToExistingDocumentTypes: config.restrictToExistingDocumentTypes === 'yes'
+  };
 
   console.log('TEST: ', config.addAIProcessedTag)
   console.log('TEST 2: ', config.addAIProcessedTags)
   // Only process tags if tagging is activated
   if (config.limitFunctions?.activateTagging !== 'no') {
-    const { tagIds, errors } = await paperlessService.processTags(analysis.document.tags);
+    const { tagIds, errors } = await paperlessService.processTags(analysis.document.tags, options);
     if (errors.length > 0) {
       console.warn('[ERROR] Some tags could not be processed:', errors);
     }
@@ -579,7 +584,7 @@ async function buildUpdateData(analysis, doc) {
     // get tags from .env file and split them by comma and make an array
     console.log('[DEBUG] Tagging is deactivated but AI processed tag will be added');
     const tags = config.addAIProcessedTags.split(',');
-    const { tagIds, errors } = await paperlessService.processTags(tags);
+    const { tagIds, errors } = await paperlessService.processTags(tags, options);
     if (errors.length > 0) {
       console.warn('[ERROR] Some tags could not be processed:', errors);
     }
@@ -598,7 +603,7 @@ async function buildUpdateData(analysis, doc) {
   // Only process document type if document type classification is activated
   if (config.limitFunctions?.activateDocumentType !== 'no' && analysis.document.document_type) {
     try {
-      const documentType = await paperlessService.getOrCreateDocumentType(analysis.document.document_type);
+      const documentType = await paperlessService.getOrCreateDocumentType(analysis.document.document_type, options);
       if (documentType) {
         updateData.document_type = documentType.id;
       }
@@ -667,7 +672,7 @@ async function buildUpdateData(analysis, doc) {
   // Only process correspondent if correspondent detection is activated
   if (config.limitFunctions?.activateCorrespondents !== 'no' && analysis.document.correspondent) {
     try {
-      const correspondent = await paperlessService.getOrCreateCorrespondent(analysis.document.correspondent);
+      const correspondent = await paperlessService.getOrCreateCorrespondent(analysis.document.correspondent, options);
       if (correspondent) {
         updateData.correspondent = correspondent.id;
       }

@@ -281,9 +281,14 @@ class MistralOcrService {
     const updateData = {};
     const { validateCustomFieldValue } = require('./serviceUtils');
     const config = require('../config/config');
+    const options = {
+      restrictToExistingTags: config.restrictToExistingTags === 'yes',
+      restrictToExistingCorrespondents: config.restrictToExistingCorrespondents === 'yes',
+      restrictToExistingDocumentTypes: config.restrictToExistingDocumentTypes === 'yes'
+    };
 
     if (config.limitFunctions?.activateTagging !== 'no') {
-      const { tagIds } = await PaperlessService.processTags(analysis.document.tags);
+      const { tagIds } = await PaperlessService.processTags(analysis.document.tags, options);
       updateData.tags = tagIds;
     }
     if (config.limitFunctions?.activateTitle !== 'no') {
@@ -291,11 +296,11 @@ class MistralOcrService {
     }
     updateData.created = analysis.document.document_date || originalData.created;
     if (config.limitFunctions?.activateDocumentType !== 'no' && analysis.document.document_type) {
-      const dt = await PaperlessService.getOrCreateDocumentType(analysis.document.document_type);
+      const dt = await PaperlessService.getOrCreateDocumentType(analysis.document.document_type, options);
       if (dt) updateData.document_type = dt.id;
     }
     if (config.limitFunctions?.activateCorrespondents !== 'no' && analysis.document.correspondent) {
-      const corr = await PaperlessService.getOrCreateCorrespondent(analysis.document.correspondent);
+      const corr = await PaperlessService.getOrCreateCorrespondent(analysis.document.correspondent, options);
       if (corr) updateData.correspondent = corr.id;
     }
     if (analysis.document.language) {

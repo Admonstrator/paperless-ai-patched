@@ -771,7 +771,6 @@ router.post('/login', loginLimiter, async (req, res) => {
 
     // Compare passwords
     const isValidPassword = await bcrypt.compare(password, user.password);
-    console.log('Password validation result:', isValidPassword);
 
     if (isValidPassword) {
       if (isMfaEnabledForUser(user)) {
@@ -3347,7 +3346,6 @@ router.post('/api/key-regenerate', async (req, res) => {
 
     // Sende die Antwort zurück
     res.json({ success: true, newKey: apiKey });
-    console.log('API key regenerated:', apiKey);
   } catch (error) {
     console.error('API key regeneration error:', error);
     res.status(500).json({ error: 'Error regenerating API key' });
@@ -5276,7 +5274,8 @@ router.get('/settings', async (req, res) => {
     TRUST_PROXY: typeof process.env.TRUST_PROXY === 'undefined' ? '' : process.env.TRUST_PROXY,
     COOKIE_SECURE_MODE: process.env.COOKIE_SECURE_MODE || 'auto',
     MIN_CONTENT_LENGTH: process.env.MIN_CONTENT_LENGTH || '10',
-    PAPERLESS_AI_PORT: process.env.PAPERLESS_AI_PORT || '3000'
+    PAPERLESS_AI_PORT: process.env.PAPERLESS_AI_PORT || '3000',
+    LOG_LEVEL: process.env.LOG_LEVEL || 'info'
   };
   
   if (isConfigured) {
@@ -6436,7 +6435,8 @@ router.post('/settings', express.json(), async (req, res) => {
       cookieSecureMode,
       minContentLength,
       paperlessAiPort,
-      externalApiAllowPrivateIps
+      externalApiAllowPrivateIps,
+      logLevel
     } = req.body;
 
     //replace equal char in system prompt
@@ -6504,7 +6504,8 @@ router.post('/settings', express.json(), async (req, res) => {
       TRUST_PROXY: typeof process.env.TRUST_PROXY === 'undefined' ? '' : process.env.TRUST_PROXY,
       COOKIE_SECURE_MODE: process.env.COOKIE_SECURE_MODE || 'auto',
       MIN_CONTENT_LENGTH: process.env.MIN_CONTENT_LENGTH || '10',
-      PAPERLESS_AI_PORT: process.env.PAPERLESS_AI_PORT || '3000'
+      PAPERLESS_AI_PORT: process.env.PAPERLESS_AI_PORT || '3000',
+      LOG_LEVEL: process.env.LOG_LEVEL || 'info'
     };
 
     const hasValue = (value) => typeof value === 'string' && value.trim() !== '';
@@ -6715,6 +6716,16 @@ router.post('/settings', express.json(), async (req, res) => {
       }
       if (minContentLength) updatedConfig.MIN_CONTENT_LENGTH = minContentLength;
       if (paperlessAiPort) updatedConfig.PAPERLESS_AI_PORT = paperlessAiPort;
+      if (typeof logLevel === 'string') {
+        const normalizedLogLevel = logLevel.trim().toLowerCase();
+        if (['debug', 'info', 'warn', 'error'].includes(normalizedLogLevel)) {
+          updatedConfig.LOG_LEVEL = normalizedLogLevel;
+        } else {
+          return res.status(400).json({
+            error: 'Invalid Log Level. Allowed values: debug, info, warn, error.'
+          });
+        }
+      }
 
     // Update tag cache TTL (validate range: 60-3600 seconds)
     if (tagCacheTTL !== undefined) {

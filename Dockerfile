@@ -36,6 +36,7 @@ HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
 
 # Set production environment
 ENV NODE_ENV=production \
+    LOG_LEVEL=info \
     ANONYMIZED_TELEMETRY=False \
     PAPERLESS_AI_COMMIT_SHA=${PAPERLESS_AI_COMMIT_SHA}
 

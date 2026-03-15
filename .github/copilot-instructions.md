@@ -142,11 +142,7 @@ res.flush();
 3. **RAG not working**: Check `RAG_SERVICE_ENABLED=true` and Python service is running
 4. **Dark mode images**: Add `class="no-invert"` to images that shouldn't be inverted
 
-## Fix Documentation & Workflow
-
-### Documentation Pattern
-All integrated fixes live in `src/content/docs/fixes/` with pattern: `NEXT-NNN-short-name/index.md`.
-Use `src/content/docs/fixes/NEXT-000-template/index.md` as the canonical template for new entries.
+## Fix Workflow
 
 ### Change Workflow (IMPORTANT)
 **Every change MUST follow this process:**
@@ -162,73 +158,46 @@ Use `src/content/docs/fixes/NEXT-000-template/index.md` as the canonical templat
 2. **Implement Changes**
    - Make code modifications
    - Test thoroughly
-   - Commit with descriptive messages
 
-3. **Document the fix**
-
-   Create `src/content/docs/fixes/NEXT-{NNN}-{name}/index.md`:
-   ```bash
-   mkdir -p src/content/docs/fixes/NEXT-{NNN}-{name}/
-   ```
-
-   Structure:
+3. **Document the Fix in the Commit Message (MANDATORY)**
+   - Do not create or update Markdown files for fix documentation.
+   - Put the full fix summary in the commit message body using this structure:
    - **Background**: Why this fix was needed
    - **Changes**: What was modified (file-by-file if complex)
    - **Testing**: How to verify the fix
    - **Impact**: Performance/security/functionality improvements
    - **Upstream Status**: Link to upstream PR if applicable
 
-   See existing fixes for reference:
-   - `src/content/docs/fixes/NEXT-000-template/index.md`
+4. **Commit Changes**
+   - Commit with a descriptive subject and structured body
 
-4. **Update `src/content/docs/changelog.md`**
-   - Add a row to the appropriate table section
-   - Format: `| FIX-ID (fixes/NEXT-{NNN}-{name}/) | Description | Date |`
-   - **The root `README.md` does NOT contain a fixes table** — it links to the Docs site
-
-5. **Commit Documentation**
-   ```bash
-   git add src/content/docs/
-   git commit -m "docs: document NEXT-{NNN} fix"
-   ```
-
-6. **Create Pull Request**
-   - Title: `[NEXT-{NNN}] Short description`
+5. **Create Pull Request**
    - Link to upstream PR if applicable
    - Reference any related issues
 
-### Fix Type Prefixes
-- `NEXT-XXX` - Standardized ID format for all new fix and feature documentation entries
+### Example Commit Message Structure
+```text
+fix: short summary
 
-### Example Fix Documentation Structure
-```markdown
-# NEXT-{NNN}: Short Title
+Background:
+Why this fix was needed.
 
-## Background
-Explain the problem, bug, or optimization opportunity.
+Changes:
+- file1.js: Modified function X to handle Y
+- file2.js: Added validation for Z
+- config/config.js: Added FEATURE_ENABLED
 
-## Changes
-- `file1.js`: Modified function X to handle Y
-- `file2.js`: Added validation for Z
-- `config/config.js`: New environment variable FEATURE_ENABLED
+Testing:
+- npm run test
+- node tests/test-new-feature.js
 
-## Testing
-\`\`\`bash
-npm run test
-# OR
-node tests/test-new-feature.js
-\`\`\`
-
-## Impact
+Impact:
 - Performance: 50% faster queries
 - Security: Prevents SSRF attacks
 - Functionality: Supports new AI provider
 
-## Upstream Status
-- [ ] Not submitted
-- [ ] PR opened: [#XXX](https://github.com/clusterzx/paperless-ai/pull/XXX)
-- [x] Merged upstream
-- [ ] Upstream declined (reason)
+Upstream Status:
+- Not submitted / PR opened / Merged upstream / Upstream declined
 ```
 
 ## Documentation Site
@@ -239,12 +208,14 @@ This project uses **Astro + Starlight** for user-facing documentation, deployed 
 - `src/content/docs/index.mdx` – Landing page (About + Features)
 - `src/content/docs/getting-started/` – Installation, First Setup, Configuration
 - `src/content/docs/features/` – Auto-tagging, AI Chat, Manual Tagging, OCR Queue, History
-- `src/content/docs/fixes/` – One subdirectory per fix (`NEXT-NNN-name/index.md`) plus `index.md` overview table
 - `src/content/docs/how-it-works.md` – Simple "How it works" overview
-- `src/content/docs/changelog.md` – Compact table of all fixes, links to `src/content/docs/fixes/` pages
 - `src/content/docs/contributing.md` – Contribution guide
 - `src/content/docs/security.md` – Security policy and fixed vulnerabilities
 - `astro.config.mjs` – Starlight site config (sidebar, integrations, branding)
+
+### Fix Documentation Policy
+- Do not add new fix/changelog Markdown entries for routine fixes.
+- Use the commit message body as the single source of truth for fix documentation.
 
 ### Local Preview
 ```bash
@@ -254,9 +225,7 @@ npm run docs:build      # CI check
 ```
 
 ### Single Source of Truth Rules
-- `src/content/docs/fixes/*/index.md` = authoritative fix record
-- `src/content/docs/fixes/index.md` = the fixes overview table
-- `src/content/docs/changelog.md` = compact user-facing overview with links to fix pages
+- Commit message body = authoritative fix record
 - Root `README.md` = minimal (~80 lines): badges, Quick Start Docker Compose, link to Docs site
 
 > For comprehensive architecture details, API reference and configuration options see the live Docs site at `https://paperless-ai-next.admon.me/` or run `npm run docs:dev` locally.

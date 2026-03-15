@@ -35,6 +35,8 @@ const TESTS = {
   'document-type-restriction': 'test-document-type-restriction.js',
   'effective-document-count-cache': 'test-effective-document-count-cache.js',
   'ignore-tags-filter': 'test-ignore-tags-filter.js',
+  'log-level-config': 'test-log-level-config.js',
+  'log-level-logger': 'test-log-level-logger.js',
   'login-mfa-flow': 'test-login-mfa-flow.js',
   'ocr-fallback-ai-errors': 'test-ocr-fallback-ai-errors.js',
   'pr772-fix': 'test-pr772-fix.js',
@@ -48,6 +50,7 @@ const AREAS = {
   chat: ['chat-document-search', 'chat-documents-service-search'],
   auth: ['login-mfa-flow', 'rate-limiting'],
   ocr: ['ocr-fallback-ai-errors'],
+  observability: ['log-level-config', 'log-level-logger'],
   processing: [
     'document-type-restriction',
     'ignore-tags-filter',

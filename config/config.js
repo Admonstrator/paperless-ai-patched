@@ -3,12 +3,56 @@ const fs = require('fs');
 const currentDir = decodeURIComponent(process.cwd());
 const envPath = path.join(currentDir, 'data', '.env');
 const runtimeOverridesPath = path.join(currentDir, 'data', 'runtime-overrides.json');
+const LOG_LEVEL_WEIGHTS = {
+  debug: 10,
+  info: 20,
+  warn: 30,
+  error: 40
+};
+const VALID_LOG_LEVELS = Object.keys(LOG_LEVEL_WEIGHTS);
+
+const normalizeLogLevel = (value) => {
+  if (!value) {
+    return 'info';
+  }
+
+  const normalized = String(value).trim().toLowerCase();
+  return VALID_LOG_LEVELS.includes(normalized) ? normalized : 'info';
+};
+
+const shouldLogAtStartup = (currentLevel, messageLevel) => {
+  const currentWeight = LOG_LEVEL_WEIGHTS[currentLevel] || LOG_LEVEL_WEIGHTS.info;
+  const messageWeight = LOG_LEVEL_WEIGHTS[messageLevel] || LOG_LEVEL_WEIGHTS.info;
+  return messageWeight >= currentWeight;
+};
+
+const startupLog = (currentLevel, level, ...args) => {
+  if (!shouldLogAtStartup(currentLevel, level)) {
+    return;
+  }
+
+  if (level === 'error') {
+    console.error(...args);
+    return;
+  }
+
+  if (level === 'warn') {
+    console.warn(...args);
+    return;
+  }
+
+  if (level === 'debug') {
+    console.debug(...args);
+    return;
+  }
+
+  console.info(...args);
+};
 
 if (!global.__PAPERLESS_AI_INJECTED_ENV_SNAPSHOT__) {
   global.__PAPERLESS_AI_INJECTED_ENV_SNAPSHOT__ = { ...process.env };
 }
 
-console.log('Loading .env from:', envPath); // Debug log
 require('dotenv').config({ path: envPath });
 
 const applyRuntimeOverrides = () => {
@@ -27,14 +71,21 @@ const applyRuntimeOverrides = () => {
     Object.entries(overrides).forEach(([key, value]) => {
       process.env[key] = value == null ? '' : String(value);
     });
-
-    console.log('Applied runtime overrides from:', runtimeOverridesPath);
   } catch (error) {
     console.error('Failed to apply runtime overrides:', error.message);
   }
 };
 
 applyRuntimeOverrides();
+
+const requestedLogLevel = process.env.LOG_LEVEL;
+const logLevel = normalizeLogLevel(requestedLogLevel);
+if (requestedLogLevel && String(requestedLogLevel).trim().toLowerCase() !== logLevel) {
+  console.warn(`[WARN] Invalid LOG_LEVEL "${requestedLogLevel}". Falling back to "info".`);
+}
+process.env.LOG_LEVEL = logLevel;
+startupLog(logLevel, 'debug', 'Loading .env from:', envPath);
+startupLog(logLevel, 'debug', 'Runtime overrides path:', runtimeOverridesPath);
 
 // Helper function to parse boolean-like env vars
 const parseEnvBoolean = (value, defaultValue = 'yes') => {
@@ -92,7 +143,7 @@ const aiRestrictions = {
   restrictToExistingDocumentTypes: parseEnvBoolean(process.env.RESTRICT_TO_EXISTING_DOCUMENT_TYPES, 'no')
 };
 
-console.log('Loaded restriction settings:', {
+startupLog(logLevel, 'debug', 'Loaded restriction settings:', {
   RESTRICT_TO_EXISTING_TAGS: aiRestrictions.restrictToExistingTags,
   RESTRICT_TO_EXISTING_CORRESPONDENTS: aiRestrictions.restrictToExistingCorrespondents,
   RESTRICT_TO_EXISTING_DOCUMENT_TYPES: aiRestrictions.restrictToExistingDocumentTypes
@@ -109,7 +160,10 @@ const externalApiConfig = {
   transformationTemplate: process.env.EXTERNAL_API_TRANSFORM || ''
 };
 
-console.log('Loaded environment variables:', {
+startupLog(logLevel, 'info', 'Configuration loaded:', {
+  LOG_LEVEL: logLevel,
+  AI_PROVIDER: process.env.AI_PROVIDER || 'openai',
+  SCAN_INTERVAL: process.env.SCAN_INTERVAL || '*/30 * * * *',
   PAPERLESS_API_URL: process.env.PAPERLESS_API_URL,
   PAPERLESS_API_TOKEN: '******',
   LIMIT_FUNCTIONS: limitFunctions,
@@ -136,6 +190,7 @@ module.exports = {
   get cookieSecureMode() {
     return getCookieSecureMode();
   },
+  logLevel,
   disableAutomaticProcessing: process.env.DISABLE_AUTOMATIC_PROCESSING || 'no',
   exposeApiDocs: parseEnvBoolean(process.env.EXPOSE_API_DOCS, 'no'),
   globalRateLimitWindowMs: parseInt(process.env.GLOBAL_RATE_LIMIT_WINDOW_MS || '900000', 10),

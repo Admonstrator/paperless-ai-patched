@@ -26,33 +26,53 @@ import nltk
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 
+def _resolve_log_level(value: Optional[str]) -> str:
+    """Normalize LOG_LEVEL to Python logging level names."""
+    normalized = str(value or "INFO").strip().upper()
+    if normalized == "WARN":
+        normalized = "WARNING"
+
+    allowed_levels = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
+    if normalized not in allowed_levels:
+        return "INFO"
+
+    return normalized
+
+
+raw_log_level = os.getenv("LOG_LEVEL", "INFO")
+effective_log_level = _resolve_log_level(raw_log_level)
+
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
+    level=getattr(logging, effective_log_level, logging.INFO),
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[logging.StreamHandler()]
 )
 logger = logging.getLogger("RAGZ")
 
+if str(raw_log_level).strip().upper() not in {"DEBUG", "INFO", "WARNING", "WARN", "ERROR", "CRITICAL"}:
+    logger.warning(f"Invalid LOG_LEVEL '{raw_log_level}'. Falling back to INFO.")
+
 # Load environment variables from data directory
+dotenv_verbose = effective_log_level == "DEBUG"
 data_env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', '.env')
 if os.path.exists(data_env_path):
-    load_dotenv(dotenv_path=data_env_path, verbose=True)
-    logger.info(f"Loaded environment variables from {data_env_path}")
+    load_dotenv(dotenv_path=data_env_path, verbose=dotenv_verbose)
+    logger.debug(f"Loaded environment variables from {data_env_path}")
 else:
     # Fallback to local .env file if none exists in data folder
     local_env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
     if os.path.exists(local_env_path):
-        load_dotenv(dotenv_path=local_env_path, verbose=True)
-        logger.info(f"Loaded environment variables from {local_env_path}")
+        load_dotenv(dotenv_path=local_env_path, verbose=dotenv_verbose)
+        logger.debug(f"Loaded environment variables from {local_env_path}")
     else:
         logger.warning("No .env file found in data directory or locally")
 
-# Debug: Print loaded environment variables for troubleshooting
-logger.info(f"Loaded PAPERLESS_URL: {os.getenv('PAPERLESS_URL')}")
-logger.info(f"Loaded PAPERLESS_NGX_URL: {os.getenv('PAPERLESS_NGX_URL')}")
-logger.info(f"Loaded PAPERLESS_HOST: {os.getenv('PAPERLESS_HOST')}")
-logger.info(f"Loaded PAPERLESS_API_TOKEN: {'[SET]' if os.getenv('PAPERLESS_API_TOKEN') else '[NOT SET]'}")
+# Environment variable diagnostics for troubleshooting
+logger.debug(f"Loaded PAPERLESS_URL: {os.getenv('PAPERLESS_URL')}")
+logger.debug(f"Loaded PAPERLESS_NGX_URL: {os.getenv('PAPERLESS_NGX_URL')}")
+logger.debug(f"Loaded PAPERLESS_HOST: {os.getenv('PAPERLESS_HOST')}")
+logger.debug(f"Loaded PAPERLESS_API_TOKEN: {'[SET]' if os.getenv('PAPERLESS_API_TOKEN') else '[NOT SET]'}")
 
 
 def _is_missing_or_placeholder(value: Optional[str]) -> bool:

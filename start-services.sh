@@ -22,8 +22,11 @@ else
 	exit 1
 fi
 
+# Keep Node.js and Python services on the same verbosity level.
+export LOG_LEVEL="${LOG_LEVEL:-info}"
+
 # Start the Python RAG service in the background
-echo "Starting Python RAG service..."
+echo "Starting Python RAG service (LOG_LEVEL=${LOG_LEVEL})..."
 "$PYTHON_BIN" main.py --host 127.0.0.1 --port 8000 &
 PYTHON_PID=$!
 

@@ -2,6 +2,22 @@ const fs = require('fs');
 const util = require('util');
 const path = require('path');
 
+const LOG_LEVEL_WEIGHTS = {
+    debug: 10,
+    info: 20,
+    warn: 30,
+    error: 40
+};
+
+const normalizeLogLevel = (value) => {
+    if (!value) {
+        return 'info';
+    }
+
+    const normalized = String(value).trim().toLowerCase();
+    return Object.prototype.hasOwnProperty.call(LOG_LEVEL_WEIGHTS, normalized) ? normalized : 'info';
+};
+
 class Logger {
     constructor(options = {}) {
         this.logFile = options.logFile || 'application.log';
@@ -9,13 +25,13 @@ class Logger {
         this.timestamp = options.timestamp !== false;
         this.format = options.format || 'txt';
         this.maxFileSize = options.maxFileSize || 1024 * 1024 * 10; // Standard: 10MB
-        
+
         if (!fs.existsSync(this.logDir)) {
             fs.mkdirSync(this.logDir, { recursive: true });
         }
 
         this.logPath = path.join(this.logDir, this.logFile);
-        
+
         // Initialisiere Log-Datei
         this.initLogFile();
 
@@ -27,7 +43,19 @@ class Logger {
             debug: console.debug
         };
 
+        const requestedLogLevel = options.logLevel || process.env.LOG_LEVEL || 'info';
+        this.logLevel = normalizeLogLevel(requestedLogLevel);
+        if (String(requestedLogLevel).trim().toLowerCase() !== this.logLevel) {
+            this.originalConsole.warn(`[WARN] Invalid LOG_LEVEL "${requestedLogLevel}". Falling back to "info".`);
+        }
+
         this.overrideConsoleMethods();
+    }
+
+    shouldLog(type) {
+        const currentWeight = LOG_LEVEL_WEIGHTS[this.logLevel] || LOG_LEVEL_WEIGHTS.info;
+        const messageWeight = LOG_LEVEL_WEIGHTS[type] || LOG_LEVEL_WEIGHTS.info;
+        return messageWeight >= currentWeight;
     }
 
     initLogFile() {
@@ -114,7 +142,7 @@ class Logger {
         let autoScroll = true;
         function toggleAutoScroll() {
             autoScroll = !autoScroll;
-            document.getElementById('autoScrollBtn').textContent = 
+            document.getElementById('autoScrollBtn').textContent =
                 autoScroll ? 'Auto-Scroll: ON' : 'Auto-Scroll: OFF';
         }
         function scrollToBottom() {
@@ -124,7 +152,7 @@ class Logger {
         }
         const observer = new MutationObserver(scrollToBottom);
         window.onload = () => {
-            observer.observe(document.querySelector('.log-container'), 
+            observer.observe(document.querySelector('.log-container'),
                 { childList: true });
             scrollToBottom();
         };
@@ -133,7 +161,7 @@ class Logger {
 <body>
     <div class="log-container">
 `;
-        
+
         if (!fs.existsSync(this.logPath) || fs.statSync(this.logPath).size === 0) {
             fs.writeFileSync(this.logPath, htmlHeader);
         }
@@ -146,7 +174,7 @@ class Logger {
     formatLogMessage(type, args) {
         const msg = util.format(...args);
         if (this.format === 'html') {
-            const timestamp = this.timestamp ? 
+            const timestamp = this.timestamp ?
                 `<span class="timestamp">[${this.getTimestamp()}]</span>` : '';
             return `    <div class="log-entry">
         ${timestamp}
@@ -154,7 +182,7 @@ class Logger {
         <span class="message">${this.escapeHtml(msg)}</span>
     </div>\n`;
         } else {
-            return this.timestamp ? 
+            return this.timestamp ?
                 `[${this.getTimestamp()}] [${type.toUpperCase()}] ${msg}\n` :
                 `[${type.toUpperCase()}] ${msg}\n`;
         }
@@ -176,42 +204,62 @@ class Logger {
         if (this.checkFileSize()) {
             // Lösche die alte Datei
             fs.unlinkSync(this.logPath);
-            
+
             // Bei HTML-Format müssen wir den Header neu schreiben
             if (this.format === 'html') {
                 this.initHtmlFile();
             }
         }
-        
+
         fs.appendFileSync(this.logPath, message);
     }
 
     overrideConsoleMethods() {
         console.log = (...args) => {
+            if (!this.shouldLog('info')) {
+                return;
+            }
+
             const logMessage = this.formatLogMessage('info', args);
             this.originalConsole.log(...args);
             this.writeToFile(logMessage);
         };
 
         console.error = (...args) => {
+            if (!this.shouldLog('error')) {
+                return;
+            }
+
             const logMessage = this.formatLogMessage('error', args);
             this.originalConsole.error(...args);
             this.writeToFile(logMessage);
         };
 
         console.warn = (...args) => {
+            if (!this.shouldLog('warn')) {
+                return;
+            }
+
             const logMessage = this.formatLogMessage('warn', args);
             this.originalConsole.warn(...args);
             this.writeToFile(logMessage);
         };
 
         console.info = (...args) => {
+            if (!this.shouldLog('info')) {
+                return;
+            }
+
             const logMessage = this.formatLogMessage('info', args);
             this.originalConsole.info(...args);
             this.writeToFile(logMessage);
         };
 
         console.debug = (...args) => {
+            if (!this.shouldLog('debug')) {
+                return;
+            }
+
             const logMessage = this.formatLogMessage('debug', args);
             this.originalConsole.debug(...args);
             this.writeToFile(logMessage);

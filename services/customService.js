@@ -84,7 +84,7 @@ class CustomOpenAIService {
       try {
         customFieldsObj = JSON.parse(process.env.CUSTOM_FIELDS);
       } catch (error) {
-        console.error('Failed to parse CUSTOM_FIELDS:', error);
+        console.error(`Failed to parse CUSTOM_FIELDS: ${error.message}`); console.debug(error);;
         customFieldsObj = { custom_fields: [] };
       }
 
@@ -229,7 +229,7 @@ class CustomOpenAIService {
       try {
         parsedResponse = JSON.parse(jsonContent);
       } catch (error) {
-        console.error('Failed to parse JSON response:', error);
+        console.error(`Failed to parse JSON response: ${error.message}`); console.debug(error);;
         throw new Error('Invalid JSON response from API');
       }
 
@@ -251,7 +251,8 @@ class CustomOpenAIService {
         truncated: truncatedContent.length < content.length
       };
     } catch (error) {
-      console.error('Failed to analyze document:', error);
+      console.error(`Failed to analyze document: ${error.message}`);
+      console.debug(error);
       return {
         document: { tags: [], correspondent: null },
         metrics: null,
@@ -359,7 +360,7 @@ class CustomOpenAIService {
       try {
         parsedResponse = JSON.parse(jsonContent);
       } catch (error) {
-        console.error('Failed to parse JSON response:', error);
+        console.error(`Failed to parse JSON response: ${error.message}`); console.debug(error);;
         throw new Error('Invalid JSON response from API');
       }
 
@@ -374,7 +375,8 @@ class CustomOpenAIService {
         truncated: truncatedContent.length < content.length
       };
     } catch (error) {
-      console.error('Failed to analyze document:', error);
+      console.error(`Failed to analyze document: ${error.message}`);
+      console.debug(error);
       return {
         document: { tags: [], correspondent: null },
         metrics: null,
@@ -428,7 +430,7 @@ class CustomOpenAIService {
 
       return response.choices[0].message.content;
     } catch (error) {
-      console.error('Error generating text with Custom OpenAI:', error);
+      console.error(`Error generating text with Custom OpenAI: ${error.message}`); console.debug(error);;
       throw error;
     }
   }
@@ -448,7 +450,7 @@ class CustomOpenAIService {
 
       return { status: 'ok', model: model };
     } catch (error) {
-      console.error('Error generating text with Custom OpenAI:', error);
+      console.error(`Error generating text with Custom OpenAI: ${error.message}`); console.debug(error);;
       return { status: 'error', error: error.message };
     }
   }

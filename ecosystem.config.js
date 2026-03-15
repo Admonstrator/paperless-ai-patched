@@ -7,7 +7,8 @@ module.exports = {
     watch: false,
     max_memory_restart: '1G',
     env: {
-      NODE_ENV: 'production'
+      NODE_ENV: 'production',
+      LOG_LEVEL: process.env.LOG_LEVEL || 'info'
     },
     exp_backoff_restart_delay: 100
   }]

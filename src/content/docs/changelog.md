@@ -57,6 +57,7 @@ All improvements and fixes included in this fork, compared to clusterzx/paperles
 
 | ID | What changed | Date |
 | --- | --- | --- |
+| NEXT-023 | Added unified `LOG_LEVEL` control and reduced noisy AI processing logs with scan summary reporting | 2026-03-15 |
 | NEXT-003 | Smaller and faster Docker images | 2025-12-03 |
 | NEXT-004 | Upgraded to Node.js 24 LTS | 2025-12-18 |
 | NEXT-002 | Removed unused `sqlite3` dependency | 2025-12-03 |

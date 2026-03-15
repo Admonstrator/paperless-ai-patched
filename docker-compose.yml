@@ -23,6 +23,7 @@ services:
       - PUID=1000
       - PGID=1000
       - PAPERLESS_AI_PORT=${PAPERLESS_AI_PORT:-3000}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
       - RAG_SERVICE_URL=http://localhost:8000
       - RAG_SERVICE_ENABLED=true
       # Mistral OCR Queue (optional) – re-OCR poorly scanned documents

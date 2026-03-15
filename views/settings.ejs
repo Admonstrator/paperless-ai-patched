@@ -822,6 +822,16 @@
                                         <p class="text-xs text-gray-500">ENV: PAPERLESS_AI_PORT · Restart required</p>
                                     </div>
                                     <div class="space-y-2">
+                                        <label for="logLevel" class="text-sm font-medium">Log Level</label>
+                                        <select id="logLevel" name="logLevel" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                            <option value="error" <%= String(config.LOG_LEVEL || 'info').toLowerCase() === 'error' ? 'selected' : '' %>>error</option>
+                                            <option value="warn" <%= String(config.LOG_LEVEL || 'info').toLowerCase() === 'warn' ? 'selected' : '' %>>warn</option>
+                                            <option value="info" <%= String(config.LOG_LEVEL || 'info').toLowerCase() === 'info' ? 'selected' : '' %>>info (default)</option>
+                                            <option value="debug" <%= String(config.LOG_LEVEL || 'info').toLowerCase() === 'debug' ? 'selected' : '' %>>debug</option>
+                                        </select>
+                                        <p class="text-xs text-gray-500">ENV: LOG_LEVEL · Restart required</p>
+                                    </div>
+                                    <div class="space-y-2">
                                         <label for="externalApiAllowPrivateIps" class="text-sm font-medium">Allow private IPs for external API</label>
                                         <select id="externalApiAllowPrivateIps" name="externalApiAllowPrivateIps" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                             <option value="no" <%= config.EXTERNAL_API_ALLOW_PRIVATE_IPS === 'no' ? 'selected' : '' %>>No</option>

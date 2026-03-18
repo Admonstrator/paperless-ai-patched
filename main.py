@@ -25,6 +25,7 @@ from rank_bm25 import BM25Okapi
 import nltk
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
+from python_restart_manager import PythonRestartManager
 
 def _resolve_log_level(value: Optional[str]) -> str:
     """Normalize LOG_LEVEL to Python logging level names."""
@@ -54,6 +55,24 @@ if str(raw_log_level).strip().upper() not in {"DEBUG", "INFO", "WARNING", "WARN"
     logger.warning(f"Invalid LOG_LEVEL '{raw_log_level}'. Falling back to INFO.")
 
 # Load environment variables from data directory
+# Capture the Docker-operator environment BEFORE load_dotenv overwrites anything.
+# Keys present here (excluding Dockerfile image defaults) are treated as immutable.
+_STARTUP_ENV_SNAPSHOT: dict = dict(os.environ)
+
+# Keys baked into the Dockerfile via ENV — image defaults, not operator-set.
+_DOCKERFILE_BAKED_KEYS: frozenset = frozenset({
+    'NODE_ENV',
+    'LOG_LEVEL',
+    'ANONYMIZED_TELEMETRY',
+    'PAPERLESS_AI_COMMIT_SHA',
+})
+
+
+def _is_operator_set(key: str) -> bool:
+    """Return True when a key was injected by the Docker operator (not a Dockerfile default)."""
+    return key in _STARTUP_ENV_SNAPSHOT and key not in _DOCKERFILE_BAKED_KEYS
+
+
 dotenv_verbose = effective_log_level == "DEBUG"
 data_env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', '.env')
 if os.path.exists(data_env_path):
@@ -100,7 +119,19 @@ def _is_missing_or_placeholder(value: Optional[str]) -> bool:
 
 
 def _resolve_paperless_config() -> Tuple[Optional[str], Optional[str]]:
-    """Resolve paperless URL/token from supported env var aliases."""
+    """Resolve paperless URL/token from supported env var aliases.
+
+    Re-reads data/.env on every call for keys that are NOT operator-set, so that
+    values saved through the Node.js Settings UI are picked up without a process
+    restart while Docker-injected values are never overwritten.
+    """
+    _data_env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', '.env')
+    if os.path.exists(_data_env_path):
+        from dotenv import dotenv_values
+        for k, v in dotenv_values(_data_env_path).items():
+            if not _is_operator_set(k):
+                os.environ[k] = v or ''
+
     paperless_api_url = (
         os.getenv("PAPERLESS_API_URL")
         or os.getenv("PAPERLESS_URL")
@@ -180,6 +211,11 @@ class IndexingRequest(BaseModel):
 class AskQuestionRequest(BaseModel):
     question: str
     max_sources: int = 5
+
+
+class RestartRequest(BaseModel):
+    reason: Optional[str] = "manual"
+    delay_seconds: float = Field(default=0.5, ge=0, le=10)
 
 # Response models
 class SearchResult(BaseModel):
@@ -281,6 +317,7 @@ class GlobalState:
             return False
 
 global_state = GlobalState()
+python_restart_manager = PythonRestartManager(logger=logger, before_restart_hook=global_state.save_state)
 
 # Data Manager
 class DataManager:
@@ -1997,6 +2034,12 @@ async def redownload_models(background: bool = True, background_tasks: Backgroun
             os.makedirs(MODEL_CACHE_DIR, exist_ok=True)
 
             if not global_state.data_manager:
+                paperless_url, paperless_token = _resolve_paperless_config()
+                if not paperless_url or not paperless_token:
+                    raise RuntimeError(
+                        "Cannot re-download models: Paperless API is not configured. "
+                        "Set PAPERLESS_API_URL and PAPERLESS_API_TOKEN in your environment or data/.env first."
+                    )
                 global_state.data_manager = DataManager(initialize_on_start=False)
 
             # Drop loaded model handles so models are created from scratch
@@ -2051,6 +2094,23 @@ async def redownload_models(background: bool = True, background_tasks: Backgroun
         "status": "completed",
         "message": "Model re-download completed"
     }
+
+
+@app.post("/system/restart")
+async def restart_python_service(request: RestartRequest):
+    """Schedule a background self-restart of the Python RAG process."""
+    try:
+        scheduled = python_restart_manager.schedule_restart(
+            reason=request.reason or "manual",
+            delay_seconds=request.delay_seconds,
+        )
+        return {
+            "status": "scheduled" if scheduled else "pending",
+            "message": "Python service restart scheduled" if scheduled else "Python service restart already pending"
+        }
+    except Exception as error:
+        logger.error(f"Failed to schedule Python service restart: {str(error)}")
+        raise HTTPException(status_code=500, detail="Failed to schedule Python service restart")
 
 @app.post("/check_health")
 async def check_health():

@@ -3,6 +3,14 @@ const fs = require('fs');
 const currentDir = decodeURIComponent(process.cwd());
 const envPath = path.join(currentDir, 'data', '.env');
 const runtimeOverridesPath = path.join(currentDir, 'data', 'runtime-overrides.json');
+// Keys baked into the Dockerfile image via ENV — these are image defaults,
+// not operator-injected values, so they must never be treated as locked.
+const DOCKERFILE_BAKED_KEYS = new Set([
+  'NODE_ENV',
+  'LOG_LEVEL',
+  'ANONYMIZED_TELEMETRY',
+  'PAPERLESS_AI_COMMIT_SHA',
+]);
 const LOG_LEVEL_WEIGHTS = {
   debug: 10,
   info: 20,
@@ -49,6 +57,15 @@ const startupLog = (currentLevel, level, ...args) => {
   console.info(...args);
 };
 
+// A key is "protected" (operator-injected via docker-compose environment:) when
+// it was present in process.env at startup AND is not a Dockerfile image default.
+const isProtectedRuntimeEnvKey = (key) => {
+  const k = String(key || '').trim();
+  if (DOCKERFILE_BAKED_KEYS.has(k)) return false;
+  const snapshot = global.__PAPERLESS_AI_INJECTED_ENV_SNAPSHOT__ || {};
+  return Object.prototype.hasOwnProperty.call(snapshot, k);
+};
+
 if (!global.__PAPERLESS_AI_INJECTED_ENV_SNAPSHOT__) {
   global.__PAPERLESS_AI_INJECTED_ENV_SNAPSHOT__ = { ...process.env };
 }
@@ -69,6 +86,7 @@ const applyRuntimeOverrides = () => {
     }
 
     Object.entries(overrides).forEach(([key, value]) => {
+      if (isProtectedRuntimeEnvKey(key)) return;
       process.env[key] = value == null ? '' : String(value);
     });
   } catch (error) {
@@ -178,6 +196,7 @@ module.exports = {
   getJwtSecret,
   getTrustProxy,
   getCookieSecureMode,
+  isProtectedRuntimeEnvKey,
   get apiKey() {
     return getApiKey();
   },

@@ -208,6 +208,32 @@ class RagService {
   }
 
   /**
+   * Schedule a restart of the Python RAG service process.
+   * @param {{reason?: string, delaySeconds?: number}} options
+   * @returns {Promise<Object>}
+   */
+  async restartPythonService(options = {}) {
+    const { reason = 'config_save', delaySeconds = 0.75 } = options;
+
+    try {
+      const response = await axios.post(
+        `${this.baseUrl}/system/restart`,
+        {
+          reason,
+          delay_seconds: delaySeconds
+        },
+        {
+          timeout: 3000
+        }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error scheduling Python RAG service restart:', error.message || error);
+      throw error;
+    }
+  }
+
+  /**
    * Get AI status
    * @returns {Promise<{status: string}>}
    */

@@ -1327,6 +1327,8 @@ function initializeRuntimeOverridePills() {
     const resetLocalOverridesBtn = document.getElementById('resetLocalOverridesBtn');
     let parsedOverrideKeys = [];
     let parsedOverrideDetails = {};
+    let parsedLockedEnvKeys = [];
+    let parsedLockedEnvDetails = {};
 
     if (resetLocalOverridesBtn?.dataset?.runtimeOverrideKeys) {
         try {
@@ -1344,8 +1346,25 @@ function initializeRuntimeOverridePills() {
         }
     }
 
+    if (resetLocalOverridesBtn?.dataset?.lockedEnvKeys) {
+        try {
+            parsedLockedEnvKeys = JSON.parse(resetLocalOverridesBtn.dataset.lockedEnvKeys);
+        } catch (error) {
+            console.warn('Failed to parse locked environment keys:', error);
+        }
+    }
+
+    if (resetLocalOverridesBtn?.dataset?.lockedEnvDetails) {
+        try {
+            parsedLockedEnvDetails = JSON.parse(resetLocalOverridesBtn.dataset.lockedEnvDetails);
+        } catch (error) {
+            console.warn('Failed to parse locked environment details:', error);
+        }
+    }
+
     const overrideKeys = new Set(Array.isArray(parsedOverrideKeys) ? parsedOverrideKeys : []);
-    if (overrideKeys.size === 0) {
+    const lockedEnvKeys = new Set(Array.isArray(parsedLockedEnvKeys) ? parsedLockedEnvKeys : []);
+    if (overrideKeys.size === 0 && lockedEnvKeys.size === 0) {
         return;
     }
 
@@ -1418,10 +1437,6 @@ function initializeRuntimeOverridePills() {
     const pills = [];
 
     fieldMappings.forEach(({ selector, envKey }) => {
-        if (!overrideKeys.has(envKey)) {
-            return;
-        }
-
         const fieldElement = document.querySelector(selector);
         if (!fieldElement) {
             return;
@@ -1433,7 +1448,7 @@ function initializeRuntimeOverridePills() {
         }
 
         const targetLabel = container.querySelector(`label[for="${fieldElement.id}"]`) || container.querySelector('label');
-        if (!targetLabel || targetLabel.querySelector('.override-pill')) {
+        if (!targetLabel) {
             return;
         }
 
@@ -1441,21 +1456,54 @@ function initializeRuntimeOverridePills() {
             targetLabel.classList.add('flex', 'items-center', 'gap-2', 'flex-wrap');
         }
 
-        const pill = document.createElement('span');
-        pill.className = 'override-pill inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800 cursor-help';
-        pill.textContent = 'Overwritten';
-        const overrideDetails = parsedOverrideDetails[envKey] || {};
-        const injectedValue = overrideDetails.injected || '[unknown]';
-        const overrideValue = overrideDetails.override || '[unknown]';
-        pill.setAttribute('data-tooltip', [
-            '<div style="font-size:12px;">',
-            `<div style="font-weight:600;margin-bottom:4px;">${escapeHtml(envKey)}</div>`,
-            `<div><strong>.env:</strong> <span style="font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,Liberation Mono,Courier New,monospace;word-break:break-all;">${escapeHtml(injectedValue)}</span></div>`,
-            `<div><strong>Override:</strong> <span style="font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,Liberation Mono,Courier New,monospace;word-break:break-all;">${escapeHtml(overrideValue)}</span></div>`,
-            '</div>'
-        ].join(''));
-        targetLabel.appendChild(pill);
-        pills.push(pill);
+        if (overrideKeys.has(envKey) && !targetLabel.querySelector('.override-pill')) {
+            const pill = document.createElement('span');
+            pill.className = 'override-pill inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800 cursor-help';
+            pill.textContent = 'Overwritten';
+            const overrideDetails = parsedOverrideDetails[envKey] || {};
+            const injectedValue = overrideDetails.injected || '[unknown]';
+            const overrideValue = overrideDetails.override || '[unknown]';
+            pill.setAttribute('data-tooltip', [
+                '<div style="font-size:12px;">',
+                `<div style="font-weight:600;margin-bottom:4px;">${escapeHtml(envKey)}</div>`,
+                `<div><strong>.env:</strong> <span style="font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,Liberation Mono,Courier New,monospace;word-break:break-all;">${escapeHtml(injectedValue)}</span></div>`,
+                `<div><strong>Override:</strong> <span style="font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,Liberation Mono,Courier New,monospace;word-break:break-all;">${escapeHtml(overrideValue)}</span></div>`,
+                '</div>'
+            ].join(''));
+            targetLabel.appendChild(pill);
+            pills.push(pill);
+        }
+
+        if (lockedEnvKeys.has(envKey)) {
+            fieldElement.disabled = true;
+            fieldElement.setAttribute('aria-disabled', 'true');
+            fieldElement.classList.add('bg-gray-100', 'text-gray-500', 'cursor-not-allowed', 'opacity-70');
+
+            if (!targetLabel.querySelector('.locked-pill')) {
+                const lockedPill = document.createElement('span');
+                lockedPill.className = 'locked-pill inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-200 text-slate-700 cursor-help';
+                lockedPill.textContent = 'Managed by ENV';
+                const lockedDetails = parsedLockedEnvDetails[envKey] || {};
+                const managedValue = lockedDetails.managed || '[unknown]';
+                lockedPill.setAttribute('data-tooltip', [
+                    '<div style="font-size:12px;">',
+                    `<div style="font-weight:600;margin-bottom:4px;">${escapeHtml(envKey)}</div>`,
+                    `<div><strong>Managed value:</strong> <span style="font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,Liberation Mono,Courier New,monospace;word-break:break-all;">${escapeHtml(managedValue)}</span></div>`,
+                    '<div style="margin-top:4px;">Change this value in your container environment and restart the service.</div>',
+                    '</div>'
+                ].join(''));
+                targetLabel.appendChild(lockedPill);
+                pills.push(lockedPill);
+            }
+
+            let lockedHelpText = container.querySelector('.locked-env-help');
+            if (!lockedHelpText) {
+                lockedHelpText = document.createElement('p');
+                lockedHelpText.className = 'locked-env-help text-xs text-slate-500';
+                lockedHelpText.textContent = 'Managed by container environment. Change it in Docker Compose or your container environment, then restart the service.';
+                container.appendChild(lockedHelpText);
+            }
+        }
     });
 
     if (pills.length > 0 && typeof tippy === 'function') {

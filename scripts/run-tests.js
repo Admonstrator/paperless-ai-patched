@@ -35,6 +35,7 @@ const TESTS = {
   'document-type-restriction': 'test-document-type-restriction.js',
   'effective-document-count-cache': 'test-effective-document-count-cache.js',
   'ignore-tags-filter': 'test-ignore-tags-filter.js',
+  'injected-env-priority': 'test-injected-env-priority.js',
   'log-level-config': 'test-log-level-config.js',
   'log-level-logger': 'test-log-level-logger.js',
   'login-mfa-flow': 'test-login-mfa-flow.js',
@@ -57,6 +58,7 @@ const AREAS = {
     'document-type-restriction',
     'ignore-tags-filter',
     'effective-document-count-cache',
+    'injected-env-priority',
     'pr772-fix',
     'scan-stop-flow',
     'thumbnail-startup-migration'

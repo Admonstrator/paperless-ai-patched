@@ -84,13 +84,22 @@ class SetupService {
     }
   }
 
-  async saveRuntimeOverrides(config) {
+  filterProtectedInjectedConfig(configValues) {
+    return Object.fromEntries(
+      Object.entries(configValues || {}).filter(
+        ([key]) => !config.isProtectedRuntimeEnvKey(key)
+      )
+    );
+  }
+
+  async saveRuntimeOverrides(configValues) {
     try {
       const dataDir = path.dirname(this.runtimeOverridesPath);
       await fs.mkdir(dataDir, { recursive: true });
 
+      const persistentConfig = this.filterProtectedInjectedConfig(configValues);
       const normalizedConfig = Object.fromEntries(
-        Object.entries(config || {}).map(([key, value]) => [key, value == null ? '' : String(value)])
+        Object.entries(persistentConfig).map(([key, value]) => [key, value == null ? '' : String(value)])
       );
 
       await fs.writeFile(this.runtimeOverridesPath, JSON.stringify(normalizedConfig, null, 2));
@@ -117,7 +126,7 @@ class SetupService {
     try {
       const runtimeOverrides = await this.loadRuntimeOverrides();
       const envContent = await fs.readFile(this.envPath, 'utf8');
-      const config = {};
+      const configValues = {};
       envContent.split('\n').forEach((line) => {
         const trimmedLine = line.trim();
         if (!trimmedLine || trimmedLine.startsWith('#')) {
@@ -135,18 +144,18 @@ class SetupService {
           return;
         }
 
-        config[key] = this.decodeEnvValue(value);
+        configValues[key] = this.decodeEnvValue(value);
       });
-      return {
-        ...config,
+      return this.filterProtectedInjectedConfig({
+        ...configValues,
         ...runtimeOverrides
-      };
+      });
     } catch (error) {
       if (error.code !== 'ENOENT') {
         console.error('Error loading config:', error.message);
       }
 
-      const runtimeOverrides = await this.loadRuntimeOverrides();
+      const runtimeOverrides = this.filterProtectedInjectedConfig(await this.loadRuntimeOverrides());
       if (Object.keys(runtimeOverrides).length > 0) {
         return runtimeOverrides;
       }
@@ -379,11 +388,11 @@ class SetupService {
     return true;
   }
 
-  async saveConfig(config, options = {}) {
+  async saveConfig(configValues, options = {}) {
     try {
       // Validate the new configuration before saving unless explicitly skipped
       if (!options.skipValidation) {
-        await this.validateConfig(config);
+        await this.validateConfig(configValues);
       }
 
       const JSON_STANDARD_PROMPT = `
@@ -401,15 +410,17 @@ class SetupService {
       const dataDir = path.dirname(this.envPath);
       await fs.mkdir(dataDir, { recursive: true });
 
-      const envContent = Object.entries(config)
+      const persistentConfig = this.filterProtectedInjectedConfig(configValues);
+
+      const envContent = Object.entries(persistentConfig)
         .map(([key, value]) => `${key}=${this.encodeEnvValue(value)}`)
         .join('\n');
 
       await fs.writeFile(this.envPath, envContent);
-      await this.saveRuntimeOverrides(config);
+      await this.saveRuntimeOverrides(configValues);
       
       // Reload environment variables
-      Object.entries(config).forEach(([key, value]) => {
+      Object.entries(persistentConfig).forEach(([key, value]) => {
         process.env[key] = this.normalizeEnvironmentValue(value);
       });
     } catch (error) {

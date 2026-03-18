@@ -38,6 +38,21 @@ function getCookieSecureMode() {
     : String(process.env.COOKIE_SECURE_MODE || 'auto').trim().toLowerCase();
 }
 
+async function triggerPythonRestartAfterConfigSave(reason) {
+  const ragEnabled = String(process.env.RAG_SERVICE_ENABLED || '').trim().toLowerCase() === 'true';
+  if (!ragEnabled) {
+    return { requested: false, reason: 'rag_disabled' };
+  }
+
+  try {
+    const result = await RAGService.restartPythonService({ reason, delaySeconds: 0.75 });
+    return { requested: true, result };
+  } catch (error) {
+    console.warn('[WARN] Failed to request Python RAG restart after config save:', error.message || error);
+    return { requested: false, reason: 'request_failed', error: error.message || String(error) };
+  }
+}
+
 function shouldUseSecureCookies(req) {
   const mode = getCookieSecureMode();
 
@@ -4288,6 +4303,8 @@ router.post('/api/setup/complete', express.json(), async (req, res) => {
       setupMfaChallenges.delete(mfaChallengeId);
     }
 
+    await triggerPythonRestartAfterConfigSave('setup_complete');
+
     const envPreview = toEnvPreviewLines(finalConfig);
 
     // Enforce a fresh login after setup completion.
@@ -5292,6 +5309,18 @@ router.get('/settings', async (req, res) => {
   console.log('Current config IGNORE_TAGS:', config.IGNORE_TAGS);
   console.log('Current config PROMPT_TAGS:', config.PROMPT_TAGS);
 
+  const lockedEnvKeys = Object.keys(config).filter((key) =>
+    configFile.isProtectedRuntimeEnvKey(key)
+  );
+  const lockedEnvDetails = Object.fromEntries(
+    lockedEnvKeys.map((key) => [
+      key,
+      {
+        managed: formatValueForTooltip(key, injectedEnvSnapshot[key])
+      }
+    ])
+  );
+
   const configuredSecrets = {};
   SETTINGS_SECRET_FIELDS.forEach((key) => {
     configuredSecrets[key] = Boolean(config[key]);
@@ -5329,6 +5358,8 @@ router.get('/settings', async (req, res) => {
     configuredSecrets,
     runtimeOverrideKeys: Array.from(runtimeOverrideKeys),
     runtimeOverrideDetails,
+    lockedEnvKeys,
+    lockedEnvDetails,
     mfaSettings,
     success: isConfigured ? 'The application is already configured. You can update the configuration below.' : undefined,
     settingsError: showErrorCheckSettings ? 'Please check your settings. Something is not working correctly.' : undefined
@@ -6755,6 +6786,8 @@ router.post('/settings', express.json(), async (req, res) => {
     } catch (error) {
       console.log('[ERROR] Error creating custom fields:', error);
     }
+
+    await triggerPythonRestartAfterConfigSave('settings_save');
 
     res.json({ 
       success: true,

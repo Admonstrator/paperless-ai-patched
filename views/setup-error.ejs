@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title || 'System Error' %></title>
+    <link rel="stylesheet" href="/css/login.css">
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+        }
+
+        .error-container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            padding: 40px;
+            max-width: 600px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .error-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+            color: #dc3545;
+        }
+
+        .error-container h1 {
+            color: #333;
+            margin: 0 0 20px 0;
+            font-size: 28px;
+            font-weight: 600;
+        }
+
+        .error-container p {
+            color: #666;
+            line-height: 1.6;
+            margin: 15px 0;
+            font-size: 14px;
+        }
+
+        .error-message {
+            background: #f8f9fa;
+            border-left: 4px solid #dc3545;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: left;
+            border-radius: 4px;
+            font-size: 13px;
+            color: #555;
+        }
+
+        .support-text {
+            background: #e7f3ff;
+            border-left: 4px solid #0066cc;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: left;
+            border-radius: 4px;
+            font-size: 13px;
+            color: #004085;
+        }
+
+        .admin-notice {
+            color: #856404;
+            background-color: #fff3cd;
+            border: 1px solid #ffeeba;
+            padding: 12px;
+            border-radius: 4px;
+            margin: 20px 0;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .action-buttons {
+            margin-top: 30px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background-color: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #5568d3;
+        }
+
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: #5a6268;
+        }
+
+        .tech-details {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            font-size: 12px;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <div class="error-icon">⚠️</div>
+        <h1><%= title %></h1>
+
+        <div class="error-message">
+            <strong>Error Details:</strong><br>
+            <%= errorMessage %>
+        </div>
+
+        <div class="admin-notice">
+            🔒 This is an administrative error state. Setup page is disabled to protect your configuration.
+        </div>
+
+        <div class="support-text">
+            <strong>What to do:</strong><br>
+            <%= supportText %>
+        </div>
+
+        <div class="action-buttons">
+            <button onclick="location.reload()" class="btn btn-secondary">Retry Connection</button>
+            <a href="/" class="btn btn-primary">Return Home</a>
+        </div>
+
+        <div class="tech-details">
+            <p>Status: System Configuration Error | Contact your administrator if this persists.</p>
+        </div>
+    </div>
+</body>
+</html>

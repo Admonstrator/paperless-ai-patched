@@ -3708,8 +3708,41 @@ async function validateAiConnectionForSetup({ aiProvider, apiUrl, token, model, 
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
+// Helper: Sanitize config for bootstrap (remove secrets)
+function sanitizeConfigForBootstrap(config) {
+  const sanitized = { ...config };
+  const secretFields = [
+    'PAPERLESS_API_TOKEN',
+    'OPENAI_API_KEY',
+    'CUSTOM_API_KEY',
+    'AZURE_API_KEY',
+    'MISTRAL_API_KEY'
+  ];
+  secretFields.forEach(field => {
+    delete sanitized[field];
+  });
+  return sanitized;
+}
+
 router.get('/setup', async (req, res) => {
   try {
+    // SECURITY: Check setup state first to detect degraded conditions
+    const setupState = await setupService.getSetupState();
+
+    // If system is in degraded state (config exists but database corrupted),
+    // refuse to render setup page with embedded config
+    if (setupState === 'degraded') {
+      console.warn('[SECURITY] Attempting to access /setup in degraded state (corrupted database)');
+      return res.status(500).render('setup-error', {
+        title: 'System Configuration Error',
+        errorMessage: 'The system configuration exists but the database is inaccessible or corrupted. This is an administrative error state. Please check system logs and database integrity.',
+        supportText: 'This may occur if: (1) the database file was deleted or corrupted, (2) file permissions changed, or (3) the database is locked. Restart the application after verifying database and permissions.'
+      }).catch(() => {
+        // Fallback if setup-error template doesn't exist
+        res.status(500).send('<h1>System Configuration Error</h1><p>Database is inaccessible. Please contact your administrator.</p>');
+      });
+    }
+
     // Base configuration object - load this FIRST, before any checks
     let config = {
       PAPERLESS_API_URL: (process.env.PAPERLESS_API_URL || 'http://localhost:8000').replace(/\/api$/, ''),
@@ -3788,9 +3821,12 @@ router.get('/setup', async (req, res) => {
       return res.redirect('/dashboard');
     }
 
-    // Render setup page with config and appropriate message
+    // SECURITY: Sanitize config before passing to template (remove secrets from bootstrap)
+    const sanitizedConfig = sanitizeConfigForBootstrap(config);
+
+    // Render setup page with sanitized config and appropriate message
     res.render('setup', {
-      config,
+      config: sanitizedConfig,
       success: successMessage,
       aiProviderPresets,
       defaults: {

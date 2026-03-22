@@ -91,6 +91,7 @@ For Docker setups, you should pre-seed/manage configuration via environment vari
 | `JWT_SECRET` | Secret used to sign and verify JWT login cookies |
 | `PAPERLESS_AI_PORT` | Port the Paperless-AI web app listens on |
 | `PAPERLESS_AI_INITIAL_SETUP` | Enables first-run setup mode (`yes`/`no`) |
+| `ALLOW_REMOTE_SETUP` | Allow setup wizard access from non-localhost addresses (`yes`/`no`, default `no`). Required when accessing setup from a remote browser (e.g. Docker bridge networking). Remove after setup is complete. |
 | `TRUST_PROXY` | Express proxy trust setting (controls `X-Forwarded-*` handling) |
 | `COOKIE_SECURE_MODE` | Controls whether auth/CSRF cookies are set with the `Secure` flag |
 

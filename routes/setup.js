@@ -391,6 +391,89 @@ let PUBLIC_ROUTES = [
   '/api/setup'
 ];
 
+/**
+ * Returns true if the incoming request originates from localhost.
+ * Uses req.socket.remoteAddress (direct TCP connection IP) rather than
+ * req.ip to remain resistant to X-Forwarded-For spoofing even when
+ * trust proxy is enabled.
+ */
+function isLocalRequest(req) {
+  const remoteAddr = req.socket?.remoteAddress;
+  if (!remoteAddr) {
+    return false;
+  }
+
+  return (
+    remoteAddr === '127.0.0.1' ||
+    remoteAddr === '::1' ||
+    remoteAddr === '::ffff:127.0.0.1'
+  );
+}
+
+/**
+ * SECURITY GUARD: Blocks remote access to setup endpoints while the
+ * initial setup is still pending (CWE-306 / GHSA-v4jq-65q5-wgjp).
+ *
+ * Rules (evaluated in order):
+ *  1. Non-setup paths pass through unconditionally.
+ *  2. Once setup is complete, the guard is lifted unconditionally.
+ *  3. ALLOW_REMOTE_SETUP=yes grants explicit opt-in for remote access.
+ *  4. Requests from localhost are always allowed.
+ *  5. All other remote requests receive HTTP 403.
+ */
+router.use(async (req, res, next) => {
+  const isSetupPath =
+    req.path === '/setup' ||
+    req.path.startsWith('/setup/') ||
+    req.path.startsWith('/api/setup');
+
+  if (!isSetupPath) {
+    return next();
+  }
+
+  try {
+    const setupOpen = await isInitialSetupOpen();
+    if (!setupOpen) {
+      // Setup already complete — no restriction needed
+      return next();
+    }
+  } catch {
+    // Fail-open here: let the next middleware handle setup-state errors
+    return next();
+  }
+
+  if (process.env.ALLOW_REMOTE_SETUP === 'yes') {
+    return next();
+  }
+
+  if (isLocalRequest(req)) {
+    return next();
+  }
+
+  // Remote client on an open fresh instance — block
+  const isApiPath = req.path.startsWith('/api/setup');
+  if (isApiPath) {
+    return res.status(403).json({
+      success: false,
+      error:
+        'Remote access to the setup API is disabled. ' +
+        'Set ALLOW_REMOTE_SETUP=yes to enable it, or complete setup from localhost.'
+    });
+  }
+
+  return res
+    .status(403)
+    .type('text/html')
+    .send(
+      '<html><head><title>Setup Restricted</title></head><body>' +
+        '<h1>403 – Remote Setup Access Denied</h1>' +
+        '<p>Initial setup is only accessible from localhost by default.</p>' +
+        '<p>Set <code>ALLOW_REMOTE_SETUP=yes</code> to enable remote access, ' +
+        'or connect from the machine running paperless-ai-next.</p>' +
+        '</body></html>'
+    );
+});
+
 // Combined middleware to check authentication and setup
 router.use(async (req, res, next) => {
   const token = req.cookies.jwt || req.headers.authorization?.split(' ')[1];

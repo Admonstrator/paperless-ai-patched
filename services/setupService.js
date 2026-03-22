@@ -168,7 +168,7 @@ class SetupService {
     try {
       // Validate URL to prevent SSRF attacks
       // Allow private IPs since Paperless-ngx is typically deployed in a private network
-      const urlValidation = validateApiUrl(url, this.getSetupUrlValidationOptions());
+      const urlValidation = await validateApiUrl(url, this.getSetupUrlValidationOptions());
       if (!urlValidation.valid) {
         console.error('Paperless URL validation error:', urlValidation.error);
         return false;
@@ -189,7 +189,7 @@ class SetupService {
 
   async validateApiPermissions(url, token) {
     // Validate URL first to prevent SSRF
-    const urlValidation = validateApiUrl(url, this.getSetupUrlValidationOptions());
+    const urlValidation = await validateApiUrl(url, this.getSetupUrlValidationOptions());
     if (!urlValidation.valid) {
       console.error('API URL validation error:', urlValidation.error);
       return { success: false, message: `URL validation failed: ${urlValidation.error}` };
@@ -241,7 +241,7 @@ class SetupService {
   async validateCustomConfig(url, apiKey, model) {
     // Validate URL to prevent SSRF attacks
     // Allow private IPs since custom AI services may be hosted internally
-    const urlValidation = validateApiUrl(url, this.getSetupUrlValidationOptions());
+    const urlValidation = await validateApiUrl(url, this.getSetupUrlValidationOptions());
     if (!urlValidation.valid) {
       console.error('Custom AI URL validation error:', urlValidation.error);
       return false;
@@ -280,7 +280,7 @@ class SetupService {
     try {
       // Validate URL to prevent SSRF attacks
       // Allow private IPs since Ollama is typically hosted locally
-      const urlValidation = validateApiUrl(url, this.getSetupUrlValidationOptions());
+      const urlValidation = await validateApiUrl(url, this.getSetupUrlValidationOptions());
       if (!urlValidation.valid) {
         console.error('Ollama URL validation error:', urlValidation.error);
         return false;
@@ -303,7 +303,7 @@ class SetupService {
     
     // Validate Azure endpoint URL to prevent SSRF attacks
     if (endpoint) {
-      const urlValidation = validateApiUrl(endpoint, { allowPrivateIPs: false });
+      const urlValidation = await validateApiUrl(endpoint, { allowPrivateIPs: false });
       if (!urlValidation.valid) {
         console.error('Azure endpoint URL validation error:', urlValidation.error);
         return false;

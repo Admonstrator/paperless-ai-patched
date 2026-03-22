@@ -4105,7 +4105,7 @@ router.post('/api/setup/paperless/metadata', express.json(), async (req, res) =>
       });
     }
 
-    const urlValidation = validateApiUrl(normalizedUrl, getSetupUrlValidationOptions());
+    const urlValidation = await validateApiUrl(normalizedUrl, getSetupUrlValidationOptions());
     if (!urlValidation.valid) {
       return res.status(400).json({
         success: false,

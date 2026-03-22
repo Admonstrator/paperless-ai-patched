@@ -49,7 +49,8 @@ const TESTS = {
   'restriction-service': 'test-restriction-service.js',
   'updated-service': 'test-updated-service.js',
   'ssrf-url-validation': 'test-ssrf-url-validation.js',
-  'external-api-ssrf-block': 'test-external-api-ssrf-block.js'
+  'external-api-ssrf-block': 'test-external-api-ssrf-block.js',
+  'ui-xss-hardening': 'test-ui-xss-hardening.js'
 };
 
 const AREAS = {
@@ -67,7 +68,7 @@ const AREAS = {
     'thumbnail-startup-migration'
   ],
   prompts: ['restriction-service', 'updated-service'],
-  security: ['setup-remote-guard', 'ssrf-url-validation', 'external-api-ssrf-block']
+  security: ['setup-remote-guard', 'ssrf-url-validation', 'external-api-ssrf-block', 'ui-xss-hardening']
 };
 
 function hasLoginCredentials() {

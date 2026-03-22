@@ -30,6 +30,7 @@ async function testSetupBootstrapNoSecrets() {
       AZURE_API_KEY: 'azure-secret',
       MISTRAL_API_KEY: 'mistral-secret',
       CUSTOM_API_KEY: 'custom-secret',
+      API_KEY: 'paperless-app-api-key',
       PAPERLESS_API_URL: 'http://localhost:8000',
       AI_PROVIDER: 'openai',
       OPENAI_MODEL: 'gpt-4o-mini'
@@ -44,7 +45,8 @@ async function testSetupBootstrapNoSecrets() {
         'OPENAI_API_KEY',
         'CUSTOM_API_KEY',
         'AZURE_API_KEY',
-        'MISTRAL_API_KEY'
+        'MISTRAL_API_KEY',
+        'API_KEY'
       ];
       secretFields.forEach(field => {
         delete sanitized[field];
@@ -55,7 +57,7 @@ async function testSetupBootstrapNoSecrets() {
     const sanitizedConfig = sanitizeConfigForBootstrap(testConfig);
     
     // Verify secrets are removed
-    const secretFields = ['PAPERLESS_API_TOKEN', 'OPENAI_API_KEY', 'AZURE_API_KEY', 'MISTRAL_API_KEY', 'CUSTOM_API_KEY'];
+    const secretFields = ['PAPERLESS_API_TOKEN', 'OPENAI_API_KEY', 'AZURE_API_KEY', 'MISTRAL_API_KEY', 'CUSTOM_API_KEY', 'API_KEY'];
     for (const field of secretFields) {
       if (sanitizedConfig[field] !== undefined) {
         throw new Error(`Secret field ${field} was not removed from bootstrap config`);

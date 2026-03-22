@@ -76,7 +76,8 @@ const SETTINGS_SECRET_FIELDS = [
   'OPENAI_API_KEY',
   'CUSTOM_API_KEY',
   'AZURE_API_KEY',
-  'MISTRAL_API_KEY'
+  'MISTRAL_API_KEY',
+  'API_KEY'
 ];
 
 function formatBytes(bytes) {
@@ -5483,6 +5484,81 @@ router.get('/settings', async (req, res) => {
     success: isConfigured ? 'The application is already configured. You can update the configuration below.' : undefined,
     settingsError: showErrorCheckSettings ? 'Please check your settings. Something is not working correctly.' : undefined
   });
+});
+
+/**
+ * @swagger
+ * /api/settings/api-key:
+ *   get:
+ *     summary: Get current application API key
+ *     description: |
+ *       Returns the currently active application API key for authenticated users.
+ *       The key is intentionally fetched on-demand and is not embedded in server-rendered HTML.
+ *     tags:
+ *       - System
+ *       - Authentication
+ *     security:
+ *       - BearerAuth: []
+ *       - ApiKeyAuth: []
+ *     responses:
+ *       200:
+ *         description: Current API key returned successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 configured:
+ *                   type: boolean
+ *                   description: Indicates whether an API key is currently configured
+ *                   example: true
+ *                 apiKey:
+ *                   type: string
+ *                   nullable: true
+ *                   description: Current API key value when configured
+ *                   example: "3f7a8d6e2c1b5a9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c7b6a5"
+ *       401:
+ *         description: Unauthorized - authentication required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                   example: "Authentication required"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                   example: "Failed to load API key"
+ */
+router.get('/api/settings/api-key', isAuthenticated, async (req, res) => {
+  try {
+    const apiKey = process.env.API_KEY || '';
+    return res.json({
+      success: true,
+      configured: Boolean(apiKey),
+      apiKey: apiKey || null
+    });
+  } catch (error) {
+    console.error('[ERROR] GET /api/settings/api-key:', error);
+    return res.status(500).json({ success: false, error: 'Failed to load API key' });
+  }
 });
 
 router.get('/api/settings/paperless-public-url', isAuthenticated, async (req, res) => {

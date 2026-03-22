@@ -11,6 +11,41 @@
 
         let timeoutId;
 
+        async function loadCurrentApiKey() {
+            try {
+                const response = await fetch('/api/settings/api-key', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to load API key');
+                }
+
+                const data = await response.json();
+                const keyValue = data && data.apiKey ? data.apiKey : '';
+
+                if (keyValue) {
+                    apiKeyContainer.textContent = keyValue;
+                    apiKeyContainer.dataset.apiKey = keyValue;
+                    apiKeyContainer.title = keyValue;
+                    return;
+                }
+
+                apiKeyContainer.textContent = 'Not configured';
+                apiKeyContainer.dataset.apiKey = '';
+                apiKeyContainer.title = 'No API key configured';
+            } catch (error) {
+                console.error('Error loading API key:', error);
+                apiKeyContainer.textContent = 'Unavailable';
+                apiKeyContainer.dataset.apiKey = '';
+                apiKeyContainer.title = 'Failed to load API key';
+                showNotification('Failed to load API key!', true);
+            }
+        }
+
         function showNotification(message, isError = false) {
             const notificationBox = copyNotification;
             const icon = notificationBox.querySelector('i');
@@ -39,6 +74,11 @@
         }
 
         apiKeyContainer.addEventListener('click', async function() {
+            if (!this.dataset.apiKey) {
+                showNotification('No API key available to copy', true);
+                return;
+            }
+
             try {
                 await navigator.clipboard.writeText(this.dataset.apiKey);
                 showNotification('API key copied to clipboard!');
@@ -88,5 +128,7 @@
                 regenerateIcon.classList.remove('animate-spin');
             }
         });
+
+        loadCurrentApiKey();
     });
 </script>

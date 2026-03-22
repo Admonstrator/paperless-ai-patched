@@ -76,7 +76,8 @@ const SETTINGS_SECRET_FIELDS = [
   'OPENAI_API_KEY',
   'CUSTOM_API_KEY',
   'AZURE_API_KEY',
-  'MISTRAL_API_KEY'
+  'MISTRAL_API_KEY',
+  'API_KEY'
 ];
 
 function formatBytes(bytes) {
@@ -390,6 +391,89 @@ let PUBLIC_ROUTES = [
   '/setup',
   '/api/setup'
 ];
+
+/**
+ * Returns true if the incoming request originates from localhost.
+ * Uses req.socket.remoteAddress (direct TCP connection IP) rather than
+ * req.ip to remain resistant to X-Forwarded-For spoofing even when
+ * trust proxy is enabled.
+ */
+function isLocalRequest(req) {
+  const remoteAddr = req.socket?.remoteAddress;
+  if (!remoteAddr) {
+    return false;
+  }
+
+  return (
+    remoteAddr === '127.0.0.1' ||
+    remoteAddr === '::1' ||
+    remoteAddr === '::ffff:127.0.0.1'
+  );
+}
+
+/**
+ * SECURITY GUARD: Blocks remote access to setup endpoints while the
+ * initial setup is still pending (CWE-306 / GHSA-v4jq-65q5-wgjp).
+ *
+ * Rules (evaluated in order):
+ *  1. Non-setup paths pass through unconditionally.
+ *  2. Once setup is complete, the guard is lifted unconditionally.
+ *  3. ALLOW_REMOTE_SETUP=yes grants explicit opt-in for remote access.
+ *  4. Requests from localhost are always allowed.
+ *  5. All other remote requests receive HTTP 403.
+ */
+router.use(async (req, res, next) => {
+  const isSetupPath =
+    req.path === '/setup' ||
+    req.path.startsWith('/setup/') ||
+    req.path.startsWith('/api/setup');
+
+  if (!isSetupPath) {
+    return next();
+  }
+
+  try {
+    const setupOpen = await isInitialSetupOpen();
+    if (!setupOpen) {
+      // Setup already complete — no restriction needed
+      return next();
+    }
+  } catch {
+    // Fail-open here: let the next middleware handle setup-state errors
+    return next();
+  }
+
+  if (process.env.ALLOW_REMOTE_SETUP === 'yes') {
+    return next();
+  }
+
+  if (isLocalRequest(req)) {
+    return next();
+  }
+
+  // Remote client on an open fresh instance — block
+  const isApiPath = req.path.startsWith('/api/setup');
+  if (isApiPath) {
+    return res.status(403).json({
+      success: false,
+      error:
+        'Remote access to the setup API is disabled. ' +
+        'Set ALLOW_REMOTE_SETUP=yes to enable it, or complete setup from localhost.'
+    });
+  }
+
+  return res
+    .status(403)
+    .type('text/html')
+    .send(
+      '<html><head><title>Setup Restricted</title></head><body>' +
+        '<h1>403 – Remote Setup Access Denied</h1>' +
+        '<p>Initial setup is only accessible from localhost by default.</p>' +
+        '<p>Set <code>ALLOW_REMOTE_SETUP=yes</code> to enable remote access, ' +
+        'or connect from the machine running paperless-ai-next.</p>' +
+        '</body></html>'
+    );
+});
 
 // Combined middleware to check authentication and setup
 router.use(async (req, res, next) => {
@@ -3708,8 +3792,41 @@ async function validateAiConnectionForSetup({ aiProvider, apiUrl, token, model, 
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
+// Helper: Sanitize config for bootstrap (remove secrets)
+function sanitizeConfigForBootstrap(config) {
+  const sanitized = { ...config };
+  const secretFields = [
+    'PAPERLESS_API_TOKEN',
+    'OPENAI_API_KEY',
+    'CUSTOM_API_KEY',
+    'AZURE_API_KEY',
+    'MISTRAL_API_KEY'
+  ];
+  secretFields.forEach(field => {
+    delete sanitized[field];
+  });
+  return sanitized;
+}
+
 router.get('/setup', async (req, res) => {
   try {
+    // SECURITY: Check setup state first to detect degraded conditions
+    const setupState = await setupService.getSetupState();
+
+    // If system is in degraded state (config exists but database corrupted),
+    // refuse to render setup page with embedded config
+    if (setupState === 'degraded') {
+      console.warn('[SECURITY] Attempting to access /setup in degraded state (corrupted database)');
+      return res.status(500).render('setup-error', {
+        title: 'System Configuration Error',
+        errorMessage: 'The system configuration exists but the database is inaccessible or corrupted. This is an administrative error state. Please check system logs and database integrity.',
+        supportText: 'This may occur if: (1) the database file was deleted or corrupted, (2) file permissions changed, or (3) the database is locked. Restart the application after verifying database and permissions.'
+      }).catch(() => {
+        // Fallback if setup-error template doesn't exist
+        res.status(500).send('<h1>System Configuration Error</h1><p>Database is inaccessible. Please contact your administrator.</p>');
+      });
+    }
+
     // Base configuration object - load this FIRST, before any checks
     let config = {
       PAPERLESS_API_URL: (process.env.PAPERLESS_API_URL || 'http://localhost:8000').replace(/\/api$/, ''),
@@ -3788,9 +3905,12 @@ router.get('/setup', async (req, res) => {
       return res.redirect('/dashboard');
     }
 
-    // Render setup page with config and appropriate message
+    // SECURITY: Sanitize config before passing to template (remove secrets from bootstrap)
+    const sanitizedConfig = sanitizeConfigForBootstrap(config);
+
+    // Render setup page with sanitized config and appropriate message
     res.render('setup', {
-      config,
+      config: sanitizedConfig,
       success: successMessage,
       aiProviderPresets,
       defaults: {
@@ -4022,7 +4142,7 @@ router.post('/api/setup/paperless/metadata', express.json(), async (req, res) =>
       });
     }
 
-    const urlValidation = validateApiUrl(normalizedUrl, getSetupUrlValidationOptions());
+    const urlValidation = await validateApiUrl(normalizedUrl, getSetupUrlValidationOptions());
     if (!urlValidation.valid) {
       return res.status(400).json({
         success: false,
@@ -5364,6 +5484,81 @@ router.get('/settings', async (req, res) => {
     success: isConfigured ? 'The application is already configured. You can update the configuration below.' : undefined,
     settingsError: showErrorCheckSettings ? 'Please check your settings. Something is not working correctly.' : undefined
   });
+});
+
+/**
+ * @swagger
+ * /api/settings/api-key:
+ *   get:
+ *     summary: Get current application API key
+ *     description: |
+ *       Returns the currently active application API key for authenticated users.
+ *       The key is intentionally fetched on-demand and is not embedded in server-rendered HTML.
+ *     tags:
+ *       - System
+ *       - Authentication
+ *     security:
+ *       - BearerAuth: []
+ *       - ApiKeyAuth: []
+ *     responses:
+ *       200:
+ *         description: Current API key returned successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 configured:
+ *                   type: boolean
+ *                   description: Indicates whether an API key is currently configured
+ *                   example: true
+ *                 apiKey:
+ *                   type: string
+ *                   nullable: true
+ *                   description: Current API key value when configured
+ *                   example: "3f7a8d6e2c1b5a9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c7b6a5"
+ *       401:
+ *         description: Unauthorized - authentication required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                   example: "Authentication required"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                   example: "Failed to load API key"
+ */
+router.get('/api/settings/api-key', isAuthenticated, async (req, res) => {
+  try {
+    const apiKey = process.env.API_KEY || '';
+    return res.json({
+      success: true,
+      configured: Boolean(apiKey),
+      apiKey: apiKey || null
+    });
+  } catch (error) {
+    console.error('[ERROR] GET /api/settings/api-key:', error);
+    return res.status(500).json({ success: false, error: 'Failed to load API key' });
+  }
 });
 
 router.get('/api/settings/paperless-public-url', isAuthenticated, async (req, res) => {

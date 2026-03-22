@@ -1154,12 +1154,42 @@ async function startServer() {
     await saveOpenApiSpec(); // Save OpenAPI specification on startup
     app.listen(port, () => {
       console.log(`Server running on port ${port}`);
+      warnIfRemoteSetupExposed();
       startScanning();
     });
   } catch (error) {
     console.error(`Failed to start server: ${error.message}`);
     console.debug(error);
     process.exit(1);
+  }
+}
+
+/**
+ * Emits a security warning when the server starts with an incomplete setup
+ * AND ALLOW_REMOTE_SETUP=yes, meaning the unauthenticated setup endpoints
+ * are reachable from the network.
+ */
+async function warnIfRemoteSetupExposed() {
+  if (process.env.ALLOW_REMOTE_SETUP !== 'yes') {
+    return;
+  }
+
+  try {
+    const isConfigured = await setupService.isConfigured();
+    if (isConfigured) {
+      return;
+    }
+
+    const msg =
+      '[SECURITY WARNING] Setup is not yet complete and ALLOW_REMOTE_SETUP=yes. ' +
+      'The setup endpoints are reachable from the network. ' +
+      'Disable ALLOW_REMOTE_SETUP or restrict network access until setup is finished.';
+
+    console.warn(msg);
+    htmlLogger.log(`⚠️ ${msg}`);
+    txtLogger.log(msg);
+  } catch {
+    // Non-fatal — warning is best-effort
   }
 }
 

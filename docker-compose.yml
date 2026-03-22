@@ -26,6 +26,10 @@ services:
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - RAG_SERVICE_URL=http://localhost:8000
       - RAG_SERVICE_ENABLED=true
+      # SECURITY: Required for initial setup via browser in Docker (host IP is not
+      # 127.0.0.1 inside the container when using bridge networking). Remove this
+      # variable or set it to 'no' immediately after completing initial setup.
+      - ALLOW_REMOTE_SETUP=yes
       # Mistral OCR Queue (optional) – re-OCR poorly scanned documents
       # - MISTRAL_OCR_ENABLED=yes
       # - MISTRAL_API_KEY=your_key_here

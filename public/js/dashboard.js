@@ -49,6 +49,15 @@ function resolveDashboardData() {
     return resolved;
 }
 
+function escapeHtml(value) {
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 const dashboardPaperlessPublicUrl = (typeof window.paperlessPublicUrl === 'string' ? window.paperlessPublicUrl : '').replace(/\/$/, '');
 
 // Chart Initialization
@@ -641,7 +650,7 @@ window.showTagDetails = async function() {
         tags.forEach(tag => {
             content += `
                 <div class="detail-item">
-                    <span class="detail-item-name">${tag.name}</span>
+                    <span class="detail-item-name">${escapeHtml(tag.name)}</span>
                     <span class="detail-item-info">${tag.document_count || 0} documents</span>
                 </div>
             `;
@@ -669,7 +678,7 @@ window.showCorrespondentDetails = async function() {
         correspondents.forEach(correspondent => {
             content += `
                 <div class="detail-item">
-                    <span class="detail-item-name">${correspondent.name}</span>
+                    <span class="detail-item-name">${escapeHtml(correspondent.name)}</span>
                     <span class="detail-item-info">${correspondent.document_count || 0} documents</span>
                 </div>
             `;

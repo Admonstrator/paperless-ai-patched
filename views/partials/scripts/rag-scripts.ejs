@@ -461,12 +461,14 @@
         const status = forceStatus || (isSuccess ? 'success' : 'error');
         const icon = status === 'success' ? 'check-circle' :
                     status === 'warning' ? 'exclamation-triangle' : 'times-circle';
+        const safeLabel = escapeHtml(label);
+        const safeValue = escapeHtml(value);
 
         const badge = document.createElement('div');
         badge.className = `status-badge ${status}`;
         badge.innerHTML = `
             <i class="fas fa-${icon}"></i>
-            <span>${label}: ${value}</span>
+            <span>${safeLabel}: ${safeValue}</span>
         `;
         apiStatus.appendChild(badge);
     }
@@ -568,7 +570,8 @@
         const messageElement = document.createElement('div');
         messageElement.className = 'message assistant';
 
-        let formattedMessage = message.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>');
+        const safeMessage = escapeHtml(message);
+        let formattedMessage = safeMessage.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>');
         if (!formattedMessage.startsWith('<p>')) formattedMessage = '<p>' + formattedMessage;
         if (!formattedMessage.endsWith('</p>')) formattedMessage += '</p>';
 

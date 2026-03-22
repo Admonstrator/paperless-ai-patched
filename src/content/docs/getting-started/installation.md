@@ -32,6 +32,9 @@ services:
       - data:/app/data
     environment:
       - PAPERLESS_AI_INITIAL_SETUP=yes
+      # Required to access the setup wizard from a remote browser.
+      # Remove this line after completing the initial setup.
+      - ALLOW_REMOTE_SETUP=yes
 
 volumes:
   data:
@@ -53,6 +56,9 @@ services:
       - data:/app/data
     environment:
       - PAPERLESS_AI_INITIAL_SETUP=yes
+      # Required to access the setup wizard from a remote browser.
+      # Remove this line after completing the initial setup.
+      - ALLOW_REMOTE_SETUP=yes
 
 volumes:
   data:
@@ -70,7 +76,13 @@ It is highly recommended to use an reverse proxy (e.g. Nginx, Caddy) in front of
 docker compose up -d
 ```
 
-Then open [http://localhost:3000](http://localhost:3000) and follow the [First Setup](/getting-started/first-setup/) guide.
+Then open `http://<your-host>:3000` in your browser and follow the [First Setup](/getting-started/first-setup/) guide.
+
+:::caution[Remote setup access]
+By default, the setup wizard is only accessible from **localhost**. When running in Docker, your browser connects through the Docker bridge network and is not considered local. The `ALLOW_REMOTE_SETUP=yes` variable above lifts this restriction so you can complete the initial setup from any machine.
+
+Once setup is finished, **remove `ALLOW_REMOTE_SETUP=yes`** from your Compose file and redeploy — the protection is restored automatically as soon as setup is marked complete, regardless.
+:::
 
 Need all available Docker environment variables? See the [Configuration reference](/getting-started/configuration/#docker-environment-variables).
 

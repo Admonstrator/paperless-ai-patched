@@ -1,6 +1,8 @@
 const tiktoken = require('tiktoken');
 const fs = require('fs').promises;
 const path = require('path');
+const dns = require('dns').promises;
+const net = require('net');
 const { parseISO, isValid } = require('date-fns');
 
 // Map non-OpenAI models to compatible OpenAI encodings or use estimation
@@ -189,6 +191,157 @@ async function writePromptToFile(systemPrompt, truncatedContent, filePath = '/ap
     }
 }
 
+const METADATA_ENDPOINTS = [
+    '169.254.169.254', // AWS, GCP, Azure metadata
+    'metadata.google.internal',
+    'metadata.goog',
+];
+
+function stripIpv6Brackets(value) {
+    return String(value || '').replace(/^\[|\]$/g, '');
+}
+
+function normalizeIpAddress(ipAddress) {
+    const normalized = stripIpv6Brackets(String(ipAddress || '').trim().toLowerCase());
+    const mappedIpv4Match = normalized.match(/^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/i);
+
+    if (mappedIpv4Match) {
+        return mappedIpv4Match[1];
+    }
+
+    return normalized;
+}
+
+function isValidIpv4Address(ipAddress) {
+    const octets = ipAddress.split('.').map(Number);
+    if (octets.length !== 4) {
+        return false;
+    }
+
+    return octets.every(octet => Number.isInteger(octet) && octet >= 0 && octet <= 255);
+}
+
+function isLoopbackIpv4Address(ipAddress) {
+    if (!isValidIpv4Address(ipAddress)) {
+        return false;
+    }
+
+    return Number(ipAddress.split('.')[0]) === 127;
+}
+
+function isLoopbackAddress(hostOrIp) {
+    const normalized = normalizeIpAddress(hostOrIp);
+
+    if (normalized === 'localhost' || normalized === '::1') {
+        return true;
+    }
+
+    if (net.isIP(normalized) === 4) {
+        return isLoopbackIpv4Address(normalized);
+    }
+
+    return false;
+}
+
+function isPrivateOrInternalIpv4Address(ipAddress) {
+    if (!isValidIpv4Address(ipAddress)) {
+        return false;
+    }
+
+    const [first, second] = ipAddress.split('.').map(Number);
+
+    if (first === 10) {
+        return true;
+    }
+
+    if (first === 172 && second >= 16 && second <= 31) {
+        return true;
+    }
+
+    if (first === 192 && second === 168) {
+        return true;
+    }
+
+    if (first === 169 && second === 254) {
+        return true;
+    }
+
+    if (first === 127) {
+        return true;
+    }
+
+    if (first === 0) {
+        return true;
+    }
+
+    return false;
+}
+
+function isPrivateOrInternalIpv6Address(ipAddress) {
+    const normalized = normalizeIpAddress(ipAddress);
+    const ipVersion = net.isIP(normalized);
+
+    if (ipVersion !== 6) {
+        return false;
+    }
+
+    if (normalized === '::1' || normalized === '::') {
+        return true;
+    }
+
+    if (/^fe[89ab][0-9a-f]/i.test(normalized)) {
+        return true;
+    }
+
+    if (normalized.startsWith('fc') || normalized.startsWith('fd')) {
+        return true;
+    }
+
+    return false;
+}
+
+function isPrivateOrInternalIpAddress(hostOrIp) {
+    const normalized = normalizeIpAddress(hostOrIp);
+    const ipVersion = net.isIP(normalized);
+
+    if (ipVersion === 4) {
+        return isPrivateOrInternalIpv4Address(normalized);
+    }
+
+    if (ipVersion === 6) {
+        return isPrivateOrInternalIpv6Address(normalized);
+    }
+
+    return false;
+}
+
+async function resolveHostnameAddresses(hostname) {
+    if (net.isIP(hostname)) {
+        return { success: true, addresses: [hostname] };
+    }
+
+    const [ipv4Result, ipv6Result] = await Promise.allSettled([
+        dns.resolve4(hostname),
+        dns.resolve6(hostname),
+    ]);
+
+    const addresses = [];
+
+    if (ipv4Result.status === 'fulfilled' && Array.isArray(ipv4Result.value)) {
+        addresses.push(...ipv4Result.value);
+    }
+
+    if (ipv6Result.status === 'fulfilled' && Array.isArray(ipv6Result.value)) {
+        addresses.push(...ipv6Result.value);
+    }
+
+    if (addresses.length === 0) {
+        return { success: false, error: 'Hostname could not be resolved' };
+    }
+
+    return { success: true, addresses };
+}
+
 /**
  * Validates a URL string to prevent Server-Side Request Forgery (SSRF) attacks.
  * 
@@ -197,9 +350,9 @@ async function writePromptToFile(systemPrompt, truncatedContent, filePath = '/ap
  * @param {boolean} options.allowPrivateIPs - Allow private IP addresses (default: false)
  * @param {boolean} options.allowLocalhost - Allow localhost/loopback addresses (default: false)
  * @param {string[]} options.allowedProtocols - Allowed protocols (default: ['http:', 'https:'])
- * @returns {{ valid: boolean, url?: URL, error?: string }} Validation result with parsed URL if valid
+ * @returns {Promise<{ valid: boolean, url?: URL, error?: string }>} Validation result with parsed URL if valid
  */
-function validateUrl(urlString, options = {}) {
+async function validateUrl(urlString, options = {}) {
     const {
         allowPrivateIPs = false,
         allowLocalhost = false,
@@ -224,54 +377,32 @@ function validateUrl(urlString, options = {}) {
 
     const hostname = parsedUrl.hostname.toLowerCase();
 
-    // Block localhost and loopback by default, even when private networks are allowed.
-    if (!allowLocalhost && (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1')) {
-        return { valid: false, error: 'Localhost addresses are not allowed' };
-    }
-
-    // Always block cloud metadata endpoints.
-    const metadataEndpoints = [
-        '169.254.169.254', // AWS, GCP, Azure metadata
-        'metadata.google.internal',
-        'metadata.goog',
-    ];
-    if (metadataEndpoints.some(endpoint => hostname === endpoint || hostname.endsWith('.' + endpoint))) {
+    if (METADATA_ENDPOINTS.some(endpoint => hostname === endpoint || hostname.endsWith('.' + endpoint))) {
         return { valid: false, error: 'Cloud metadata endpoints are not allowed' };
     }
 
+    const resolution = await resolveHostnameAddresses(hostname);
+    if (!resolution.success) {
+        return { valid: false, error: resolution.error };
+    }
+
+    const resolvedAddresses = resolution.addresses.map(normalizeIpAddress);
+
+    // Always block cloud metadata IPs.
+    if (resolvedAddresses.includes('169.254.169.254')) {
+        return { valid: false, error: 'Cloud metadata endpoints are not allowed' };
+    }
+
+    // Block localhost and loopback by default, even when private networks are allowed.
+    if (!allowLocalhost) {
+        if (isLoopbackAddress(hostname) || resolvedAddresses.some(isLoopbackAddress)) {
+            return { valid: false, error: 'Localhost addresses are not allowed' };
+        }
+    }
+
     // Block private networks unless explicitly allowed.
-    if (!allowPrivateIPs) {
-        // Block private IP ranges
-        const ipPatterns = [
-            /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/,        // 10.0.0.0/8
-            /^172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}$/, // 172.16.0.0/12
-            /^192\.168\.\d{1,3}\.\d{1,3}$/,           // 192.168.0.0/16
-            /^169\.254\.\d{1,3}\.\d{1,3}$/,           // 169.254.0.0/16 (link-local)
-            /^0\.0\.0\.0$/,                           // 0.0.0.0
-        ];
-
-        for (const pattern of ipPatterns) {
-            if (pattern.test(hostname)) {
-                return { valid: false, error: 'Private IP addresses are not allowed' };
-            }
-        }
-
-        // Block IPv6 private/local addresses
-        if (hostname.startsWith('[') || hostname.includes(':')) {
-            const cleanedHostname = hostname.replace(/^\[|\]$/g, '').toLowerCase();
-            // Link-local (fe80::/10)
-            if (cleanedHostname.startsWith('fe80:')) {
-                return { valid: false, error: 'Private IPv6 addresses are not allowed' };
-            }
-            // Unique local addresses (fc00::/7 - fc and fd prefixes)
-            if (/^f[cd][0-9a-f]{2}:/i.test(cleanedHostname)) {
-                return { valid: false, error: 'Private IPv6 addresses are not allowed' };
-            }
-            // Unspecified (::)
-            if (cleanedHostname === '::') {
-                return { valid: false, error: 'Private IPv6 addresses are not allowed' };
-            }
-        }
+    if (!allowPrivateIPs && resolvedAddresses.some(isPrivateOrInternalIpAddress)) {
+        return { valid: false, error: 'Private IP addresses are not allowed' };
     }
 
     return { valid: true, url: parsedUrl };
@@ -285,9 +416,9 @@ function validateUrl(urlString, options = {}) {
  * @param {Object} options - Additional options
  * @param {boolean} options.allowPrivateIPs - Allow private IP addresses for internal services (default: false)
  * @param {boolean} options.allowLocalhost - Allow localhost/loopback addresses (default: false)
- * @returns {{ valid: boolean, url?: URL, error?: string }} Validation result
+ * @returns {Promise<{ valid: boolean, url?: URL, error?: string }>} Validation result
  */
-function validateApiUrl(urlString, options = {}) {
+async function validateApiUrl(urlString, options = {}) {
     return validateUrl(urlString, {
         allowPrivateIPs: options.allowPrivateIPs || false,
         allowLocalhost: options.allowLocalhost || false,

@@ -86,7 +86,8 @@ async function sendMessage(message) {
                         const parsed = JSON.parse(data);
                         if (parsed.content) {
                             markdown += parsed.content;
-                            messageDiv.innerHTML = marked.parse(markdown);
+                            const safeMarkdown = escapeHtml(markdown);
+                            messageDiv.innerHTML = marked.parse(safeMarkdown);
                             
                             // Apply syntax highlighting to any code blocks
                             messageDiv.querySelectorAll('pre code').forEach((block) => {
@@ -131,7 +132,8 @@ function addMessage(message, isUser = true) {
             console.log('Message is not JSON, using as is');
         }
         
-        messageDiv.innerHTML = marked.parse(messageContent);
+        const safeMessageContent = escapeHtml(String(messageContent ?? ''));
+        messageDiv.innerHTML = marked.parse(safeMessageContent);
         messageDiv.querySelectorAll('pre code').forEach((block) => {
             hljs.highlightBlock(block);
         });

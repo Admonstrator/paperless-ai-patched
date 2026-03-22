@@ -168,7 +168,7 @@ class SetupService {
     try {
       // Validate URL to prevent SSRF attacks
       // Allow private IPs since Paperless-ngx is typically deployed in a private network
-      const urlValidation = validateApiUrl(url, this.getSetupUrlValidationOptions());
+      const urlValidation = await validateApiUrl(url, this.getSetupUrlValidationOptions());
       if (!urlValidation.valid) {
         console.error('Paperless URL validation error:', urlValidation.error);
         return false;
@@ -189,7 +189,7 @@ class SetupService {
 
   async validateApiPermissions(url, token) {
     // Validate URL first to prevent SSRF
-    const urlValidation = validateApiUrl(url, this.getSetupUrlValidationOptions());
+    const urlValidation = await validateApiUrl(url, this.getSetupUrlValidationOptions());
     if (!urlValidation.valid) {
       console.error('API URL validation error:', urlValidation.error);
       return { success: false, message: `URL validation failed: ${urlValidation.error}` };
@@ -241,7 +241,7 @@ class SetupService {
   async validateCustomConfig(url, apiKey, model) {
     // Validate URL to prevent SSRF attacks
     // Allow private IPs since custom AI services may be hosted internally
-    const urlValidation = validateApiUrl(url, this.getSetupUrlValidationOptions());
+    const urlValidation = await validateApiUrl(url, this.getSetupUrlValidationOptions());
     if (!urlValidation.valid) {
       console.error('Custom AI URL validation error:', urlValidation.error);
       return false;
@@ -280,7 +280,7 @@ class SetupService {
     try {
       // Validate URL to prevent SSRF attacks
       // Allow private IPs since Ollama is typically hosted locally
-      const urlValidation = validateApiUrl(url, this.getSetupUrlValidationOptions());
+      const urlValidation = await validateApiUrl(url, this.getSetupUrlValidationOptions());
       if (!urlValidation.valid) {
         console.error('Ollama URL validation error:', urlValidation.error);
         return false;
@@ -303,7 +303,7 @@ class SetupService {
     
     // Validate Azure endpoint URL to prevent SSRF attacks
     if (endpoint) {
-      const urlValidation = validateApiUrl(endpoint, { allowPrivateIPs: false });
+      const urlValidation = await validateApiUrl(endpoint, { allowPrivateIPs: false });
       if (!urlValidation.valid) {
         console.error('Azure endpoint URL validation error:', urlValidation.error);
         return false;
@@ -459,6 +459,54 @@ class SetupService {
     }
 
     return false;
+  }
+
+  async isDatabaseHealthy() {
+    try {
+      // Attempt a non-intrusive read from the users table to validate database health
+      const documentModel = require('../models/document.js');
+      const users = await documentModel.getUsers();
+      // If we can query without error, database is healthy
+      return Array.isArray(users);
+    } catch (error) {
+      console.error('[SECURITY] Database health check failed:', error.message);
+      return false;
+    }
+  }
+
+  async getSetupState() {
+    try {
+      // Check if .env file exists
+      try {
+        await fs.access(this.envPath, fs.constants.F_OK);
+      } catch {
+        // .env doesn't exist - this is first-run state
+        return 'first-run';
+      }
+
+      // .env exists, check if configuration is complete
+      const config = await this.loadConfig();
+      const isConfigComplete = this.hasRequiredConfiguration(config);
+
+      if (!isConfigComplete) {
+        return 'partial';
+      }
+
+      // Configuration is complete, check database health
+      const dbHealthy = await this.isDatabaseHealthy();
+
+      if (!dbHealthy) {
+        console.warn('[SECURITY] Setup state: degraded (config exists, database unhealthy)');
+        return 'degraded';
+      }
+
+      // All checks passed
+      return 'configured';
+    } catch (error) {
+      console.error('[SECURITY] Error determining setup state:', error.message);
+      // Conservative: treat unexpected errors as degraded
+      return 'degraded';
+    }
   }
 
   async isConfigured() {

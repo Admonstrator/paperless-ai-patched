@@ -97,7 +97,7 @@ class ExternalApiService {
       // Validate URL to prevent SSRF attacks
       // Note: allowPrivateIPs is set based on environment - administrators may need internal APIs
       const allowPrivateIPs = process.env.EXTERNAL_API_ALLOW_PRIVATE_IPS === 'yes';
-      const urlValidation = validateApiUrl(url, { allowPrivateIPs });
+      const urlValidation = await validateApiUrl(url, { allowPrivateIPs });
       if (!urlValidation.valid) {
         console.error(`[ERROR] External API URL validation failed: ${urlValidation.error}`);
         return null;

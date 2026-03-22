@@ -43,10 +43,14 @@ const TESTS = {
   'pr772-fix': 'test-pr772-fix.js',
   'rate-limiting': 'test-rate-limiting.js',
   'scan-stop-flow': 'test-scan-stop-flow.js',
+  'setup-remote-guard': 'test-setup-remote-guard.js',
   'thumbnail-auth-guard': 'test-thumbnail-auth-guard.js',
   'thumbnail-startup-migration': 'test-thumbnail-startup-migration.js',
   'restriction-service': 'test-restriction-service.js',
-  'updated-service': 'test-updated-service.js'
+  'updated-service': 'test-updated-service.js',
+  'ssrf-url-validation': 'test-ssrf-url-validation.js',
+  'external-api-ssrf-block': 'test-external-api-ssrf-block.js',
+  'ui-xss-hardening': 'test-ui-xss-hardening.js'
 };
 
 const AREAS = {
@@ -63,7 +67,8 @@ const AREAS = {
     'scan-stop-flow',
     'thumbnail-startup-migration'
   ],
-  prompts: ['restriction-service', 'updated-service']
+  prompts: ['restriction-service', 'updated-service'],
+  security: ['setup-remote-guard', 'ssrf-url-validation', 'external-api-ssrf-block', 'ui-xss-hardening']
 };
 
 function hasLoginCredentials() {

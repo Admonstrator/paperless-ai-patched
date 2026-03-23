@@ -6,7 +6,7 @@ ARG PAPERLESS_AI_COMMIT_SHA=unknown
 WORKDIR /app
 
 # Copy application files
-COPY --chown=node:node server.js main.py start-services.sh ./
+COPY --chown=node:node server.js main.py python_restart_manager.py start-services.sh ./
 COPY docker-entrypoint.sh ./
 COPY --chown=node:node config ./config/
 COPY --chown=node:node models ./models/

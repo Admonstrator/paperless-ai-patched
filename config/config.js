@@ -2,7 +2,10 @@ const path = require('path');
 const fs = require('fs');
 const currentDir = decodeURIComponent(process.cwd());
 const envPath = path.join(currentDir, 'data', '.env');
+const migratedEnvPath = path.join(currentDir, 'data', '.env.migrated');
 const runtimeOverridesPath = path.join(currentDir, 'data', 'runtime-overrides.json');
+const CONFIG_SOURCE_MODE = String(process.env.CONFIG_SOURCE_MODE || 'runtime-first').trim().toLowerCase();
+const LEGACY_CONFIG_SOURCE_MODE = 'legacy';
 // Keys baked into the Dockerfile image via ENV — these are image defaults,
 // not operator-injected values, so they must never be treated as locked.
 const DOCKERFILE_BAKED_KEYS = new Set([
@@ -70,7 +73,69 @@ if (!global.__PAPERLESS_AI_INJECTED_ENV_SNAPSHOT__) {
   global.__PAPERLESS_AI_INJECTED_ENV_SNAPSHOT__ = { ...process.env };
 }
 
-require('dotenv').config({ path: envPath });
+const migrateLegacyEnvFileToRuntimeOverrides = (currentLevel) => {
+  try {
+    if (!fs.existsSync(envPath)) {
+      return;
+    }
+
+    const rawEnvContent = fs.readFileSync(envPath, 'utf8');
+    const parsedLegacyEnv = require('dotenv').parse(rawEnvContent);
+    if (!parsedLegacyEnv || typeof parsedLegacyEnv !== 'object') {
+      return;
+    }
+
+    let existingOverrides = {};
+    if (fs.existsSync(runtimeOverridesPath)) {
+      try {
+        const rawOverrides = fs.readFileSync(runtimeOverridesPath, 'utf8');
+        const parsedOverrides = JSON.parse(rawOverrides);
+        if (parsedOverrides && typeof parsedOverrides === 'object') {
+          existingOverrides = parsedOverrides;
+        }
+      } catch (error) {
+        startupLog(currentLevel, 'warn', '[WARN] Failed to parse existing runtime overrides before migration:', error.message);
+      }
+    }
+
+    let hasChanges = false;
+    const mergedOverrides = { ...existingOverrides };
+    Object.entries(parsedLegacyEnv).forEach(([key, value]) => {
+      if (isProtectedRuntimeEnvKey(key)) {
+        return;
+      }
+
+      if (Object.prototype.hasOwnProperty.call(mergedOverrides, key)) {
+        return;
+      }
+
+      const normalizedValue = value == null ? '' : String(value);
+      if (!normalizedValue.trim()) {
+        return;
+      }
+
+      mergedOverrides[key] = normalizedValue;
+      hasChanges = true;
+    });
+
+    if (hasChanges) {
+      fs.mkdirSync(path.dirname(runtimeOverridesPath), { recursive: true });
+      fs.writeFileSync(runtimeOverridesPath, JSON.stringify(mergedOverrides, null, 2));
+      startupLog(currentLevel, 'info', '[INFO] Migrated legacy data/.env values to runtime overrides.');
+    }
+
+    fs.renameSync(envPath, migratedEnvPath);
+    startupLog(currentLevel, 'warn', '[WARN] data/.env has been migrated and renamed to data/.env.migrated.');
+  } catch (error) {
+    startupLog(currentLevel, 'warn', '[WARN] Failed to migrate legacy data/.env:', error.message);
+  }
+};
+
+if (CONFIG_SOURCE_MODE === LEGACY_CONFIG_SOURCE_MODE) {
+  require('dotenv').config({ path: envPath });
+} else {
+  migrateLegacyEnvFileToRuntimeOverrides('info');
+}
 
 const applyRuntimeOverrides = () => {
   try {
@@ -87,7 +152,9 @@ const applyRuntimeOverrides = () => {
 
     Object.entries(overrides).forEach(([key, value]) => {
       if (isProtectedRuntimeEnvKey(key)) return;
-      process.env[key] = value == null ? '' : String(value);
+      const normalizedValue = value == null ? '' : String(value);
+      if (!normalizedValue.trim()) return;
+      process.env[key] = normalizedValue;
     });
   } catch (error) {
     console.error('Failed to apply runtime overrides:', error.message);
@@ -102,7 +169,11 @@ if (requestedLogLevel && String(requestedLogLevel).trim().toLowerCase() !== logL
   console.warn(`[WARN] Invalid LOG_LEVEL "${requestedLogLevel}". Falling back to "info".`);
 }
 process.env.LOG_LEVEL = logLevel;
-startupLog(logLevel, 'debug', 'Loading .env from:', envPath);
+if (CONFIG_SOURCE_MODE === LEGACY_CONFIG_SOURCE_MODE) {
+  startupLog(logLevel, 'debug', 'Loading legacy .env from:', envPath);
+} else {
+  startupLog(logLevel, 'debug', 'Running in runtime-first config mode.');
+}
 startupLog(logLevel, 'debug', 'Runtime overrides path:', runtimeOverridesPath);
 
 // Helper function to parse boolean-like env vars
@@ -192,6 +263,7 @@ startupLog(logLevel, 'info', 'Configuration loaded:', {
 module.exports = {
   PAPERLESS_AI_VERSION: 'v2026.03.04',
   CONFIGURED: false,
+  configSourceMode: CONFIG_SOURCE_MODE,
   getApiKey,
   getJwtSecret,
   getTrustProxy,

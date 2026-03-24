@@ -19,6 +19,7 @@ async function main() {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'paperless-ai-env-priority-'));
   const dataDir = path.join(tempDir, 'data');
   const envFilePath = path.join(dataDir, '.env');
+  const migratedEnvFilePath = path.join(dataDir, '.env.migrated');
   const runtimeOverridesPath = path.join(dataDir, 'runtime-overrides.json');
 
   fs.mkdirSync(dataDir, { recursive: true });
@@ -53,6 +54,7 @@ async function main() {
     COOKIE_SECURE_MODE: 'never',
     TRUST_PROXY: 'loopback',
     LOG_LEVEL: 'warn',
+    CONFIG_SOURCE_MODE: 'runtime-first',
     // Simulate node-internal and other system vars that should not be treated as locked.
     PATH: originalEnv.PATH || ''
   };
@@ -63,6 +65,15 @@ async function main() {
   resetModule(setupServiceModulePath);
 
   require(configModulePath);
+
+  assert.ok(
+    fs.existsSync(migratedEnvFilePath),
+    'Expected legacy data/.env to be migrated to data/.env.migrated in runtime-first mode'
+  );
+  assert.ok(
+    !fs.existsSync(envFilePath),
+    'Expected data/.env to be removed after migration in runtime-first mode'
+  );
 
   assert.strictEqual(
     process.env.COOKIE_SECURE_MODE,
@@ -122,24 +133,11 @@ async function main() {
     { skipValidation: true }
   );
 
-  const persistedEnvContent = fs.readFileSync(envFilePath, 'utf8');
   const persistedOverrides = JSON.parse(fs.readFileSync(runtimeOverridesPath, 'utf8'));
 
   assert.ok(
-    !persistedEnvContent.includes('COOKIE_SECURE_MODE='),
-    'Expected injected COOKIE_SECURE_MODE to be excluded from data/.env'
-  );
-  assert.ok(
-    !persistedEnvContent.includes('TRUST_PROXY='),
-    'Expected injected TRUST_PROXY to be excluded from data/.env'
-  );
-  assert.ok(
-    persistedEnvContent.includes('LOG_LEVEL="error"'),
-    'Expected non-protected LOG_LEVEL to be written to data/.env'
-  );
-  assert.ok(
-    persistedEnvContent.includes('CUSTOM_BASE_URL="http://persisted.example"'),
-    'Expected non-injected CUSTOM_BASE_URL to be written to data/.env'
+    !fs.existsSync(envFilePath),
+    'Expected saveConfig not to recreate data/.env in runtime-first mode'
   );
   assert.ok(
     !Object.prototype.hasOwnProperty.call(persistedOverrides, 'COOKIE_SECURE_MODE'),

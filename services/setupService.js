@@ -15,6 +15,25 @@ class SetupService {
     this.configured = null; // Variable to store the configuration status
   }
 
+  isLegacyConfigSourceMode() {
+    return String(process.env.CONFIG_SOURCE_MODE || 'runtime-first').trim().toLowerCase() === 'legacy';
+  }
+
+  getRuntimeConfigurationSnapshot() {
+    return {
+      PAPERLESS_API_URL: process.env.PAPERLESS_API_URL || '',
+      AI_PROVIDER: process.env.AI_PROVIDER || '',
+      OPENAI_API_KEY: process.env.OPENAI_API_KEY || '',
+      OLLAMA_API_URL: process.env.OLLAMA_API_URL || '',
+      OLLAMA_MODEL: process.env.OLLAMA_MODEL || '',
+      AZURE_ENDPOINT: process.env.AZURE_ENDPOINT || '',
+      AZURE_API_KEY: process.env.AZURE_API_KEY || '',
+      AZURE_DEPLOYMENT_NAME: process.env.AZURE_DEPLOYMENT_NAME || '',
+      CUSTOM_BASE_URL: process.env.CUSTOM_BASE_URL || '',
+      CUSTOM_MODEL: process.env.CUSTOM_MODEL || ''
+    };
+  }
+
   normalizeEnvironmentValue(value) {
     if (value == null) {
       return '';
@@ -123,8 +142,13 @@ class SetupService {
   }
 
   async loadConfig() {
+    const runtimeOverrides = this.filterProtectedInjectedConfig(await this.loadRuntimeOverrides());
+
+    if (!this.isLegacyConfigSourceMode()) {
+      return Object.keys(runtimeOverrides).length > 0 ? runtimeOverrides : null;
+    }
+
     try {
-      const runtimeOverrides = await this.loadRuntimeOverrides();
       const envContent = await fs.readFile(this.envPath, 'utf8');
       const configValues = {};
       envContent.split('\n').forEach((line) => {
@@ -155,7 +179,6 @@ class SetupService {
         console.error('Error loading config:', error.message);
       }
 
-      const runtimeOverrides = this.filterProtectedInjectedConfig(await this.loadRuntimeOverrides());
       if (Object.keys(runtimeOverrides).length > 0) {
         return runtimeOverrides;
       }
@@ -412,11 +435,14 @@ class SetupService {
 
       const persistentConfig = this.filterProtectedInjectedConfig(configValues);
 
-      const envContent = Object.entries(persistentConfig)
-        .map(([key, value]) => `${key}=${this.encodeEnvValue(value)}`)
-        .join('\n');
+      if (this.isLegacyConfigSourceMode()) {
+        const envContent = Object.entries(persistentConfig)
+          .map(([key, value]) => `${key}=${this.encodeEnvValue(value)}`)
+          .join('\n');
 
-      await fs.writeFile(this.envPath, envContent);
+        await fs.writeFile(this.envPath, envContent);
+      }
+
       await this.saveRuntimeOverrides(configValues);
       
       // Reload environment variables
@@ -476,17 +502,22 @@ class SetupService {
 
   async getSetupState() {
     try {
-      // Check if .env file exists
-      try {
-        await fs.access(this.envPath, fs.constants.F_OK);
-      } catch {
-        // .env doesn't exist - this is first-run state
-        return 'first-run';
+      if (this.isLegacyConfigSourceMode()) {
+        // Legacy mode depends on data/.env as the persisted source.
+        try {
+          await fs.access(this.envPath, fs.constants.F_OK);
+        } catch {
+          return 'first-run';
+        }
       }
 
-      // .env exists, check if configuration is complete
+      // Runtime-first mode derives configuration from runtime env + overrides.
       const config = await this.loadConfig();
-      const isConfigComplete = this.hasRequiredConfiguration(config);
+      const effectiveConfig = {
+        ...this.getRuntimeConfigurationSnapshot(),
+        ...(config || {})
+      };
+      const isConfigComplete = this.hasRequiredConfiguration(effectiveConfig);
 
       if (!isConfigComplete) {
         return 'partial';
@@ -515,16 +546,22 @@ class SetupService {
     }
 
     try {
-      try {
-        await fs.access(this.envPath, fs.constants.F_OK);
-      } catch (err) {
-        console.log('No .env file found. Starting setup process...');
-        this.configured = false;
-        return false;
+      if (this.isLegacyConfigSourceMode()) {
+        try {
+          await fs.access(this.envPath, fs.constants.F_OK);
+        } catch (_err) {
+          console.log('No .env file found. Starting setup process...');
+          this.configured = false;
+          return false;
+        }
       }
 
       const config = await this.loadConfig();
-      if (!this.hasRequiredConfiguration(config)) {
+      const effectiveConfig = {
+        ...this.getRuntimeConfigurationSnapshot(),
+        ...(config || {})
+      };
+      if (!this.hasRequiredConfiguration(effectiveConfig)) {
         console.log('Required configuration is incomplete. Starting setup process...');
         this.configured = false;
         return false;

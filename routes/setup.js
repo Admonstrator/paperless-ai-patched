@@ -2649,12 +2649,25 @@ router.post('/api/settings/thumbnail-cache/clear', isAuthenticated, cacheClearLi
  * /api/settings/reset-local-overrides:
  *   post:
  *     summary: Reset local runtime overrides
- *     description: Removes local runtime override values so injected environment variables are used after restart.
+ *     description: |
+ *       Removes local runtime override values so injected environment variables are used after restart.
+ *       This operation is restricted to interactive user sessions and requires the current account password.
  *     tags:
  *       - Settings
  *     security:
  *       - BearerAuth: []
- *       - ApiKeyAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - currentPassword
+ *             properties:
+ *               currentPassword:
+ *                 type: string
+ *                 description: Current password of the signed-in settings user
  *     responses:
  *       200:
  *         description: Override reset completed
@@ -2667,23 +2680,70 @@ router.post('/api/settings/thumbnail-cache/clear', isAuthenticated, cacheClearLi
  *                   type: boolean
  *                 hadOverrides:
  *                   type: boolean
+ *                 restart:
+ *                   type: boolean
  *                 message:
  *                   type: string
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Invalid password
+ *       403:
+ *         description: Forbidden - interactive session required
+ *       404:
+ *         description: User not found
  *       500:
  *         description: Server error
  */
 
-router.post('/api/settings/reset-local-overrides', isAuthenticated, cacheClearLimiter, async (req, res) => {
+router.post('/api/settings/reset-local-overrides', isAuthenticated, cacheClearLimiter, express.json(), async (req, res) => {
   try {
+    const username = getAuthenticatedSettingsUsername(req);
+    if (!username) {
+      return res.status(403).json({
+        success: false,
+        error: 'Reset local overrides requires a signed-in user session.'
+      });
+    }
+
+    const currentPassword = String(req.body?.currentPassword || '').trim();
+    if (!currentPassword) {
+      return res.status(400).json({
+        success: false,
+        error: 'Current password is required.'
+      });
+    }
+
+    const user = await documentModel.getUser(username);
+    if (!user || !user.password) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found.'
+      });
+    }
+
+    const validPassword = await bcrypt.compare(currentPassword, user.password);
+    if (!validPassword) {
+      return res.status(401).json({
+        success: false,
+        error: 'Current password is invalid.'
+      });
+    }
+
     const hadOverrides = await setupService.clearRuntimeOverrides();
 
     res.json({
       success: true,
       hadOverrides,
+      restart: true,
       message: hadOverrides
-        ? 'Local runtime overrides have been removed. Restart the container to apply injected environment values.'
-        : 'No local runtime overrides were found. Restart the container to reload injected environment values.'
+        ? 'Local runtime overrides have been removed. Restarting service to apply injected environment values.'
+        : 'No local runtime overrides were found. Restarting service to reload injected environment values.'
     });
+
+    setTimeout(() => {
+      process.exit(0);
+    }, 5000);
   } catch (error) {
     console.error('[ERROR] resetting local runtime overrides:', error);
     res.status(500).json({
@@ -3421,25 +3481,32 @@ router.post('/api/key-regenerate', async (req, res) => {
     const dotenv = require('dotenv');
     const crypto = require('crypto');    
     const envPath = path.join(__dirname, '../data/', '.env');
-    const envConfig = dotenv.parse(fs.readFileSync(envPath));
-    // Generiere ein neues API-Token
+    const legacyMode = String(process.env.CONFIG_SOURCE_MODE || 'runtime-first').trim().toLowerCase() === 'legacy';
+    let envConfig = {};
+    if (legacyMode && fs.existsSync(envPath)) {
+      envConfig = dotenv.parse(fs.readFileSync(envPath));
+    }
+
+    // Generate a new API token
     const apiKey = crypto.randomBytes(32).toString('hex');
     envConfig.API_KEY = apiKey;
 
-    // Schreibe die aktualisierte .env-Datei
-    const envContent = Object.entries(envConfig)
-      .map(([key, value]) => `${key}=${value}`)
-      .join('\n');
-    fs.writeFileSync(envPath, envContent);
+    if (legacyMode) {
+      // Persist to legacy .env only in legacy mode
+      const envContent = Object.entries(envConfig)
+        .map(([key, value]) => `${key}=${value}`)
+        .join('\n');
+      fs.writeFileSync(envPath, envContent);
+    }
 
-    // Setze die Umgebungsvariable für den aktuellen Prozess
+    // Set runtime value for current process
     process.env.API_KEY = apiKey;
     await setupService.saveRuntimeOverrides({
       ...(await setupService.loadRuntimeOverrides()),
       API_KEY: apiKey
     });
 
-    // Sende die Antwort zurück
+    // Return response
     res.json({ success: true, newKey: apiKey });
   } catch (error) {
     console.error('API key regeneration error:', error);
@@ -5312,6 +5379,17 @@ router.get('/settings', async (req, res) => {
   const runtimeOverrides = await setupService.loadRuntimeOverrides();
   const injectedEnvSnapshot = global.__PAPERLESS_AI_INJECTED_ENV_SNAPSHOT__ || {};
   const secretKeys = new Set(SETTINGS_SECRET_FIELDS);
+  const runtimeFirstMode = String(process.env.CONFIG_SOURCE_MODE || 'runtime-first').trim().toLowerCase() !== 'legacy';
+  let hasLegacyEnvMigrationNotice = false;
+
+  if (runtimeFirstMode) {
+    try {
+      await fs.access(path.join(process.cwd(), 'data', '.env.migrated'));
+      hasLegacyEnvMigrationNotice = true;
+    } catch (_error) {
+      hasLegacyEnvMigrationNotice = false;
+    }
+  }
 
   const formatValueForTooltip = (key, value) => {
     const normalizedValue = value == null ? '' : String(value);
@@ -5480,6 +5558,8 @@ router.get('/settings', async (req, res) => {
     runtimeOverrideDetails,
     lockedEnvKeys,
     lockedEnvDetails,
+    runtimeFirstMode,
+    hasLegacyEnvMigrationNotice,
     mfaSettings,
     success: isConfigured ? 'The application is already configured. You can update the configuration below.' : undefined,
     settingsError: showErrorCheckSettings ? 'Please check your settings. Something is not working correctly.' : undefined
@@ -5549,7 +5629,7 @@ router.get('/settings', async (req, res) => {
  */
 router.get('/api/settings/api-key', isAuthenticated, async (req, res) => {
   try {
-    const apiKey = process.env.API_KEY || '';
+    const apiKey = configFile.getApiKey ? configFile.getApiKey() : (process.env.API_KEY || process.env.PAPERLESS_AI_API_KEY || '');
     return res.json({
       success: true,
       configured: Boolean(apiKey),
@@ -6733,6 +6813,9 @@ router.post('/settings', express.json(), async (req, res) => {
     const hasValue = (value) => typeof value === 'string' && value.trim() !== '';
 
     const hasPaperlessTokenInput = hasValue(paperlessToken);
+    const hasPaperlessUrlInput = hasValue(paperlessUrl);
+    const normalizedCurrentPaperlessUrl = (currentConfig.PAPERLESS_API_URL || '').replace(/\/api$/, '');
+    const effectivePaperlessUrl = hasPaperlessUrlInput ? paperlessUrl : normalizedCurrentPaperlessUrl;
     const effectivePaperlessToken = hasPaperlessTokenInput ? paperlessToken.trim() : currentConfig.PAPERLESS_API_TOKEN;
     const hasOpenAiKeyInput = hasValue(openaiKey);
     const effectiveOpenAiKey = hasOpenAiKeyInput ? openaiKey.trim() : currentConfig.OPENAI_API_KEY;
@@ -6791,8 +6874,8 @@ router.post('/settings', express.json(), async (req, res) => {
     const externalApiTimeout = req.body.externalApiTimeout || '5000';
     const externalApiTransform = req.body.externalApiTransform || '';
 
-    if (paperlessUrl !== currentConfig.PAPERLESS_API_URL?.replace('/api', '') || hasPaperlessTokenInput) {
-      const isPaperlessValid = await setupService.validatePaperlessConfig(paperlessUrl, effectivePaperlessToken);
+    if ((effectivePaperlessUrl && effectivePaperlessUrl !== normalizedCurrentPaperlessUrl) || hasPaperlessTokenInput) {
+      const isPaperlessValid = await setupService.validatePaperlessConfig(effectivePaperlessUrl, effectivePaperlessToken);
       if (!isPaperlessValid) {
         return res.status(400).json({ 
           error: 'Paperless-ngx connection failed. Please check URL and Token.'
@@ -6802,7 +6885,7 @@ router.post('/settings', express.json(), async (req, res) => {
 
     const updatedConfig = {};
 
-    if (paperlessUrl) updatedConfig.PAPERLESS_API_URL = paperlessUrl + '/api';
+    if (hasPaperlessUrlInput) updatedConfig.PAPERLESS_API_URL = effectivePaperlessUrl + '/api';
     if (typeof paperlessPublicUrl === 'string') updatedConfig.PAPERLESS_PUBLIC_URL = paperlessPublicUrl.trim();
     if (hasPaperlessTokenInput) updatedConfig.PAPERLESS_API_TOKEN = effectivePaperlessToken;
     if (paperlessUsername) updatedConfig.PAPERLESS_USERNAME = paperlessUsername;
@@ -6961,7 +7044,7 @@ router.post('/settings', express.json(), async (req, res) => {
     }
 
     // Handle API key
-    let apiToken = process.env.API_KEY;
+    let apiToken = configFile.getApiKey ? configFile.getApiKey() : (process.env.API_KEY || process.env.PAPERLESS_AI_API_KEY || '');
     if (!apiToken) {
       console.log('Generating new API key');
       apiToken = require('crypto').randomBytes(64).toString('hex');

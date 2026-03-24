@@ -778,7 +778,21 @@ function initializeFormHandlers() {
             const confirmResult = await Swal.fire({
                 icon: 'warning',
                 title: 'Reset local runtime overrides?',
-                text: 'This removes local overrides. Injected container environment values are applied after restart.',
+                text: 'This removes local overrides. Container-managed environment values are applied after restart.',
+                input: 'password',
+                inputLabel: 'Confirm with your current password',
+                inputPlaceholder: 'Enter current password',
+                inputAttributes: {
+                    autocapitalize: 'off',
+                    autocorrect: 'off',
+                    autocomplete: 'current-password'
+                },
+                inputValidator: (value) => {
+                    if (!value || !String(value).trim()) {
+                        return 'Current password is required.';
+                    }
+                    return null;
+                },
                 showCancelButton: true,
                 confirmButtonColor: '#d33',
                 cancelButtonColor: '#3085d6',
@@ -789,6 +803,8 @@ function initializeFormHandlers() {
                 return;
             }
 
+            const currentPassword = String(confirmResult.value || '').trim();
+
             const originalHtml = resetLocalOverridesBtn.innerHTML;
             try {
                 resetLocalOverridesBtn.disabled = true;
@@ -798,11 +814,12 @@ function initializeFormHandlers() {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
-                    }
+                    },
+                    body: JSON.stringify({ currentPassword })
                 });
 
                 const result = await response.json();
-                if (!result.success) {
+                if (!response.ok || !result.success) {
                     throw new Error(result.error || 'Failed to reset local runtime overrides');
                 }
 
@@ -811,6 +828,9 @@ function initializeFormHandlers() {
                     title: 'Local overrides reset',
                     text: result.message || 'Local runtime overrides were removed. Restart the container to apply injected environment values.'
                 });
+
+                showRestartOverlay();
+                await waitForServerRecovery();
             } catch (error) {
                 await Swal.fire({
                     icon: 'error',

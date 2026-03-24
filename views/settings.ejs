@@ -148,6 +148,11 @@
                         <div class="settings-env-notice rounded-lg px-4 py-3 text-sm">
                             All settings map to runtime Docker environment variables. Every field below shows the linked ENV key and if a restart is required. Current values are preloaded where safe.
                         </div>
+                        <% if (runtimeFirstMode && hasLegacyEnvMigrationNotice) { %>
+                            <div class="rounded-lg px-4 py-3 text-sm border theme-alert-warning">
+                                Legacy local config migration detected: <strong>data/.env</strong> was migrated to <strong>data/.env.migrated</strong>. Runtime environment variables are now the source of truth. Use runtime overrides only for keys not managed by container ENV.
+                            </div>
+                        <% } %>
 
                         <div class="tab-navigation border-b border-gray-200">
                             <nav class="flex flex-wrap gap-2" role="tablist">
@@ -779,12 +784,12 @@
                             <section class="space-y-4 settings-section-card">
                                 <h3 class="text-lg font-semibold">Runtime Controls</h3>
                                 <div class="space-y-2">
-                                    <p class="text-sm text-gray-600">Reset local runtime overrides to fall back to your container-injected environment values on next restart.</p>
+                                    <p class="text-sm text-gray-600">Reset local runtime overrides to fall back to container-managed environment values after restart.</p>
                                     <button type="button" id="resetLocalOverridesBtn" data-runtime-override-keys="<%- JSON.stringify(runtimeOverrideKeys || []).replace(/\"/g, '&quot;') %>" data-runtime-override-details="<%- JSON.stringify(runtimeOverrideDetails || {}).replace(/\"/g, '&quot;') %>" data-locked-env-keys="<%- JSON.stringify(lockedEnvKeys || []).replace(/\"/g, '&quot;') %>" data-locked-env-details="<%- JSON.stringify(lockedEnvDetails || {}).replace(/\"/g, '&quot;') %>" class="toolbar-btn toolbar-btn--danger flex items-center gap-2">
                                         <i class="fas fa-rotate-left"></i>
-                                        <span>Reset Local Runtime Overrides</span>
+                                        <span>Reset Local Overrides (Password Required)</span>
                                     </button>
-                                    <p class="text-xs text-gray-500">Removes local override file only (`data/runtime-overrides.json`). A container restart is required to apply injected ENV values.</p>
+                                    <p class="text-xs text-gray-500">Removes only local override data (`data/runtime-overrides.json`). Requires your current account password and an interactive user session. Restart to apply container-managed ENV values.</p>
                                 </div>
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div class="space-y-2">

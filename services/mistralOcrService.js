@@ -177,16 +177,17 @@ class MistralOcrService {
 
     this.activeDocumentIds.add(normalizedDocumentId);
 
+    let fallbackTitle = `Document ${normalizedDocumentId}`;
+    let terminalFailureRecorded = false;
+    const recordTerminalFailure = async (reason, source = 'ocr') => {
+      if (terminalFailureRecorded) return;
+      await documentModel.addFailedDocument(normalizedDocumentId, fallbackTitle, reason, source);
+      terminalFailureRecorded = true;
+    };
+
     try {
       const queueItem = await documentModel.getOcrQueueItem(normalizedDocumentId);
-      const fallbackTitle = queueItem?.title || `Document ${normalizedDocumentId}`;
-      let terminalFailureRecorded = false;
-
-      const recordTerminalFailure = async (reason, source = 'ocr') => {
-        if (terminalFailureRecorded) return;
-        await documentModel.addFailedDocument(normalizedDocumentId, fallbackTitle, reason, source);
-        terminalFailureRecorded = true;
-      };
+      fallbackTitle = queueItem?.title || fallbackTitle;
 
       await documentModel.updateOcrQueueStatus(normalizedDocumentId, 'processing');
 

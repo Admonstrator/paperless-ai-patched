@@ -21,6 +21,7 @@
     "test:log-level-logger": "node scripts/run-tests.js --test log-level-logger",
     "test:login-mfa-flow": "node scripts/run-tests.js --test login-mfa-flow",
     "test:ocr-fallback-ai-errors": "node scripts/run-tests.js --test ocr-fallback-ai-errors",
+    "test:ocr-startup-recovery": "node scripts/run-tests.js --test ocr-startup-recovery",
     "test:pr772-fix": "node scripts/run-tests.js --test pr772-fix",
     "test:rate-limiting": "node scripts/run-tests.js --test rate-limiting",
     "test:scan-stop-flow": "node scripts/run-tests.js --test scan-stop-flow",

@@ -928,6 +928,41 @@ async getCurrentProcessingStatus() {
     }
   },
 
+  async resetOcrQueueItemsToPending(documentIds) {
+    try {
+      const normalizedIds = Array.isArray(documentIds)
+        ? documentIds
+          .map((documentId) => Number(documentId))
+          .filter((documentId) => Number.isInteger(documentId) && documentId > 0)
+        : [];
+
+      if (normalizedIds.length === 0) {
+        return 0;
+      }
+
+      const resetItem = db.prepare(`
+        UPDATE ocr_queue SET
+          status = 'pending',
+          processed_at = NULL
+        WHERE document_id = ?
+          AND status = 'processing'
+      `);
+
+      const resetMany = db.transaction((ids) => {
+        let changes = 0;
+        for (const documentId of ids) {
+          changes += resetItem.run(documentId).changes;
+        }
+        return changes;
+      });
+
+      return resetMany(normalizedIds);
+    } catch (error) {
+      console.error('[ERROR] resetting OCR queue items to pending:', error);
+      return 0;
+    }
+  },
+
   async removeFromOcrQueue(documentId) {
     try {
       const result = db.prepare('DELETE FROM ocr_queue WHERE document_id = ?').run(documentId);

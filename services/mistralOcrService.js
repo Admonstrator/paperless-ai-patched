@@ -15,6 +15,7 @@ const AIServiceFactory = require('./aiServiceFactory');
 class MistralOcrService {
   constructor() {
     this.apiBase = 'https://api.mistral.ai/v1';
+    this.activeDocumentIds = new Set();
   }
 
   // ── Helpers ──────────────────────────────────────────────────────────────
@@ -29,6 +30,38 @@ class MistralOcrService {
 
   isEnabled() {
     return config.mistralOcr?.enabled === 'yes';
+  }
+
+  isDocumentActivelyProcessing(documentId) {
+    const normalizedDocumentId = Number(documentId);
+    return Number.isInteger(normalizedDocumentId) && this.activeDocumentIds.has(normalizedDocumentId);
+  }
+
+  async recoverInterruptedJobs(logger = console) {
+    const processingItems = await documentModel.getOcrQueue('processing');
+    const recoverableItems = processingItems.filter(
+      (item) => !this.isDocumentActivelyProcessing(item.document_id)
+    );
+
+    if (recoverableItems.length === 0) {
+      logger.log('[OCR] No stale OCR queue items found at startup.');
+      return {
+        recovered: 0,
+        documentIds: []
+      };
+    }
+
+    const documentIds = recoverableItems.map((item) => item.document_id);
+    const recovered = await documentModel.resetOcrQueueItemsToPending(documentIds);
+
+    logger.warn(
+      `[OCR] Recovered ${recovered} stale OCR queue item(s) stuck in processing: ${documentIds.join(', ')}`
+    );
+
+    return {
+      recovered,
+      documentIds
+    };
   }
 
   // ── Core Methods ─────────────────────────────────────────────────────────
@@ -129,28 +162,40 @@ class MistralOcrService {
    */
   async processQueueItem(documentId, opts = {}) {
     const { autoAnalyze = false, progressCallback = null } = opts;
+    const normalizedDocumentId = Number(documentId);
     const emit = (step, message, data = {}) => {
       if (progressCallback) progressCallback(step, message, data);
     };
 
-    const queueItem = await documentModel.getOcrQueueItem(documentId);
-    const fallbackTitle = queueItem?.title || `Document ${documentId}`;
-    let terminalFailureRecorded = false;
+    if (!Number.isInteger(normalizedDocumentId) || normalizedDocumentId <= 0) {
+      throw new Error('Invalid OCR document ID');
+    }
 
+    if (this.isDocumentActivelyProcessing(normalizedDocumentId)) {
+      throw new Error(`Document ${normalizedDocumentId} is already being processed`);
+    }
+
+    this.activeDocumentIds.add(normalizedDocumentId);
+
+    let fallbackTitle = `Document ${normalizedDocumentId}`;
+    let terminalFailureRecorded = false;
     const recordTerminalFailure = async (reason, source = 'ocr') => {
       if (terminalFailureRecorded) return;
-      await documentModel.addFailedDocument(documentId, fallbackTitle, reason, source);
+      await documentModel.addFailedDocument(normalizedDocumentId, fallbackTitle, reason, source);
       terminalFailureRecorded = true;
     };
 
-    await documentModel.updateOcrQueueStatus(documentId, 'processing');
-
     try {
+      const queueItem = await documentModel.getOcrQueueItem(normalizedDocumentId);
+      fallbackTitle = queueItem?.title || fallbackTitle;
+
+      await documentModel.updateOcrQueueStatus(normalizedDocumentId, 'processing');
+
       // Step 1: Download
-      emit('download', `Downloading document ${documentId} from Paperless-ngx…`);
+      emit('download', `Downloading document ${normalizedDocumentId} from Paperless-ngx…`);
       let base64, mimeType;
       try {
-        ({ base64, mimeType } = await this.downloadDocumentAsBase64(documentId));
+        ({ base64, mimeType } = await this.downloadDocumentAsBase64(normalizedDocumentId));
       } catch (dlErr) {
         throw new Error(`Download failed: ${dlErr.message}`);
       }
@@ -171,7 +216,7 @@ class MistralOcrService {
 
       // Step 3: Write back
       emit('writeback', 'Writing OCR text back to Paperless-ngx…');
-      const wroteBack = await this.writeBackContent(documentId, ocrText);
+      const wroteBack = await this.writeBackContent(normalizedDocumentId, ocrText);
       if (wroteBack) {
         emit('writeback', 'OCR text successfully written to Paperless-ngx.');
       } else {
@@ -179,33 +224,35 @@ class MistralOcrService {
       }
 
       // Persist result in queue
-      await documentModel.updateOcrQueueStatus(documentId, 'done', ocrText);
+      await documentModel.updateOcrQueueStatus(normalizedDocumentId, 'done', ocrText);
 
       let aiResult = null;
       if (autoAnalyze) {
         emit('ai', 'Starting AI analysis with OCR text…');
         try {
-          aiResult = await this._runAiAnalysis(documentId, ocrText);
+          aiResult = await this._runAiAnalysis(normalizedDocumentId, ocrText);
           emit('ai', 'AI analysis complete.');
         } catch (aiErr) {
           await recordTerminalFailure('ai_failed_after_ocr', 'ai');
-          await documentModel.updateOcrQueueStatus(documentId, 'failed', ocrText);
+          await documentModel.updateOcrQueueStatus(normalizedDocumentId, 'failed', ocrText);
           throw new Error(`AI analysis failed after OCR: ${aiErr.message}`);
         }
       }
 
       if (!autoAnalyze || aiResult) {
-        await documentModel.resetFailedDocument(documentId);
+        await documentModel.resetFailedDocument(normalizedDocumentId);
       }
 
       emit('done', 'Processing finished successfully.');
       return { ocrText, wroteBack, aiAnalysis: aiResult };
 
     } catch (error) {
-      await documentModel.updateOcrQueueStatus(documentId, 'failed');
+      await documentModel.updateOcrQueueStatus(normalizedDocumentId, 'failed');
       await recordTerminalFailure('ocr_failed', 'ocr');
       emit('error', error.message);
       throw error;
+    } finally {
+      this.activeDocumentIds.delete(normalizedDocumentId);
     }
   }
 

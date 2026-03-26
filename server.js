@@ -1151,6 +1151,7 @@ async function startServer() {
   try {
     await initializeDataDirectory();
     await runStartupMigrations(console);
+    await mistralOcrService.recoverInterruptedJobs(console);
     await saveOpenApiSpec(); // Save OpenAPI specification on startup
     app.listen(port, () => {
       console.log(`Server running on port ${port}`);

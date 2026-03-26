@@ -40,6 +40,7 @@ const TESTS = {
   'log-level-logger': 'test-log-level-logger.js',
   'login-mfa-flow': 'test-login-mfa-flow.js',
   'ocr-fallback-ai-errors': 'test-ocr-fallback-ai-errors.js',
+  'ocr-startup-recovery': 'test-ocr-startup-recovery.js',
   'pr772-fix': 'test-pr772-fix.js',
   'rate-limiting': 'test-rate-limiting.js',
   'scan-stop-flow': 'test-scan-stop-flow.js',
@@ -56,7 +57,7 @@ const TESTS = {
 const AREAS = {
   chat: ['chat-document-search', 'chat-documents-service-search'],
   auth: ['login-mfa-flow', 'rate-limiting', 'thumbnail-auth-guard'],
-  ocr: ['ocr-fallback-ai-errors'],
+  ocr: ['ocr-fallback-ai-errors', 'ocr-startup-recovery'],
   observability: ['log-level-config', 'log-level-logger'],
   processing: [
     'document-type-restriction',

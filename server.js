@@ -585,6 +585,7 @@ async function processDocument(doc, existingTags, existingCorrespondentList, exi
   if (docRetries >= 3) {
     console.warn(`Document ${doc.id} has failed ${docRetries} times, skipping to prevent infinite retry loop`);
     await documentModel.setProcessingStatus(doc.id, doc.title, 'failed');
+    retryTracker.delete(doc.id);
     return null;
   }
 

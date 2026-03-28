@@ -145,7 +145,7 @@ class OllamaService {
 
             // Calculate context window size
             const promptTokenCount = this._calculatePromptTokenCount(prompt);
-            const numCtx = this._calculateNumCtx(promptTokenCount, 1024);
+            const numCtx = this._calculateNumCtx(promptTokenCount, Number(config.responseTokens));
 
             console.log(`[DEBUG] Use existing data: ${config.useExistingData}, Restrictions applied based on useExistingData setting`);
             console.log(`[DEBUG] External API data: ${validatedExternalApiData ? 'included' : 'none'}`);
@@ -193,16 +193,17 @@ class OllamaService {
      */
     async analyzePlayground(content, prompt) {
         try {
-            // Calculate context window size
-            const promptTokenCount = await calculateTokens(prompt);
-            const numCtx = this._calculateNumCtx(promptTokenCount, 1024);
+            // Calculate context window size — include both prompt and content
+            const fullPrompt = prompt + "\n\n" + JSON.stringify(content);
+            const promptTokenCount = this._calculatePromptTokenCount(fullPrompt);
+            const numCtx = this._calculateNumCtx(promptTokenCount, Number(config.responseTokens));
 
             // Generate playground system prompt (simpler than full analysis)
             const systemPrompt = this._generatePlaygroundSystemPrompt();
 
             // Call Ollama API
             const response = await this._callOllamaAPI(
-                prompt + "\n\n" + JSON.stringify(content),
+                fullPrompt,
                 systemPrompt,
                 numCtx,
                 this.playgroundSchema
@@ -394,13 +395,13 @@ class OllamaService {
             ? JSON.stringify(apiData, null, 2)
             : String(apiData);
 
-        // Calculate tokens for the data (using simple estimation for Ollama)
-        const dataTokens = Math.ceil(dataString.length / 4);
+        // Calculate tokens for the data (conservative 2 chars/token for non-English)
+        const dataTokens = Math.ceil(dataString.length / 2);
 
         if (dataTokens > maxTokens) {
             console.warn(`[WARNING] External API data (${dataTokens} tokens) exceeds limit (${maxTokens}), truncating`);
             // Simple truncation based on character count
-            const maxChars = maxTokens * 4;
+            const maxChars = maxTokens * 2;
             return dataString.substring(0, maxChars);
         }
 
@@ -501,7 +502,10 @@ class OllamaService {
      * @returns {number} Estimated token count
      */
     _calculatePromptTokenCount(prompt) {
-        return Math.ceil(prompt.length / 4);
+        // Use conservative 2 chars/token estimate to avoid truncation
+        // with non-English models (CJK, German, etc.) where tokenization
+        // produces roughly 2 chars per token instead of ~4 for English
+        return Math.ceil(prompt.length / 2);
     }
 
     /**
@@ -712,7 +716,7 @@ class OllamaService {
         try {
             // Calculate context window size based on prompt length
             const promptTokenCount = this._calculatePromptTokenCount(prompt);
-            const numCtx = this._calculateNumCtx(promptTokenCount, 512);
+            const numCtx = this._calculateNumCtx(promptTokenCount, Number(config.responseTokens));
 
             // Simple system prompt for text generation
             const systemPrompt = `You are a helpful assistant. Generate a clear, concise, and informative response to the user's question or request.`;

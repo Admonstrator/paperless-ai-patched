@@ -86,7 +86,7 @@ class AzureOpenAIService {
       try {
         customFieldsObj = JSON.parse(process.env.CUSTOM_FIELDS);
       } catch (error) {
-        console.error(`Failed to parse CUSTOM_FIELDS: ${error.message}`); console.debug(error);;
+        console.error(`Failed to parse CUSTOM_FIELDS: ${error.message}`); console.debug(error);
         customFieldsObj = { custom_fields: [] };
       }
 
@@ -214,7 +214,7 @@ class AzureOpenAIService {
       try {
         parsedResponse = JSON.parse(jsonContent);
       } catch (error) {
-        console.error(`Failed to parse JSON response: ${error.message}`); console.debug(error);;
+        console.error(`Failed to parse JSON response: ${error.message}`); console.debug(error);
         throw new Error('Invalid JSON response from API');
       }
 
@@ -344,7 +344,7 @@ class AzureOpenAIService {
       try {
         parsedResponse = JSON.parse(jsonContent);
       } catch (error) {
-        console.error(`Failed to parse JSON response: ${error.message}`); console.debug(error);;
+        console.error(`Failed to parse JSON response: ${error.message}`); console.debug(error);
         throw new Error('Invalid JSON response from API');
       }
 
@@ -402,7 +402,7 @@ class AzureOpenAIService {
 
       return response.choices[0].message.content;
     } catch (error) {
-      console.error(`Error generating text with AzureOpenAI: ${error.message}`); console.debug(error);;
+      console.error(`Error generating text with AzureOpenAI: ${error.message}`); console.debug(error);
       throw error;
     }
   }
@@ -438,7 +438,7 @@ class AzureOpenAIService {
 
       return { status: 'ok', model: model };
     } catch (error) {
-      console.error(`Error generating text with Azure OpenAI: ${error.message}`); console.debug(error);;
+      console.error(`Error generating text with Azure OpenAI: ${error.message}`); console.debug(error);
       return { status: 'error', error: error.message };
     }
   }

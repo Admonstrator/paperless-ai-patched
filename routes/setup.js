@@ -3474,7 +3474,7 @@ async function saveDocumentChanges(docId, updateData, analysis, originalData) {
  *                   type: string
  *                   example: "Error regenerating API key"
  */
-router.post('/api/key-regenerate', async (req, res) => {
+router.post('/api/key-regenerate', isAuthenticated, async (req, res) => {
   try {
     const fs = require('fs');
     const path = require('path');
@@ -5057,7 +5057,7 @@ async function processQueue(customPrompt) {
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/api/webhook/document', async (req, res) => {
+router.post('/api/webhook/document', isAuthenticated, async (req, res) => {
   try {
     const { url, prompt } = req.body;
     let usePrompt = false;

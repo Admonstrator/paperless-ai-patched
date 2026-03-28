@@ -108,7 +108,7 @@ class OllamaService {
                 try {
                     customFieldsObj = JSON.parse(process.env.CUSTOM_FIELDS);
                 } catch (error) {
-                    console.error(`Failed to parse CUSTOM_FIELDS: ${error.message}`); console.debug(error);;
+                    console.error(`Failed to parse CUSTOM_FIELDS: ${error.message}`); console.debug(error);
                     customFieldsObj = { custom_fields: [] };
                 }
 
@@ -249,7 +249,7 @@ class OllamaService {
                 return content.substring(0, process.env.CONTENT_MAX_LENGTH);
             }
         } catch (error) {
-            console.error(`Error truncating content: ${error.message}`); console.debug(error);;
+            console.error(`Error truncating content: ${error.message}`); console.debug(error);
         }
         return content;
     }
@@ -276,7 +276,7 @@ class OllamaService {
         try {
             customFieldsObj = JSON.parse(process.env.CUSTOM_FIELDS);
         } catch (error) {
-            console.error(`Failed to parse CUSTOM_FIELDS: ${error.message}`); console.debug(error);;
+            console.error(`Failed to parse CUSTOM_FIELDS: ${error.message}`); console.debug(error);
             customFieldsObj = { custom_fields: [] };
         }
 
@@ -417,7 +417,7 @@ class OllamaService {
         try {
             customFieldsObj = JSON.parse(process.env.CUSTOM_FIELDS);
         } catch (error) {
-            console.error(`Failed to parse CUSTOM_FIELDS: ${error.message}`); console.debug(error);;
+            console.error(`Failed to parse CUSTOM_FIELDS: ${error.message}`); console.debug(error);
             customFieldsObj = { custom_fields: [] };
         }
 
@@ -737,7 +737,7 @@ class OllamaService {
 
             return response.data.response;
         } catch (error) {
-            console.error(`Error generating text with Ollama: ${error.message}`); console.debug(error);;
+            console.error(`Error generating text with Ollama: ${error.message}`); console.debug(error);
             throw error;
         }
     }

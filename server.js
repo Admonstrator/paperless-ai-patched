@@ -229,7 +229,7 @@ const apiGlobalLimiter = rateLimit({
   max: config.globalRateLimitMax,
   message: {
     success: false,
-    error: 'Zu viele Anfragen. Bitte versuchen Sie es später erneut.'
+    error: 'Too many requests. Please try again later.'
   },
   standardHeaders: true,
   legacyHeaders: false,
@@ -259,15 +259,9 @@ const apiGlobalLimiter = rateLimit({
 
 app.use(cors(corsOptions));
 
+// Chrome Private Network Access: respond to preflight with the required header
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, x-api-key, Access-Control-Allow-Private-Network');
   res.header('Access-Control-Allow-Private-Network', 'true');
-  
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
   next();
 });
 

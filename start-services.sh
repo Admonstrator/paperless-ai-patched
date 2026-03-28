@@ -40,7 +40,7 @@ PYTHON_PID=$!
 echo "Waiting for RAG service health endpoint..."
 RAG_READY=0
 for i in $(seq 1 60); do
-	if "$PYTHON_BIN" -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/status', timeout=1).status == 200 else 1)" >/dev/null 2>&1; then
+	if "$PYTHON_BIN" -c "import urllib.request,os,sys; req=urllib.request.Request('http://127.0.0.1:8000/status'); s=os.environ.get('RAG_API_SECRET',''); req.add_header('Authorization','Bearer '+s) if s else None; sys.exit(0 if urllib.request.urlopen(req,timeout=1).status==200 else 1)" >/dev/null 2>&1; then
 		RAG_READY=1
 		echo "RAG service is reachable (attempt $i)."
 		break

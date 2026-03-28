@@ -15,7 +15,7 @@ class ManualService {
         if(config.aiProvider === 'custom'){
             this.openai = new OpenAI({
                 apiKey: config.custom.apiKey,
-                baseUrl: config.custom.apiUrl
+                baseURL: config.custom.apiUrl
             });
         }else if (config.aiProvider === 'azure'){
             this.openai = new AzureOpenAI({

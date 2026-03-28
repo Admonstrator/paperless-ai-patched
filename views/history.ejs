@@ -60,9 +60,10 @@
                         <button id="resetAllBtn" class="toolbar-btn toolbar-btn--danger">
                             Reset All
                         </button>
-                        <button id="validateHistoryBtn" class="toolbar-btn toolbar-btn--warning">
-                            Validate History
-                        </button>
+                        <span class="text-sm text-gray-500 italic ml-2">
+                            <i class="fas fa-info-circle"></i>
+                            History is reconciled automatically. To run manually, go to <a href="/settings#troubleshooting" class="underline hover:text-blue-600">Settings &rarr; Troubleshooting</a>.
+                        </span>
                     </div>
                 </div>
 
@@ -272,24 +273,6 @@
         </div>
     </div>
 
-    <!-- Validation Modal for Missing Documents -->
-    <div id="validateModal" class="modal hidden">
-        <div class="modal-overlay"></div>
-        <div class="modal-container">
-            <div class="modal-header">
-                <h3 class="modal-title">Validate History</h3>
-                <button class="modal-close"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="modal-content">
-                <p class="mb-4">This will check whether each history entry still exists in Paperless-ngx. Missing entries can be removed from the history.</p>
-                <div id="validateResults" style="max-height:300px; overflow:auto; margin-bottom:1rem;"></div>
-                <div class="flex justify-end gap-4">
-                    <button id="cancelValidate" class="toolbar-btn toolbar-btn--outline">Cancel</button>
-                    <button id="confirmRemoveMissing" class="toolbar-btn toolbar-btn--danger">Remove Missing</button>
-                </div>
-            </div>
-        </div>
-    </div>
     <script src="/vendor/jquery/jquery.min.js"></script>
     <script src="/vendor/datatables/js/jquery.dataTables.min.js"></script>
     <script src="js/history.js"></script>

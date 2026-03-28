@@ -23,6 +23,7 @@ const cookieParser = require('cookie-parser');
 const { authenticateJWT, isAuthenticated } = require('./auth.js');
 const customService = require('../services/customService.js');
 const mistralOcrService = require('../services/mistralOcrService');
+const reconciliationService = require('../services/reconciliationService');
 const { THUMBNAIL_CACHE_DIR, getThumbnailCachePath } = require('../services/thumbnailCachePaths');
 const config = require('../config/config.js');
 require('dotenv').config({ path: '../data/.env' });
@@ -2797,6 +2798,68 @@ router.post('/api/settings/rag-force-model-redownload', isAuthenticated, cacheCl
   }
 });
 
+/**
+ * @swagger
+ * /api/settings/reconcile-history:
+ *   post:
+ *     summary: Manually trigger history reconciliation (Server-Sent Events)
+ *     description: |
+ *       Triggers an immediate reconciliation pass that removes stale entries from the
+ *       local AI database for documents that have been deleted in Paperless-ngx.
+ *       Uses Server-Sent Events (SSE) to stream real-time progress.
+ *       Returns a single result event with the number of removed entries.
+ *     tags:
+ *       - Settings
+ *     security:
+ *       - BearerAuth: []
+ *       - ApiKeyAuth: []
+ *     responses:
+ *       200:
+ *         description: Reconciliation result (SSE stream)
+ *         content:
+ *           text/event-stream:
+ *             schema:
+ *               type: string
+ *               example: |
+ *                 data: {"type":"complete","removed":3,"durationMs":120}
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       500:
+ *         description: Server error during reconciliation
+ */
+router.post('/api/settings/reconcile-history', isAuthenticated, cacheClearLimiter, async (req, res) => {
+  try {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders();
+
+    res.write(`data: ${JSON.stringify({ type: 'progress', message: 'Starting reconciliation...' })}\n\n`);
+    if (res.flush) res.flush();
+
+    const result = await reconciliationService.reconcileAllDocuments();
+
+    if (result && result.skipped) {
+      res.write(`data: ${JSON.stringify({ type: 'complete', skipped: true, removed: 0, durationMs: result.durationMs || 0, message: 'Reconciliation skipped: a scan or reconciliation is already in progress.' })}\n\n`);
+    } else {
+      const removed = result ? result.removed : 0;
+      const durationMs = result ? result.durationMs : 0;
+      res.write(`data: ${JSON.stringify({ type: 'complete', skipped: false, removed, durationMs, message: removed > 0 ? `Removed ${removed} stale entries.` : 'No stale entries found.' })}\n\n`);
+    }
+
+    if (res.flush) res.flush();
+    res.end();
+  } catch (error) {
+    console.error('[ERROR] manual reconciliation:', error);
+    try {
+      res.write(`data: ${JSON.stringify({ type: 'error', error: 'Reconciliation failed. Check server logs.' })}\n\n`);
+      if (res.flush) res.flush();
+      res.end();
+    } catch (_) { /* client disconnected */ }
+  }
+});
+
 router.post('/api/reset-all-documents', isAuthenticated, cacheClearLimiter, async (req, res) => {
   try {
     await documentModel.deleteAllDocuments();
@@ -5435,6 +5498,8 @@ router.get('/settings', async (req, res) => {
     OLLAMA_API_URL: process.env.OLLAMA_API_URL || 'http://localhost:11434',
     OLLAMA_MODEL: process.env.OLLAMA_MODEL || 'llama3.2',
     SCAN_INTERVAL: process.env.SCAN_INTERVAL || '*/30 * * * *',
+    RECONCILIATION_INTERVAL: process.env.RECONCILIATION_INTERVAL || '0 * * * *',
+    RECONCILIATION_ENABLED: process.env.RECONCILIATION_ENABLED || 'yes',
     SYSTEM_PROMPT: process.env.SYSTEM_PROMPT || '',
     PROCESS_PREDEFINED_DOCUMENTS: process.env.PROCESS_PREDEFINED_DOCUMENTS || 'no',
     
@@ -6758,6 +6823,8 @@ router.post('/settings', express.json(), async (req, res) => {
       OLLAMA_API_URL: process.env.OLLAMA_API_URL || '',
       OLLAMA_MODEL: process.env.OLLAMA_MODEL || '',
       SCAN_INTERVAL: process.env.SCAN_INTERVAL || '*/30 * * * *',
+      RECONCILIATION_INTERVAL: process.env.RECONCILIATION_INTERVAL || '0 * * * *',
+      RECONCILIATION_ENABLED: process.env.RECONCILIATION_ENABLED || 'yes',
       SYSTEM_PROMPT: process.env.SYSTEM_PROMPT || '',
       PROCESS_PREDEFINED_DOCUMENTS: process.env.PROCESS_PREDEFINED_DOCUMENTS || 'no',
       TOKEN_LIMIT: process.env.TOKEN_LIMIT || 128000,

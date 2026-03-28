@@ -328,6 +328,9 @@ module.exports = {
   customFields: process.env.CUSTOM_FIELDS || '',
   aiProvider: process.env.AI_PROVIDER || 'openai',
   scanInterval: process.env.SCAN_INTERVAL || '*/30 * * * *',
+  // Reconciliation: periodic cleanup of stale documents deleted in Paperless-ngx
+  reconciliationInterval: process.env.RECONCILIATION_INTERVAL || '0 * * * *',
+  reconciliationEnabled: parseEnvBoolean(process.env.RECONCILIATION_ENABLED, 'yes'),
   useExistingData: process.env.USE_EXISTING_DATA || 'no',
   // Cache configuration (in seconds)
   // Recommended: 300 (5 min) for balanced performance, 60-900 (1-15 min) for custom needs

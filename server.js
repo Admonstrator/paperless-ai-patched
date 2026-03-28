@@ -13,6 +13,7 @@ const { runStartupMigrations } = require('./services/startupMigrations');
 const setupRoutes = require('./routes/setup');
 const { isAuthenticated } = require('./routes/auth');
 const mistralOcrService = require('./services/mistralOcrService');
+const reconciliationService = require('./services/reconciliationService');
 
 // Add environment variables for RAG service if not already set
 process.env.RAG_SERVICE_URL = process.env.RAG_SERVICE_URL || 'http://localhost:8000';
@@ -1096,6 +1097,17 @@ async function startScanning() {
         console.log(`Starting scheduled scan at ${new Date().toISOString()}`);
         await scanDocuments();
       });
+    }
+
+    // Reconciliation: remove stale documents deleted in Paperless-ngx
+    if (config.reconciliationEnabled) {
+      console.log('Configured reconciliation interval:', config.reconciliationInterval);
+      cron.schedule(config.reconciliationInterval, async () => {
+        console.debug(`[RECONCILIATION] Scheduled run triggered at ${new Date().toISOString()}`);
+        await reconciliationService.reconcileAllDocuments();
+      });
+    } else {
+      console.info('[RECONCILIATION] Automatic reconciliation is disabled (RECONCILIATION_ENABLED=no).');
     }
   } catch (error) {
     console.error(`[ERROR] in startScanning: ${error.message}`);

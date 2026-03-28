@@ -208,6 +208,8 @@ class AzureOpenAIService {
       };
 
       let jsonContent = response.choices[0].message.content;
+      // Strip <think>...</think> reasoning tags from models like Qwen3, DeepSeek-R1
+      jsonContent = jsonContent.replace(/<think>[\s\S]*?<\/think>/g, '');
       jsonContent = jsonContent.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
 
       let parsedResponse;
@@ -338,6 +340,8 @@ class AzureOpenAIService {
       };
 
       let jsonContent = response.choices[0].message.content;
+      // Strip <think>...</think> reasoning tags from models like Qwen3, DeepSeek-R1
+      jsonContent = jsonContent.replace(/<think>[\s\S]*?<\/think>/g, '');
       jsonContent = jsonContent.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
 
       let parsedResponse;

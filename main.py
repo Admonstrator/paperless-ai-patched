@@ -12,7 +12,7 @@ import traceback
 
 import requests
 import uvicorn
-from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks
+from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
@@ -1557,7 +1557,21 @@ def run_indexing(force_update=False, check_new=False):
 # FastAPI Application
 app = FastAPI(title="RAGZ Document Search API")
 
-# Add CORS middleware
+# Internal service-to-service authentication.
+# When RAG_API_SECRET is set, all endpoints require a matching Bearer token.
+_RAG_API_SECRET = os.getenv("RAG_API_SECRET", "")
+
+async def verify_rag_api_secret(request: Request):
+    if not _RAG_API_SECRET:
+        return  # No secret configured — skip auth (backwards compatible)
+    auth = request.headers.get("authorization", "")
+    if not auth.startswith("Bearer ") or auth[7:] != _RAG_API_SECRET:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+# Apply auth to all endpoints when secret is configured
+if _RAG_API_SECRET:
+    app.router.dependencies.append(Depends(verify_rag_api_secret))
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # In production, restrict to your Node.js server

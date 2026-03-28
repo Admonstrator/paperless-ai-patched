@@ -12,14 +12,18 @@ class RagService {
     this.aiStatusTtlMs = Number(process.env.RAG_AI_STATUS_TTL_MS || 300000);
   }
 
+  _headers() {
+    const secret = process.env.RAG_API_SECRET;
+    return secret ? { Authorization: `Bearer ${secret}` } : {};
+  }
+
   /**
    * Check if the RAG service is available and ready
    * @returns {Promise<{status: string, index_ready: boolean, data_loaded: boolean}>}
    */
   async checkStatus() {
     try {
-      const response = await axios.get(`${this.baseUrl}/status`);
-      //make test call to the LLM service to check if it is available
+      const response = await axios.get(`${this.baseUrl}/status`, { headers: this._headers() });
       return response.data;
     } catch (error) {
       console.error('Error checking RAG service status:', error.message);
@@ -43,7 +47,7 @@ class RagService {
       const response = await axios.post(`${this.baseUrl}/search`, {
         query,
         ...filters
-      });
+      }, { headers: this._headers() });
       return response.data;
     } catch (error) {
       console.error('Error searching documents:', error);
@@ -59,10 +63,10 @@ class RagService {
   async askQuestion(question) {
     try {
       // 1. Get context from the RAG service
-      const response = await axios.post(`${this.baseUrl}/context`, { 
+      const response = await axios.post(`${this.baseUrl}/context`, {
         question,
         max_sources: 5
-      });
+      }, { headers: this._headers() });
       
       const { context, sources } = response.data;
       
@@ -137,10 +141,10 @@ class RagService {
    */
   async indexDocuments(force = false) {
     try {
-      const response = await axios.post(`${this.baseUrl}/indexing/start`, { 
-        force, 
-        background: true 
-      });
+      const response = await axios.post(`${this.baseUrl}/indexing/start`, {
+        force,
+        background: true
+      }, { headers: this._headers() });
       return response.data;
     } catch (error) {
       console.error('Error indexing documents:', error);
@@ -154,7 +158,7 @@ class RagService {
    */
   async checkForUpdates() {
     try {
-      const response = await axios.post(`${this.baseUrl}/indexing/check`);
+      const response = await axios.post(`${this.baseUrl}/indexing/check`, {}, { headers: this._headers() });
       return response.data;
     } catch (error) {
       console.error('Error checking for updates:', error);
@@ -168,7 +172,7 @@ class RagService {
    */
   async getIndexingStatus() {
     try {
-      const response = await axios.get(`${this.baseUrl}/indexing/status`);
+      const response = await axios.get(`${this.baseUrl}/indexing/status`, { headers: this._headers() });
       return response.data;
     } catch (error) {
       console.error('Error getting indexing status:', error);
@@ -183,7 +187,7 @@ class RagService {
    */
   async initialize(force = false) {
     try {
-      const response = await axios.post(`${this.baseUrl}/initialize`, { force });
+      const response = await axios.post(`${this.baseUrl}/initialize`, { force }, { headers: this._headers() });
       return response.data;
     } catch (error) {
       console.error('Error initializing RAG service:', error);
@@ -199,7 +203,7 @@ class RagService {
     try {
       const response = await axios.post(`${this.baseUrl}/models/redownload`, {
         background: true
-      });
+      }, { headers: this._headers() });
       return response.data;
     } catch (error) {
       console.error('Error triggering model re-download:', error);
@@ -223,7 +227,8 @@ class RagService {
           delay_seconds: delaySeconds
         },
         {
-          timeout: 3000
+          timeout: 3000,
+          headers: this._headers()
         }
       );
       return response.data;

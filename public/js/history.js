@@ -252,11 +252,11 @@ class HistoryManager {
                     data: null,
                     render: (data) => `
                         <div class="flex space-x-2">
-                            <button onclick="window.open('${data.link}')" class="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+                            <button data-link="${this._escapeHTML(data.link)}" onclick="window.open(this.dataset.link)" class="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
                                 <i class="fa-solid fa-eye"></i>
                                 <span class="hidden sm:inline ml-1">View</span>
                             </button>
-                            <button onclick="window.open('/chat?open=${data.document_id}')" class="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+                            <button data-docid="${this._escapeHTML(String(data.document_id))}" onclick="window.open('/chat?open=' + this.dataset.docid)" class="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
                                 <i class="fa-solid fa-comment"></i>
                                 <span class="hidden sm:inline ml-1">Chat</span>
                             </button>

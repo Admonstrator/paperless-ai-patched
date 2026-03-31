@@ -138,7 +138,7 @@
         </main>
     </div>
 
-    <script id="supportInfoPayload" type="application/json"><%- JSON.stringify(supportInfo || {}) %></script>
+    <script id="supportInfoPayload" type="application/json"><%- JSON.stringify(supportInfo || {}).replace(/</g, '\\u003c') %></script>
 
     <%- include('partials/scripts/about-scripts') %>
     <%- include('partials/shell/footer') %>

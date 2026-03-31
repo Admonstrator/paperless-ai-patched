@@ -2,7 +2,8 @@ const {
   calculateTokens,
   calculateTotalPromptTokens,
   truncateToTokenLimit,
-  writePromptToFile
+  writePromptToFile,
+  extractChatMessageContent
 } = require('./serviceUtils');
 const OpenAI = require('openai');
 const config = require('../config/config');
@@ -123,8 +124,8 @@ class CustomOpenAIService {
         ` + process.env.SYSTEM_PROMPT + '\n\n' + config.mustHavePrompt.replace('%CUSTOMFIELDS%', customFieldsStr);
         promptTags = '';
       } else {
-        config.mustHavePrompt = config.mustHavePrompt.replace('%CUSTOMFIELDS%', customFieldsStr);
-        systemPrompt = process.env.SYSTEM_PROMPT + '\n\n' + config.mustHavePrompt;
+        const mustHavePrompt = config.mustHavePrompt.replace('%CUSTOMFIELDS%', customFieldsStr);
+        systemPrompt = process.env.SYSTEM_PROMPT + '\n\n' + mustHavePrompt;
         promptTags = '';
       }
 
@@ -152,7 +153,7 @@ class CustomOpenAIService {
       // Custom prompt override if provided
       if (customPrompt) {
         console.log('[DEBUG] Replace system prompt with custom prompt');
-        systemPrompt = customPrompt + '\n\n' + config.mustHavePrompt;
+        systemPrompt = customPrompt + '\n\n' + config.mustHavePrompt.replace('%CUSTOMFIELDS%', customFieldsStr);
       }
 
       // Calculate tokens AFTER all prompt modifications are complete
@@ -209,7 +210,9 @@ class CustomOpenAIService {
 
       // Handle response
       //console.log(`MESSAGE: ${response?.choices?.[0]?.message?.content}`);
-      if (!response?.choices?.[0]?.message?.content) {
+      const message = response?.choices?.[0]?.message;
+      let jsonContent = extractChatMessageContent(message, 'Custom OpenAI');
+      if (!jsonContent) {
         throw new Error('Invalid API response structure');
       }
 
@@ -224,7 +227,8 @@ class CustomOpenAIService {
         totalTokens: usage.total_tokens
       };
 
-      let jsonContent = response.choices[0].message.content;
+      // Strip <think>...</think> reasoning tags from models like Qwen3, DeepSeek-R1
+      jsonContent = jsonContent.replace(/<think>[\s\S]*?<\/think>/g, '');
       jsonContent = jsonContent.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
 
       let parsedResponse;
@@ -340,7 +344,9 @@ class CustomOpenAIService {
       });
 
       // Handle response
-      if (!response?.choices?.[0]?.message?.content) {
+      const message = response?.choices?.[0]?.message;
+      let jsonContent = extractChatMessageContent(message, 'Custom OpenAI');
+      if (!jsonContent) {
         throw new Error('Invalid API response structure');
       }
 
@@ -355,7 +361,8 @@ class CustomOpenAIService {
         totalTokens: usage.total_tokens
       };
 
-      let jsonContent = response.choices[0].message.content;
+      // Strip <think>...</think> reasoning tags from models like Qwen3, DeepSeek-R1
+      jsonContent = jsonContent.replace(/<think>[\s\S]*?<\/think>/g, '');
       jsonContent = jsonContent.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
 
       let parsedResponse;
@@ -426,11 +433,12 @@ class CustomOpenAIService {
         max_tokens: maxCompletionTokens
       });
 
-      if (!response?.choices?.[0]?.message?.content) {
+      const generatedText = extractChatMessageContent(response?.choices?.[0]?.message, 'Custom OpenAI');
+      if (!generatedText) {
         throw new Error('Invalid API response structure');
       }
 
-      return response.choices[0].message.content;
+      return generatedText;
     } catch (error) {
       console.error(`Error generating text with Custom OpenAI: ${error.message}`); console.debug(error);;
       throw error;

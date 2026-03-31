@@ -34,6 +34,9 @@ services:
       # - MISTRAL_OCR_ENABLED=yes
       # - MISTRAL_API_KEY=your_key_here
       # - MISTRAL_OCR_MODEL=mistral-ocr-latest
+      # Reconciliation (optional) – remove stale history entries for deleted documents
+      # - RECONCILIATION_ENABLED=yes
+      # - RECONCILIATION_INTERVAL=0 * * * *
     ports:
       - "3000:${PAPERLESS_AI_PORT:-3000}"
     volumes:

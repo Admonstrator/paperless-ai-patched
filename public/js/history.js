@@ -4,7 +4,6 @@ class HistoryManager {
         this.confirmModalAll = document.getElementById('confirmModalAll');
         this.selectAll = document.getElementById('selectAll');
         this.table = null; // Will be initialized in initializeDataTable
-        this.validateModal = null;
         this.initialize();
     }
 
@@ -336,30 +335,6 @@ class HistoryManager {
             await this.forceReloadFilters();
         });
 
-        // Validation modal handlers
-        this.validateModal = document.getElementById('validateModal');
-        document.getElementById('validateHistoryBtn')?.addEventListener('click', async () => {
-            await this.validateHistory();
-        });
-
-        document.getElementById('confirmRemoveMissing')?.addEventListener('click', async () => {
-            const missingIds = Array.from(document.querySelectorAll('#validateResults input[type="checkbox"]:checked'))
-                .map(cb => cb.value);
-            if (missingIds.length === 0) {
-                alert('No missing documents selected for removal.');
-                return;
-            }
-
-            const success = await this.resetDocuments(missingIds);
-            if (success) {
-                this.hideModal(this.validateModal);
-            }
-        });
-
-        document.getElementById('cancelValidate')?.addEventListener('click', () => {
-            this.hideModal(this.validateModal);
-        });
-
         // Info Modal handlers
         const infoModal = document.getElementById('infoModal');
         document.getElementById('infoModalClose')?.addEventListener('click', () => this.hideModal(infoModal));
@@ -498,149 +473,6 @@ class HistoryManager {
             console.error('Error resetting all documents:', error);
             alert('Failed to reset all documents. Please try again.');
             return false;
-        }
-    }
-
-    async validateHistory() {
-        try {
-            // Show a loading state in the modal while we validate
-            this.showModal(this.validateModal);
-            const container = document.getElementById('validateResults');
-            
-            // Show progress indicator
-            container.innerHTML = `
-                <div class="text-center py-6">
-                    <div class="mb-4">
-                        <i class="fas fa-spinner fa-spin text-4xl text-blue-500"></i>
-                    </div>
-                    <div class="mb-2 font-medium">Validating history entries...</div>
-                    <div class="w-full bg-gray-200 rounded-full h-2.5 mb-2">
-                        <div id="validateProgress" class="bg-blue-500 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
-                    </div>
-                    <div id="validateStatus" class="text-sm text-gray-600">Starting validation...</div>
-                </div>
-            `;
-
-            // Use EventSource for real-time progress updates
-            const progressBar = document.getElementById('validateProgress');
-            const statusText = document.getElementById('validateStatus');
-
-            const eventSource = new EventSource('/api/history/validate');
-            let missingDocuments = [];
-
-            eventSource.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                
-                if (data.type === 'progress') {
-                    // Update progress bar
-                    const percentage = data.percentage || 0;
-                    progressBar.style.width = `${percentage}%`;
-                    
-                    // Update status text with real numbers
-                    statusText.textContent = `Checking ${data.current} of ${data.total} entries... (${data.missing} missing found)`;
-                } 
-                else if (data.type === 'complete') {
-                    // Validation complete
-                    eventSource.close();
-                    missingDocuments = data.missing || [];
-                    
-                    // Complete the progress bar
-                    progressBar.style.width = '100%';
-                    statusText.textContent = 'Validation complete!';
-                    
-                    // Small delay to show completion
-                    setTimeout(() => {
-                        this.renderValidateResults(missingDocuments);
-                    }, 300);
-                }
-                else if (data.type === 'error') {
-                    eventSource.close();
-                    alert('Failed to validate history. Please try again.');
-                    this.hideModal(this.validateModal);
-                }
-            };
-
-            eventSource.onerror = (error) => {
-                console.error('EventSource error:', error);
-                eventSource.close();
-                alert('Connection error during validation. Please try again.');
-                this.hideModal(this.validateModal);
-            };
-        } catch (error) {
-            console.error('Error validating history:', error);
-            alert('Failed to validate history. Please try again.');
-            this.hideModal(this.validateModal);
-        }
-    }
-
-    renderValidateResults(missing) {
-        const container = document.getElementById('validateResults');
-        if (!container) return;
-
-        if (!missing || missing.length === 0) {
-            container.innerHTML = `
-                <div class="text-center py-4">
-                    <i class="fas fa-check-circle text-5xl text-green-500 mb-3"></i>
-                    <div class="text-lg font-medium text-green-600">All history entries are valid!</div>
-                    <div class="text-sm text-gray-500 mt-2">No missing documents found.</div>
-                </div>
-            `;
-            
-            // Hide the "Remove Missing" button since there's nothing to remove
-            document.getElementById('confirmRemoveMissing').style.display = 'none';
-            return;
-        }
-
-        // Show the "Remove Missing" button
-        document.getElementById('confirmRemoveMissing').style.display = 'block';
-
-        const list = missing.map(item => {
-            return `
-                <div class="flex items-center justify-between p-2 border-b hover:bg-gray-50">
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" value="${item.document_id}" class="rounded" />
-                        <span class="font-medium">${item.title || ('Document ' + item.document_id)}</span>
-                    </label>
-                    <span class="text-sm text-gray-500">ID: ${item.document_id}</span>
-                </div>
-            `;
-        }).join('');
-
-        container.innerHTML = `
-            <div class="mb-3">
-                <div class="flex items-center gap-2 text-yellow-600 mb-2">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <span class="font-medium">${missing.length} missing document(s) found</span>
-                </div>
-                <p class="text-sm text-gray-600">These documents exist in history but not in Paperless-ngx. Select which ones to remove:</p>
-            </div>
-            <div class="mb-3 flex gap-2">
-                <button id="selectAllMissingBtn" class="px-3 py-1.5 bg-green-500 text-white text-sm rounded hover:bg-green-600 transition-colors">
-                    <i class="fas fa-check-square"></i> Select All
-                </button>
-                <button id="deselectAllMissingBtn" class="px-3 py-1.5 bg-gray-500 text-white text-sm rounded hover:bg-gray-600 transition-colors">
-                    <i class="fas fa-square"></i> Deselect All
-                </button>
-            </div>
-            ${list}
-        `;
-        
-        // Add select all/deselect all button functionality
-        const selectAllBtn = document.getElementById('selectAllMissingBtn');
-        const deselectAllBtn = document.getElementById('deselectAllMissingBtn');
-        
-        if (selectAllBtn) {
-            selectAllBtn.addEventListener('click', () => {
-                const checkboxes = container.querySelectorAll('input[type="checkbox"][value]');
-                checkboxes.forEach(cb => cb.checked = true);
-            });
-        }
-        
-        if (deselectAllBtn) {
-            deselectAllBtn.addEventListener('click', () => {
-                const checkboxes = container.querySelectorAll('input[type="checkbox"][value]');
-                checkboxes.forEach(cb => cb.checked = false);
-            });
         }
     }
 

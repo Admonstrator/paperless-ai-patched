@@ -542,29 +542,102 @@ class DataManager:
         return processed_docs
     
     def _check_for_new_documents(self):
-        """Check for new documents that haven't been indexed yet"""
+        """Check for new documents and remove stale entries for deleted documents"""
         logger.info("Checking for new documents")
-        
+
         try:
             # Fetch all documents from API
             api_documents = self.fetch_documents_from_api()
-            
+            api_ids = {doc["id"] for doc in api_documents}
+
             # Find documents that aren't in our indexed set
             new_docs = []
             self.new_document_ids.clear()
-            
+
             for doc in api_documents:
                 if doc["id"] not in self.indexed_document_ids:
                     new_docs.append(doc)
                     self.new_document_ids.add(doc["id"])
                     self.indexed_document_ids.add(doc["id"])
-            
+
             logger.info(f"Found {len(new_docs)} new documents to index")
+
+            # Reconcile: remove stale entries for documents deleted in Paperless-ngx
+            stale_ids = self.indexed_document_ids - api_ids
+            if stale_ids:
+                logger.info(f"Found {len(stale_ids)} stale documents to remove from cache")
+                self._remove_stale_documents(stale_ids)
+
             return new_docs
-            
+
         except Exception as e:
             logger.error(f"Error checking for new documents: {str(e)}")
             return []
+
+    def _reconcile_deleted_documents(self):
+        """Check for documents deleted in Paperless-ngx and remove them from cache"""
+        try:
+            api_documents = self.fetch_documents_from_api()
+            api_ids = {doc["id"] for doc in api_documents}
+            cached_ids = {doc["id"] for doc in self.documents}
+            stale_ids = cached_ids - api_ids
+
+            if stale_ids:
+                logger.info(f"Reconciliation: found {len(stale_ids)} stale documents to remove")
+                self._remove_stale_documents(stale_ids)
+            else:
+                logger.debug("Reconciliation: no stale documents found")
+        except Exception as e:
+            logger.warning(f"Reconciliation failed (non-fatal): {str(e)}")
+
+    def _remove_stale_documents(self, stale_ids):
+        """Remove deleted documents from documents list, chromadb, and indexed_document_ids"""
+        try:
+            # Remove from in-memory documents list
+            before_count = len(self.documents)
+            self.documents = [doc for doc in self.documents if doc["id"] not in stale_ids]
+            removed_count = before_count - len(self.documents)
+            logger.info(f"Removed {removed_count} stale documents from documents list")
+
+            # Remove from indexed_document_ids
+            self.indexed_document_ids -= stale_ids
+
+            # Remove from chromadb if collection exists, otherwise defer
+            if self.collection is not None:
+                self._remove_from_chromadb(stale_ids)
+            else:
+                # Defer chromadb cleanup — store IDs for later
+                if not hasattr(self, '_pending_chromadb_deletes'):
+                    self._pending_chromadb_deletes = set()
+                self._pending_chromadb_deletes.update(stale_ids)
+                logger.info(f"Deferred ChromaDB cleanup for {len(stale_ids)} stale entries (collection not yet initialized)")
+
+            # Save updated documents list
+            self.save_documents()
+
+            # Save updated state
+            global_state.indexing_status.documents_count = len(self.documents)
+            global_state.save_state()
+
+        except Exception as e:
+            logger.error(f"Error removing stale documents: {str(e)}")
+            logger.error(traceback.format_exc())
+
+    def _remove_from_chromadb(self, doc_ids):
+        """Remove document entries from ChromaDB collection"""
+        try:
+            str_ids = [str(doc_id) for doc_id in doc_ids]
+            self.collection.delete(ids=str_ids)
+            logger.info(f"Removed {len(str_ids)} stale entries from ChromaDB")
+        except Exception as e:
+            logger.warning(f"Failed to remove stale entries from ChromaDB: {str(e)}")
+
+    def flush_pending_chromadb_deletes(self):
+        """Process any deferred chromadb deletions after collection is initialized"""
+        if hasattr(self, '_pending_chromadb_deletes') and self._pending_chromadb_deletes and self.collection is not None:
+            logger.info(f"Flushing {len(self._pending_chromadb_deletes)} deferred ChromaDB deletions")
+            self._remove_from_chromadb(self._pending_chromadb_deletes)
+            self._pending_chromadb_deletes.clear()
     
     def load_documents(self, force_refresh=False, check_new=False):
         """Load documents from file or API with option to check for new documents"""
@@ -573,20 +646,20 @@ class DataManager:
             try:
                 with open(DOCUMENTS_FILE, 'r', encoding='utf-8') as f:
                     local_documents = json.load(f)
-                
+
                 # Validate loaded documents structure
                 if not isinstance(local_documents, list) or (local_documents and not isinstance(local_documents[0], dict)):
                     logger.error("Invalid document structure in documents.json")
                     return []
-                
+
                 # If no indexed_document_ids loaded from state, populate from existing documents
                 if not self.indexed_document_ids:
                     self.indexed_document_ids = {doc["id"] for doc in local_documents if "id" in doc}
                     logger.info(f"Initialized indexed_document_ids with {len(self.indexed_document_ids)} document IDs")
-                
+
                 self.last_sync = datetime.now().isoformat()
                 self.documents = local_documents
-                
+
                 # Only check for new documents if explicitly requested
                 if check_new:
                     logger.info("Explicitly checking for new documents")
@@ -602,6 +675,10 @@ class DataManager:
                     logger.info("Skipping check for new documents")
                     # Clear new_document_ids since we're not checking
                     self.new_document_ids = set()
+
+                # Reconcile: remove stale entries for documents deleted in Paperless-ngx
+                # This runs on every load from cache to keep the cache in sync
+                self._reconcile_deleted_documents()
                 
                 global_state.system_status.data_loaded = True
                 global_state.indexing_status.documents_count = len(self.documents)
@@ -709,10 +786,11 @@ class DataManager:
                         self.collection = collection
                         self.chroma_initialized = True
                         global_state.system_status.chroma_ready = True
-                        
+                        self.flush_pending_chromadb_deletes()
+
                         # Save state after updating
                         global_state.save_state()
-                        
+
                         return collection
                 
                 except Exception as inner_e:
@@ -743,10 +821,11 @@ class DataManager:
             self.collection = collection
             self.chroma_initialized = True
             global_state.system_status.chroma_ready = True
-            
+            self.flush_pending_chromadb_deletes()
+
             # Save state after updating
             global_state.save_state()
-            
+
             return collection
                 
         except Exception as e:

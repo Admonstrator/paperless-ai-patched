@@ -39,7 +39,7 @@ class PaperlessService {
   initialize() {
     if (!this.client && config.paperless.apiUrl && config.paperless.apiToken) {
       this.client = axios.create({
-        baseURL: config.paperless.apiUrl,
+        baseURL: config.paperless.apiUrl.replace(/\/+$/, '') + '/api',
         headers: {
           'Authorization': `Token ${config.paperless.apiToken}`,
           'Content-Type': 'application/json'
@@ -307,7 +307,7 @@ class PaperlessService {
 
   async initializeWithCredentials(apiUrl, apiToken) {
     this.client = axios.create({
-      baseURL: apiUrl,
+      baseURL: apiUrl.replace(/\/+$/, '') + '/api',
       headers: {
         'Authorization': `Token ${apiToken}`,
         'Content-Type': 'application/json'
@@ -1760,38 +1760,42 @@ async getOrCreateDocumentType(name, options = {}) {
       }
 
       let updateData;
+      // Remove null/undefined dates before processing
+      if (updates.created === null || updates.created === undefined) {
+        delete updates.created;
+      }
       try {
         if (updates.created) {
           let dateObject;
-          
+
           dateObject = parseISO(updates.created);
-          
+
           if (!isValid(dateObject)) {
             dateObject = parse(updates.created, 'dd.MM.yyyy', new Date());
             if (!isValid(dateObject)) {
               dateObject = parse(updates.created, 'dd-MM-yyyy', new Date());
             }
           }
-          
+
           if (!isValid(dateObject)) {
-            console.warn(`[WARN] Invalid date format: ${updates.created}, using fallback date: 01.01.1990`);
-            dateObject = new Date(1990, 0, 1);
+            console.warn(`[WARN] Invalid date format: ${updates.created}, skipping date update`);
+            delete updates.created;
+          } else if (dateObject > new Date()) {
+            console.warn(`[WARN] AI returned future date ${format(dateObject, 'yyyy-MM-dd')}, skipping date update`);
+            delete updates.created;
+          } else {
+            updates.created = format(dateObject, 'yyyy-MM-dd');
           }
-      
-          updateData = {
-            ...updates,
-            created: format(dateObject, 'yyyy-MM-dd'),
-          };
+
+          updateData = { ...updates };
         } else {
           updateData = { ...updates };
         }
       } catch (error) {
         console.warn('[WARN] Error parsing date:', error.message);
         console.warn('[DEBUG] Received Date:', updates);
-        updateData = {
-          ...updates,
-          created: format(new Date(1990, 0, 1), 'yyyy-MM-dd'),
-        };
+        delete updates.created;
+        updateData = { ...updates };
       }
 
       // // Handle custom fields update

@@ -358,7 +358,7 @@ class SetupService {
 
   async validateConfig(config) {
     // Validate Paperless config
-    const paperlessApiUrl = config.PAPERLESS_API_URL.replace(/\/api/g, '');
+    const paperlessApiUrl = (config.PAPERLESS_API_URL || '').replace(/\/+$/, '').replace(/\/api$/, '');
     const paperlessValid = await this.validatePaperlessConfig(
       paperlessApiUrl,
       config.PAPERLESS_API_TOKEN

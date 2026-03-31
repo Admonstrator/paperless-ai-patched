@@ -2,7 +2,8 @@ const {
     calculateTokens, 
     calculateTotalPromptTokens, 
     truncateToTokenLimit, 
-    writePromptToFile 
+    writePromptToFile,
+    extractChatMessageContent
 } = require('./serviceUtils');
 const axios = require('axios');
 const OpenAI = require('openai');
@@ -75,7 +76,10 @@ class ManualService {
             ...(model !== 'o3-mini' && { temperature: 0.3 }),
         });
     
-        let jsonContent = response.choices[0].message.content;
+        let jsonContent = extractChatMessageContent(response?.choices?.[0]?.message, 'ManualService/OpenAI');
+        if (!jsonContent) {
+            throw new Error('Invalid API response structure');
+        }
         jsonContent = jsonContent.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
         
         let parsedResponse;
@@ -120,7 +124,10 @@ class ManualService {
             temperature: 0.3,
         });
     
-        let jsonContent = response.choices[0].message.content;
+        let jsonContent = extractChatMessageContent(response?.choices?.[0]?.message, 'ManualService/Azure');
+        if (!jsonContent) {
+            throw new Error('Invalid API response structure');
+        }
         jsonContent = jsonContent.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
         
         let parsedResponse;
@@ -165,7 +172,10 @@ class ManualService {
                 ...(model !== 'o3-mini' && { temperature: 0.3 }),
             });
         
-            let jsonContent = response.choices[0].message.content;
+            let jsonContent = extractChatMessageContent(response?.choices?.[0]?.message, 'ManualService/Custom');
+            if (!jsonContent) {
+                throw new Error('Invalid API response structure');
+            }
             jsonContent = jsonContent.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
             
             const parsedResponse = JSON.parse(jsonContent);

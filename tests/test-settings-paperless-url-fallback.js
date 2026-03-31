@@ -27,7 +27,7 @@ function main() {
   );
 
   assert.ok(
-    source.includes("if (hasPaperlessUrlInput) updatedConfig.PAPERLESS_API_URL = effectivePaperlessUrl + '/api';"),
+    source.includes("if (hasPaperlessUrlInput) updatedConfig.PAPERLESS_API_URL = effectivePaperlessUrl;"),
     'Expected POST /settings to persist PAPERLESS_API_URL only when user submitted a new URL'
   );
 

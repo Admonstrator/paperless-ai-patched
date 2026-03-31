@@ -124,7 +124,7 @@ async function main() {
       TRUST_PROXY: 'false',
       LOG_LEVEL: 'error',
       CUSTOM_BASE_URL: 'http://persisted.example',
-      PAPERLESS_API_URL: 'http://paperless.example/api',
+      PAPERLESS_API_URL: 'http://paperless.example',
       PAPERLESS_API_TOKEN: 'token',
       AI_PROVIDER: 'openai',
       OPENAI_API_KEY: 'test-key',

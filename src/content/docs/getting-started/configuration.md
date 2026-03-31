@@ -106,6 +106,8 @@ For Docker setups, you should pre-seed/manage configuration via environment vari
 | `USE_EXISTING_DATA` | Include existing Paperless metadata in analysis (`yes`/`no`) |
 | `DISABLE_AUTOMATIC_PROCESSING` | Disables scheduled background processing (`yes`/`no`) |
 | `SCAN_INTERVAL` | Cron expression for document scan frequency |
+| `RECONCILIATION_INTERVAL` | Cron expression for automatic history reconciliation (default: `0 * * * *` = every hour) |
+| `RECONCILIATION_ENABLED` | Enable automatic removal of stale history entries for deleted documents (`yes`/`no`, default: `yes`) |
 | `LOG_LEVEL` | Controls log verbosity for Node and Python services (`error`, `warn`, `info`, `debug`) |
 
 ### Processing scope, tagging & prompt restrictions

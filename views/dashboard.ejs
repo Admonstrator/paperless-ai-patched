@@ -407,7 +407,7 @@
                 <%= JSON.stringify(paperless_data) %>
             </div>
             <script>
-                window.paperlessPublicUrl = <%- JSON.stringify(typeof paperlessUrl !== 'undefined' ? paperlessUrl : '') %>;
+                window.paperlessPublicUrl = <%- JSON.stringify(typeof paperlessUrl !== 'undefined' ? paperlessUrl : '').replace(/</g, '\\u003c') %>;
             </script>
             <%- include('partials/scripts/dashboard-scripts') %>
                 <script src="js/dashboard.js"></script>

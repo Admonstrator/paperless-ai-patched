@@ -44,6 +44,8 @@ const TESTS = {
   'pr772-fix': 'test-pr772-fix.js',
   'rate-limiting': 'test-rate-limiting.js',
   'scan-stop-flow': 'test-scan-stop-flow.js',
+  'setup-auth-endpoint-protection': 'test-setup-auth-endpoint-protection.js',
+  'setup-auth-middleware-guards': 'test-setup-auth-middleware-guards.js',
   'setup-remote-guard': 'test-setup-remote-guard.js',
   'thumbnail-auth-guard': 'test-thumbnail-auth-guard.js',
   'thumbnail-startup-migration': 'test-thumbnail-startup-migration.js',
@@ -69,7 +71,14 @@ const AREAS = {
     'thumbnail-startup-migration'
   ],
   prompts: ['restriction-service', 'updated-service'],
-  security: ['setup-remote-guard', 'ssrf-url-validation', 'external-api-ssrf-block', 'ui-xss-hardening']
+  security: [
+    'setup-remote-guard',
+    'setup-auth-middleware-guards',
+    'setup-auth-endpoint-protection',
+    'ssrf-url-validation',
+    'external-api-ssrf-block',
+    'ui-xss-hardening'
+  ]
 };
 
 function hasLoginCredentials() {
@@ -142,6 +151,14 @@ async function getSkipReason(testName) {
     const hasApiKey = Boolean(process.env.API_KEY || process.env.PAPERLESS_AI_API_KEY);
     if (!hasToken && !hasApiKey) {
       return 'missing JWT_TOKEN or API_KEY/PAPERLESS_AI_API_KEY';
+    }
+  }
+
+  if (testName === 'setup-auth-endpoint-protection') {
+    const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+    const reachable = await checkHttpAvailability(baseUrl);
+    if (!reachable) {
+      return `server not reachable at ${baseUrl}`;
     }
   }
 

@@ -84,7 +84,6 @@
     "jsonwebtoken": "^9.0.3",
     "marked": "^9.1.6",
     "node-cron": "^3.0.3",
-    "nodemon": "^3.1.9",
     "openai": "^4.86.2",
     "qrcode": "^1.5.4",
     "rimraf": "^6.0.1",
@@ -97,14 +96,15 @@
     "tippy.js": "^6.3.7"
   },
   "devDependencies": {
-    "@astrojs/starlight": "^0.37.7",
+    "@astrojs/starlight": "^0.38.2",
     "@eslint/js": "^9.22.0",
     "astro": "^5.18.0",
-    "eslint": "^10.0.3",
+    "eslint": "^10.1.0",
     "eslint-config-prettier": "^10.1.1",
-    "eslint-plugin-jsdoc": "^62.7.1",
+    "eslint-plugin-jsdoc": "^62.8.1",
     "globals": "^16.0.0",
-    "mermaid": "^11.12.3",
+    "mermaid": "^11.13.0",
+    "nodemon": "^3.1.9",
     "prettier": "^3.5.3"
   },
   "pnpm": {

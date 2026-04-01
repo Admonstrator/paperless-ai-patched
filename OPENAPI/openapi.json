@@ -2734,18 +2734,34 @@
     "/api/settings/reset-local-overrides": {
       "post": {
         "summary": "Reset local runtime overrides",
-        "description": "Removes local runtime override values so injected environment variables are used after restart.",
+        "description": "Removes local runtime override values so injected environment variables are used after restart.\nThis operation is restricted to interactive user sessions and requires the current account password.\n",
         "tags": [
           "Settings"
         ],
         "security": [
           {
             "BearerAuth": []
-          },
-          {
-            "ApiKeyAuth": []
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "currentPassword"
+                ],
+                "properties": {
+                  "currentPassword": {
+                    "type": "string",
+                    "description": "Current password of the signed-in settings user"
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Override reset completed",
@@ -2760,6 +2776,9 @@
                     "hadOverrides": {
                       "type": "boolean"
                     },
+                    "restart": {
+                      "type": "boolean"
+                    },
                     "message": {
                       "type": "string"
                     }
@@ -2767,6 +2786,18 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Invalid password"
+          },
+          "403": {
+            "description": "Forbidden - interactive session required"
+          },
+          "404": {
+            "description": "User not found"
           },
           "500": {
             "description": "Server error"
@@ -2811,6 +2842,42 @@
           },
           "500": {
             "description": "Server error"
+          }
+        }
+      }
+    },
+    "/api/settings/reconcile-history": {
+      "post": {
+        "summary": "Manually trigger history reconciliation (Server-Sent Events)",
+        "description": "Triggers an immediate reconciliation pass that removes stale entries from the\nlocal AI database for documents that have been deleted in Paperless-ngx.\nUses Server-Sent Events (SSE) to stream real-time progress.\nReturns a single result event with the number of removed entries.\n",
+        "tags": [
+          "Settings"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reconciliation result (SSE stream)",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string",
+                  "example": "data: {\"type\":\"complete\",\"removed\":3,\"durationMs\":120}\n"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - authentication required"
+          },
+          "500": {
+            "description": "Server error during reconciliation"
           }
         }
       }

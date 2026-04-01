@@ -896,6 +896,84 @@ function initializeFormHandlers() {
         });
     }
 
+    // Force Reconcile Button Handler
+    const forceReconcileBtn = document.getElementById('forceReconcileBtn');
+    if (forceReconcileBtn) {
+        forceReconcileBtn.addEventListener('click', async () => {
+            const btn = forceReconcileBtn;
+            const resultDiv = document.getElementById('reconcileResult');
+            const originalHtml = btn.innerHTML;
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Running...';
+            if (resultDiv) {
+                resultDiv.className = 'mt-3';
+                resultDiv.innerHTML = '<span class="text-sm text-gray-500"><i class="fas fa-spinner fa-spin mr-1"></i> Reconciliation in progress...</span>';
+            }
+
+            try {
+                await new Promise((resolve, reject) => {
+                    const eventSource = new EventSource('/api/settings/reconcile-history');
+                    // Workaround: EventSource only supports GET. Use fetch for POST SSE.
+                    // Actually the endpoint is POST - close EventSource and use fetch instead.
+                    eventSource.close();
+                    resolve();
+                });
+
+                // Use fetch with streaming for the POST SSE endpoint
+                const response = await fetch('/api/settings/reconcile-history', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status}`);
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let lastEvent = null;
+                let buffer = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n\n');
+                    buffer = lines.pop();
+                    for (const chunk of lines) {
+                        const match = chunk.match(/^data:\s*(.+)$/m);
+                        if (match) {
+                            try { lastEvent = JSON.parse(match[1]); } catch (_) {}
+                        }
+                    }
+                }
+
+                if (lastEvent && lastEvent.type === 'complete') {
+                    if (resultDiv) {
+                        if (lastEvent.skipped) {
+                            resultDiv.innerHTML = '<span class="text-sm text-yellow-600"><i class="fas fa-exclamation-triangle mr-1"></i> Skipped: a scan or reconciliation is already in progress.</span>';
+                        } else if (lastEvent.removed > 0) {
+                            resultDiv.innerHTML = `<span class="text-sm text-green-600"><i class="fas fa-check-circle mr-1"></i> Removed ${lastEvent.removed} stale entr${lastEvent.removed === 1 ? 'y' : 'ies'} in ${lastEvent.durationMs}ms.</span>`;
+                        } else {
+                            resultDiv.innerHTML = '<span class="text-sm text-green-600"><i class="fas fa-check-circle mr-1"></i> No stale entries found.</span>';
+                        }
+                    }
+                } else if (lastEvent && lastEvent.type === 'error') {
+                    throw new Error(lastEvent.error || 'Reconciliation failed.');
+                }
+            } catch (error) {
+                console.error('Error during reconciliation:', error);
+                if (resultDiv) {
+                    resultDiv.innerHTML = `<span class="text-sm text-red-600"><i class="fas fa-times-circle mr-1"></i> ${error.message || 'Reconciliation failed.'}</span>`;
+                }
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
+        });
+    }
+
     // Form submission handler
     const setupForm = document.getElementById('setupForm');
     if (!setupForm) {

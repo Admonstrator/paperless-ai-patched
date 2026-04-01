@@ -508,6 +508,14 @@ function validateCustomFieldValue(fieldName, rawValue, dataType) {
         };
     }
 
+    // Paperless-ngx enforces a 128-character limit on STRING custom fields
+    if (dataType === 'string' && strValue.length > 128) {
+        return {
+            skip: true,
+            warn: `[WARN] Custom field "${fieldName}" value exceeds 128 characters (${strValue.length}), skipping`
+        };
+    }
+
     // All other types: pass the string through unchanged
     return { skip: false, value: strValue };
 }
@@ -567,6 +575,35 @@ function classifyOcrQueueReasonFromAiError(errorMessage) {
     return 'ai_failed_unknown';
 }
 
+/**
+ * Extracts assistant message content from OpenAI-compatible responses.
+ * Falls back to extracting JSON from reasoning_content when content is empty.
+ *
+ * @param {Object} message - Assistant message object
+ * @param {string} providerLabel - Provider label for warning logs
+ * @returns {string} Extracted content or empty string
+ */
+function extractChatMessageContent(message, providerLabel = 'OpenAI-compatible') {
+    const content = typeof message?.content === 'string' ? message.content.trim() : '';
+    if (content) {
+        return content;
+    }
+
+    const reasoningContent = typeof message?.reasoning_content === 'string' ? message.reasoning_content.trim() : '';
+    if (!reasoningContent) {
+        return '';
+    }
+
+    const jsonMatch = reasoningContent.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+        console.warn(`[WARN] [${providerLabel}] Empty message.content, using JSON extracted from reasoning_content.`);
+        return jsonMatch[0].trim();
+    }
+
+    console.warn(`[WARN] [${providerLabel}] Empty message.content and no JSON found in reasoning_content.`);
+    return '';
+}
+
 module.exports = {
     calculateTokens,
     calculateTotalPromptTokens,
@@ -577,5 +614,6 @@ module.exports = {
     validateUrlAgainstBase,
     validateCustomFieldValue,
     shouldQueueForOcrOnAiError,
-    classifyOcrQueueReasonFromAiError
+    classifyOcrQueueReasonFromAiError,
+    extractChatMessageContent
 };

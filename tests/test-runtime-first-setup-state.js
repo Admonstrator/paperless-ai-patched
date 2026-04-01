@@ -21,7 +21,7 @@ async function main() {
   process.env = {
     ...originalEnv,
     CONFIG_SOURCE_MODE: 'runtime-first',
-    PAPERLESS_API_URL: 'http://paperless.example/api',
+    PAPERLESS_API_URL: 'http://paperless.example',
     AI_PROVIDER: 'openai',
     OPENAI_API_KEY: 'test-key'
   };

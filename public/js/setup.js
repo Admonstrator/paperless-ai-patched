@@ -738,7 +738,7 @@ class SetupWizard {
         const preview = [];
         const provider = this.aiProvider.value.trim().toLowerCase();
 
-        preview.push(`PAPERLESS_API_URL=${this.paperlessUrl.value.trim().replace(/\/+$/, '').replace(/\/api$/, '')}/api`);
+        preview.push(`PAPERLESS_API_URL=${this.paperlessUrl.value.trim().replace(/\/+$/, '').replace(/\/api$/, '')}`);
         preview.push(`PAPERLESS_API_TOKEN=${this.paperlessToken.value.trim()}`);
         preview.push(`PAPERLESS_USERNAME=${this.paperlessUsername.value.trim()}`);
         preview.push(`PROCESS_PREDEFINED_DOCUMENTS=${this.scanAllDocuments.checked ? 'no' : 'yes'}`);

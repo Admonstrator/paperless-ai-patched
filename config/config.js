@@ -261,7 +261,7 @@ startupLog(logLevel, 'info', 'Configuration loaded:', {
 });
 
 module.exports = {
-  PAPERLESS_AI_VERSION: 'v2026.03.05',
+  PAPERLESS_AI_VERSION: 'v2026.03.06',
   CONFIGURED: false,
   configSourceMode: CONFIG_SOURCE_MODE,
   getApiKey,
@@ -299,7 +299,7 @@ module.exports = {
   // External API config
   externalApiConfig: externalApiConfig,
   paperless: {
-    apiUrl: process.env.PAPERLESS_API_URL,
+    apiUrl: (process.env.PAPERLESS_API_URL || '').replace(/\/+$/, '').replace(/\/api$/i, ''),
     apiToken: process.env.PAPERLESS_API_TOKEN
   },
   openai: {
@@ -307,7 +307,9 @@ module.exports = {
   },
   ollama: {
     apiUrl: process.env.OLLAMA_API_URL || 'http://localhost:11434',
-    model: process.env.OLLAMA_MODEL || 'llama3.2'
+    model: process.env.OLLAMA_MODEL || 'llama3.2',
+    // Strict opt-in: only literal "true" enables thinking mode.
+    think: String(process.env.OLLAMA_THINK || '').trim().toLowerCase() === 'true'
   },
   custom: {
     apiUrl: process.env.CUSTOM_BASE_URL || '',
@@ -328,6 +330,9 @@ module.exports = {
   customFields: process.env.CUSTOM_FIELDS || '',
   aiProvider: process.env.AI_PROVIDER || 'openai',
   scanInterval: process.env.SCAN_INTERVAL || '*/30 * * * *',
+  // Reconciliation: periodic cleanup of stale documents deleted in Paperless-ngx
+  reconciliationInterval: process.env.RECONCILIATION_INTERVAL || '0 * * * *',
+  reconciliationEnabled: parseEnvBoolean(process.env.RECONCILIATION_ENABLED, 'yes'),
   useExistingData: process.env.USE_EXISTING_DATA || 'no',
   // Cache configuration (in seconds)
   // Recommended: 300 (5 min) for balanced performance, 60-900 (1-15 min) for custom needs

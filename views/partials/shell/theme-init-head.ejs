@@ -1,0 +1,40 @@
+<meta name="color-scheme" content="light dark">
+<script>
+    (function () {
+        const STORAGE_KEY = 'theme';
+
+        function normalizeTheme(value) {
+            return value === 'dark' ? 'dark' : 'light';
+        }
+
+        function applyTheme(theme) {
+            const resolvedTheme = normalizeTheme(theme);
+            const root = document.documentElement;
+
+            root.setAttribute('data-theme', resolvedTheme);
+            root.classList.toggle('dark', resolvedTheme === 'dark');
+            root.style.colorScheme = resolvedTheme;
+
+            try {
+                window.localStorage.setItem(STORAGE_KEY, resolvedTheme);
+            } catch (_error) {
+                // Ignore storage failures and keep the in-memory theme.
+            }
+
+            return resolvedTheme;
+        }
+
+        function getStoredTheme() {
+            try {
+                return normalizeTheme(window.localStorage.getItem(STORAGE_KEY));
+            } catch (_error) {
+                return 'light';
+            }
+        }
+
+        window.__paperlessAiApplyTheme = applyTheme;
+        window.__paperlessAiGetTheme = getStoredTheme;
+
+        applyTheme(getStoredTheme());
+    })();
+</script>

@@ -251,11 +251,11 @@ class HistoryManager {
                     data: null,
                     render: (data) => `
                         <div class="flex space-x-2">
-                            <button onclick="window.open('${data.link}')" class="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+                            <button type="button" class="history-view-btn px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors" data-link="${this._escapeHTML(String(data.link ?? ''))}">
                                 <i class="fa-solid fa-eye"></i>
                                 <span class="hidden sm:inline ml-1">View</span>
                             </button>
-                            <button onclick="window.open('/chat?open=${data.document_id}')" class="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+                            <button type="button" class="history-chat-btn px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors" data-docid="${this._escapeHTML(String(data.document_id ?? ''))}">
                                 <i class="fa-solid fa-comment"></i>
                                 <span class="hidden sm:inline ml-1">Chat</span>
                             </button>
@@ -280,6 +280,8 @@ class HistoryManager {
                 this.updateSelectAllState();
                 // Reattach event listeners to checkboxes
                 this.attachCheckboxListeners();
+                // Reattach action handlers after each redraw
+                this.attachActionButtonListeners();
             }
         });
     }
@@ -397,6 +399,69 @@ class HistoryManager {
             // Add new listener
             checkbox.addEventListener('change', () => this.handleCheckboxChange());
         });
+    }
+
+    attachActionButtonListeners() {
+        const viewButtons = document.querySelectorAll('.history-view-btn');
+        viewButtons.forEach((button) => {
+            if (button.dataset.boundClick === 'true') {
+                return;
+            }
+
+            button.addEventListener('click', () => {
+                const link = button.dataset.link || '';
+                if (!this.isSafeHistoryLink(link)) {
+                    console.warn('Blocked unsafe history link:', link);
+                    return;
+                }
+                window.open(link);
+            });
+
+            button.dataset.boundClick = 'true';
+        });
+
+        const chatButtons = document.querySelectorAll('.history-chat-btn');
+        chatButtons.forEach((button) => {
+            if (button.dataset.boundClick === 'true') {
+                return;
+            }
+
+            button.addEventListener('click', () => {
+                const docId = button.dataset.docid || '';
+                if (!/^\d+$/.test(docId)) {
+                    console.warn('Blocked unsafe document id:', docId);
+                    return;
+                }
+
+                const encodedDocId = encodeURIComponent(docId);
+                window.open(`/chat?open=${encodedDocId}`);
+            });
+
+            button.dataset.boundClick = 'true';
+        });
+    }
+
+    isSafeHistoryLink(link) {
+        if (typeof link !== 'string') {
+            return false;
+        }
+
+        const trimmed = link.trim();
+        if (!trimmed) {
+            return false;
+        }
+
+        const lower = trimmed.toLowerCase();
+        if (lower.startsWith('javascript:') || lower.startsWith('data:')) {
+            return false;
+        }
+
+        try {
+            const parsed = new URL(trimmed, window.location.origin);
+            return parsed.origin === window.location.origin && parsed.pathname.startsWith('/');
+        } catch (error) {
+            return false;
+        }
     }
 
     handleCheckboxChange() {

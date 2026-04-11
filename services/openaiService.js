@@ -199,7 +199,7 @@ class OpenAIService {
             content: truncatedContent
           }
         ],
-        ...(model !== 'o3-mini' && { temperature: 0.3 }),
+        ...(model !== 'o3-mini' && { temperature: config.aiTemperatureAnalysis }),
       });
 
       const message = response?.choices?.[0]?.message;
@@ -350,7 +350,7 @@ class OpenAIService {
             content: truncatedContent
           }
         ],
-        ...(model !== 'o3-mini' && { temperature: 0.3 }),
+        ...(model !== 'o3-mini' && { temperature: config.aiTemperatureAnalysis }),
       });
 
       // Handle response
@@ -447,7 +447,7 @@ class OpenAIService {
             content: prompt
           }
         ],
-        temperature: 0.7
+        temperature: config.aiTemperatureGeneration
       });
 
       const generatedText = extractChatMessageContent(response?.choices?.[0]?.message, 'OpenAI');

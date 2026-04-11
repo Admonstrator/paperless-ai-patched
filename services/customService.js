@@ -205,7 +205,7 @@ class CustomOpenAIService {
             content: truncatedContent
           }
         ],
-        temperature: 0.3,
+        temperature: config.aiTemperatureAnalysis,
       });
 
       // Handle response
@@ -340,7 +340,7 @@ class CustomOpenAIService {
             content: truncatedContent
           }
         ],
-        temperature: 0.3,
+        temperature: config.aiTemperatureAnalysis,
       });
 
       // Handle response
@@ -429,7 +429,7 @@ class CustomOpenAIService {
             content: prompt
           }
         ],
-        temperature: 0.7,
+        temperature: config.aiTemperatureGeneration,
         max_tokens: maxCompletionTokens
       });
 

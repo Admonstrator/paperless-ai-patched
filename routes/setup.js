@@ -5505,6 +5505,8 @@ router.get('/settings', async (req, res) => {
     
     TOKEN_LIMIT: process.env.TOKEN_LIMIT || 128000,
     RESPONSE_TOKENS: process.env.RESPONSE_TOKENS || 1000,
+    AI_TEMPERATURE_ANALYSIS: process.env.AI_TEMPERATURE_ANALYSIS || '0.3',
+    AI_TEMPERATURE_GENERATION: process.env.AI_TEMPERATURE_GENERATION || '0.7',
     TAGS: normalizeArray(process.env.TAGS),
     IGNORE_TAGS: normalizeArray(process.env.IGNORE_TAGS),
     ADD_AI_PROCESSED_TAG: process.env.ADD_AI_PROCESSED_TAG || 'no',
@@ -6656,6 +6658,14 @@ router.get('/health', async (req, res) => {
  *                 type: integer
  *                 description: The approx. amount of tokens required for the response
  *                 example: 1000
+ *               aiTemperatureAnalysis:
+ *                 type: number
+ *                 description: Temperature for analysis/classification calls (range 0.0-2.0)
+ *                 example: 0.3
+ *               aiTemperatureGeneration:
+ *                 type: number
+ *                 description: Temperature for generation calls (range 0.0-2.0)
+ *                 example: 0.7
  *               tags:
  *                 type: string
  *                 description: Comma-separated list of tags to use for filtering
@@ -6768,6 +6778,8 @@ router.post('/settings', express.json(), async (req, res) => {
       showTags,
       tokenLimit,
       responseTokens,
+      aiTemperatureAnalysis,
+      aiTemperatureGeneration,
       tags,
       ignoreTags,
       aiProcessedTag,
@@ -6829,6 +6841,8 @@ router.post('/settings', express.json(), async (req, res) => {
       PROCESS_PREDEFINED_DOCUMENTS: process.env.PROCESS_PREDEFINED_DOCUMENTS || 'no',
       TOKEN_LIMIT: process.env.TOKEN_LIMIT || 128000,
       RESPONSE_TOKENS: process.env.RESPONSE_TOKENS || 1000,
+      AI_TEMPERATURE_ANALYSIS: process.env.AI_TEMPERATURE_ANALYSIS || '0.3',
+      AI_TEMPERATURE_GENERATION: process.env.AI_TEMPERATURE_GENERATION || '0.7',
       TAGS: process.env.TAGS || '',
       IGNORE_TAGS: process.env.IGNORE_TAGS || '',
       ADD_AI_PROCESSED_TAG: process.env.ADD_AI_PROCESSED_TAG || 'no',
@@ -6925,6 +6939,21 @@ router.post('/settings', express.json(), async (req, res) => {
       if (Array.isArray(value)) return value;
       if (typeof value === 'string') return value.split(',').filter(Boolean).map(item => item.trim());
       return [];
+    };
+
+    const sanitizeTemperatureValue = (rawValue, fallbackValue, envKey) => {
+      const normalizedValue = String(rawValue ?? '').trim();
+      if (!normalizedValue) {
+        return fallbackValue;
+      }
+
+      const parsed = Number.parseFloat(normalizedValue);
+      if (!Number.isFinite(parsed) || parsed < 0 || parsed > 2) {
+        console.warn(`[WARN] Invalid ${envKey} value: ${normalizedValue}. Using fallback: ${fallbackValue}`);
+        return fallbackValue;
+      }
+
+      return String(parsed);
     };
 
     // Extract tag and correspondent restriction settings with defaults
@@ -7030,6 +7059,20 @@ router.post('/settings', express.json(), async (req, res) => {
     if (showTags) updatedConfig.PROCESS_PREDEFINED_DOCUMENTS = showTags;
     if (tokenLimit) updatedConfig.TOKEN_LIMIT = tokenLimit;
     if (responseTokens) updatedConfig.RESPONSE_TOKENS = responseTokens;
+    if (aiTemperatureAnalysis !== undefined) {
+      updatedConfig.AI_TEMPERATURE_ANALYSIS = sanitizeTemperatureValue(
+        aiTemperatureAnalysis,
+        currentConfig.AI_TEMPERATURE_ANALYSIS,
+        'AI_TEMPERATURE_ANALYSIS'
+      );
+    }
+    if (aiTemperatureGeneration !== undefined) {
+      updatedConfig.AI_TEMPERATURE_GENERATION = sanitizeTemperatureValue(
+        aiTemperatureGeneration,
+        currentConfig.AI_TEMPERATURE_GENERATION,
+        'AI_TEMPERATURE_GENERATION'
+      );
+    }
     if (tags !== undefined) updatedConfig.TAGS = normalizeArray(tags);
     if (ignoreTags !== undefined) updatedConfig.IGNORE_TAGS = normalizeArray(ignoreTags);
     if (aiProcessedTag) updatedConfig.ADD_AI_PROCESSED_TAG = aiProcessedTag;

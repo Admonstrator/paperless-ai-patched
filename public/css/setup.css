@@ -57,6 +57,10 @@ main {
     animation: setup-card-in 340ms ease-out;
 }
 
+.setup-card:hover {
+    transform: none;
+}
+
 .setup-subtitle {
     color: var(--text-secondary);
     margin-top: 0.35rem;

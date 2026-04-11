@@ -247,7 +247,7 @@ class CustomOpenAIService {
       }
 
       // Validate response structure
-      if (!parsedResponse || !Array.isArray(parsedResponse.tags) || typeof parsedResponse.correspondent !== 'string') {
+      if (!parsedResponse || !Array.isArray(parsedResponse.tags) || (typeof parsedResponse.correspondent !== 'string' && parsedResponse.correspondent !== null)) {
         throw new Error('AI could not determine assignable metadata: no tags or correspondent found');
       }
 
@@ -374,7 +374,7 @@ class CustomOpenAIService {
       }
 
       // Validate response structure
-      if (!parsedResponse || !Array.isArray(parsedResponse.tags) || typeof parsedResponse.correspondent !== 'string') {
+      if (!parsedResponse || !Array.isArray(parsedResponse.tags) || (typeof parsedResponse.correspondent !== 'string' && parsedResponse.correspondent !== null)) {
         throw new Error('AI could not determine assignable metadata: no tags or correspondent found');
       }
 

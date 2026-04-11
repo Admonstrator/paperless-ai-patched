@@ -4155,6 +4155,16 @@
                     "description": "The approx. amount of tokens required for the response",
                     "example": 1000
                   },
+                  "aiTemperatureAnalysis": {
+                    "type": "number",
+                    "description": "Temperature for analysis/classification calls (range 0.0-2.0)",
+                    "example": 0.3
+                  },
+                  "aiTemperatureGeneration": {
+                    "type": "number",
+                    "description": "Temperature for generation calls (range 0.0-2.0)",
+                    "example": 0.7
+                  },
                   "tags": {
                     "type": "string",
                     "description": "Comma-separated list of tags to use for filtering",

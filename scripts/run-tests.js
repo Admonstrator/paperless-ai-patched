@@ -53,7 +53,8 @@ const TESTS = {
   'updated-service': 'test-updated-service.js',
   'ssrf-url-validation': 'test-ssrf-url-validation.js',
   'external-api-ssrf-block': 'test-external-api-ssrf-block.js',
-  'ui-xss-hardening': 'test-ui-xss-hardening.js'
+  'ui-xss-hardening': 'test-ui-xss-hardening.js',
+  'history-xss-hardening': 'test-history-xss-hardening.js'
 };
 
 const AREAS = {
@@ -77,7 +78,8 @@ const AREAS = {
     'setup-auth-endpoint-protection',
     'ssrf-url-validation',
     'external-api-ssrf-block',
-    'ui-xss-hardening'
+    'ui-xss-hardening',
+    'history-xss-hardening'
   ]
 };
 

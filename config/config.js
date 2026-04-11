@@ -182,6 +182,26 @@ const parseEnvBoolean = (value, defaultValue = 'yes') => {
   return value.toLowerCase() === 'true' || value === '1' || value.toLowerCase() === 'yes' ? 'yes' : 'no';
 };
 
+const parseTemperature = (value, defaultValue, envKey) => {
+  const normalizedValue = String(value ?? '').trim();
+  if (!normalizedValue) {
+    return defaultValue;
+  }
+
+  const parsed = Number.parseFloat(normalizedValue);
+  if (!Number.isFinite(parsed)) {
+    startupLog(logLevel, 'warn', `[WARN] Invalid ${envKey} value "${normalizedValue}". Falling back to ${defaultValue}.`);
+    return defaultValue;
+  }
+
+  if (parsed < 0 || parsed > 2) {
+    startupLog(logLevel, 'warn', `[WARN] Out-of-range ${envKey} value "${normalizedValue}". Falling back to ${defaultValue}.`);
+    return defaultValue;
+  }
+
+  return parsed;
+};
+
 const getApiKey = () => process.env.API_KEY || process.env.PAPERLESS_AI_API_KEY || '';
 const getJwtSecret = () => process.env.JWT_SECRET || '';
 
@@ -261,7 +281,7 @@ startupLog(logLevel, 'info', 'Configuration loaded:', {
 });
 
 module.exports = {
-  PAPERLESS_AI_VERSION: 'v2026.03.05',
+  PAPERLESS_AI_VERSION: 'v2026.03.06',
   CONFIGURED: false,
   configSourceMode: CONFIG_SOURCE_MODE,
   getApiKey,
@@ -290,6 +310,8 @@ module.exports = {
   ignoreTags: process.env.IGNORE_TAGS || '',
   tokenLimit: process.env.TOKEN_LIMIT || 128000,
   responseTokens: process.env.RESPONSE_TOKENS || 1000,
+  aiTemperatureAnalysis: parseTemperature(process.env.AI_TEMPERATURE_ANALYSIS, 0.3, 'AI_TEMPERATURE_ANALYSIS'),
+  aiTemperatureGeneration: parseTemperature(process.env.AI_TEMPERATURE_GENERATION, 0.7, 'AI_TEMPERATURE_GENERATION'),
   addAIProcessedTag: process.env.ADD_AI_PROCESSED_TAG || 'no',
   addAIProcessedTags: process.env.AI_PROCESSED_TAG_NAME || 'ai-processed',
   // AI restrictions config

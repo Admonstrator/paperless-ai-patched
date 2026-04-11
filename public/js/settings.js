@@ -994,6 +994,22 @@ function initializeFormHandlers() {
             if (formData.get('systemPrompt')) {
                 formData.set('systemPrompt', formData.get('systemPrompt').replace(/`/g, ''));
             }
+
+            const validateTemperature = (fieldName, envKey) => {
+                const rawValue = String(formData.get(fieldName) || '').trim();
+                if (!rawValue) {
+                    return;
+                }
+
+                const parsed = Number.parseFloat(rawValue);
+                if (!Number.isFinite(parsed) || parsed < 0 || parsed > 2) {
+                    throw new Error(`${envKey} must be a number between 0.0 and 2.0.`);
+                }
+            };
+
+            validateTemperature('aiTemperatureAnalysis', 'AI_TEMPERATURE_ANALYSIS');
+            validateTemperature('aiTemperatureGeneration', 'AI_TEMPERATURE_GENERATION');
+
             const response = await fetch('/settings', {
                 method: 'POST',
                 headers: {
@@ -1497,6 +1513,8 @@ function initializeRuntimeOverridePills() {
         { selector: '#azureApiVersion', envKey: 'AZURE_API_VERSION' },
         { selector: '#tokenLimit', envKey: 'TOKEN_LIMIT' },
         { selector: '#responseTokens', envKey: 'RESPONSE_TOKENS' },
+        { selector: '#aiTemperatureAnalysis', envKey: 'AI_TEMPERATURE_ANALYSIS' },
+        { selector: '#aiTemperatureGeneration', envKey: 'AI_TEMPERATURE_GENERATION' },
         { selector: '#aiProcessedTag', envKey: 'ADD_AI_PROCESSED_TAG' },
         { selector: '#aiTagName', envKey: 'AI_PROCESSED_TAG_NAME' },
         { selector: '#usePromptTags', envKey: 'USE_PROMPT_TAGS' },

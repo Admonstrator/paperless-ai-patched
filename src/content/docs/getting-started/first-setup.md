@@ -43,7 +43,7 @@ For details and all supported cookie/proxy flag values, see [Configuration](/get
 | **4. Paperless metadata** | Load document/tag/correspondent counts and define include/exclude/processed tag behavior plus scan interval. |
 | **5. AI credentials** | Select a provider preset, configure API URL/model/token, then run **Test AI connection**. |
 | **6. Mistral OCR (optional)** | Enable OCR fallback and set Mistral credentials/model if needed. |
-| **7. Review and finish** | Review generated `.env` values, copy them if needed, and finalize setup. |
+| **7. Review and finish** | Review generated configuration values, copy them if needed, and finalize setup. |
 
 ### Provider notes
 
@@ -60,7 +60,9 @@ For details and all supported cookie/proxy flag values, see [Configuration](/get
 
 ## What happens after Finish?
 
-When you click **Save and restart container**, the installer writes configuration to `data/.env`, creates the admin user, and triggers an app restart.
+When you click **Save and restart container**, the installer writes configuration to `data/runtime-overrides.json` by default, creates the admin user, and triggers an app restart.
+
+If you explicitly run with `CONFIG_SOURCE_MODE=legacy`, the installer continues to use `data/.env` instead.
 
 In most Docker setups (`restart: unless-stopped`), this restart happens automatically.
 

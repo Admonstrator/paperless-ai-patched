@@ -4,7 +4,7 @@
 
 <h1>Paperless-AI <span style="font-size: 0.62em; color: #2563eb; font-weight: 700;">next</span></h1>
 
-[![Latest Release](https://img.shields.io/github/v/release/admonstrator/paperless-ai-next?style=for-the-badge&logo=github&color=0ea5e9)](https://github.com/admonstrator/paperless-ai-next/releases/latest) [![Docker Pulls](https://img.shields.io/badge/docker%20pulls-5.5k-brightgreen?style=for-the-badge&logo=docker&color=10b981)](https://hub.docker.com/r/admonstrator/paperless-ai-next) [![Docs](https://img.shields.io/badge/docs-Live-0891b2?style=for-the-badge&logo=readthedocs)](https://paperless-ai-next.admon.me/)
+[![Latest Release](https://img.shields.io/github/v/release/admonstrator/paperless-ai-next?style=for-the-badge&logo=github&color=0ea5e9)](https://github.com/admonstrator/paperless-ai-next/releases/latest) [![Docker Pulls](https://img.shields.io/badge/docker%20pulls-6.8k-brightgreen?style=for-the-badge&logo=docker&color=10b981)](https://hub.docker.com/r/admonstrator/paperless-ai-next) [![Docs](https://img.shields.io/badge/docs-Live-0891b2?style=for-the-badge&logo=readthedocs)](https://paperless-ai-next.admon.me/)
 
 [🧠 What makes it "Next"](#-the-evolution-what-makes-it-next) | [💖 Fuel the Evolution](#-fuel-the-evolution) | [🚀 Quick Start](#-quick-start) | [💬 Frequently Asked Questions](#-frequently-asked-questions)
 
@@ -181,6 +181,6 @@ If it's OpenAI-compatible, it probably works. If not, open an issue! Since I hav
 
 <div align="center">
 
-_Last updated: 2026-03-29_
+_Last updated: 2026-04-05_
 
 </div>

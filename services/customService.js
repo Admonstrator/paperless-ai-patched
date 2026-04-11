@@ -205,7 +205,7 @@ class CustomOpenAIService {
             content: truncatedContent
           }
         ],
-        temperature: 0.3,
+        temperature: config.aiTemperatureAnalysis,
       });
 
       // Handle response
@@ -247,7 +247,7 @@ class CustomOpenAIService {
       }
 
       // Validate response structure
-      if (!parsedResponse || !Array.isArray(parsedResponse.tags) || typeof parsedResponse.correspondent !== 'string') {
+      if (!parsedResponse || !Array.isArray(parsedResponse.tags) || (typeof parsedResponse.correspondent !== 'string' && parsedResponse.correspondent !== null)) {
         throw new Error('AI could not determine assignable metadata: no tags or correspondent found');
       }
 
@@ -340,7 +340,7 @@ class CustomOpenAIService {
             content: truncatedContent
           }
         ],
-        temperature: 0.3,
+        temperature: config.aiTemperatureAnalysis,
       });
 
       // Handle response
@@ -374,7 +374,7 @@ class CustomOpenAIService {
       }
 
       // Validate response structure
-      if (!parsedResponse || !Array.isArray(parsedResponse.tags) || typeof parsedResponse.correspondent !== 'string') {
+      if (!parsedResponse || !Array.isArray(parsedResponse.tags) || (typeof parsedResponse.correspondent !== 'string' && parsedResponse.correspondent !== null)) {
         throw new Error('AI could not determine assignable metadata: no tags or correspondent found');
       }
 
@@ -429,7 +429,7 @@ class CustomOpenAIService {
             content: prompt
           }
         ],
-        temperature: 0.7,
+        temperature: config.aiTemperatureGeneration,
         max_tokens: maxCompletionTokens
       });
 

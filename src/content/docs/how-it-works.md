@@ -43,7 +43,8 @@ When you add a document to Paperless-ngx, the search service creates a mathemati
 
 Everything is stored in the `./data` volume you mount into the container:
 
-- `data/.env` – Your configuration
+- `data/runtime-overrides.json` – Your configuration in the default `runtime-first` mode
+- `data/.env` / `data/.env.migrated` – Legacy configuration file or migrated backup when coming from older versions
 - `data/documents.db` – Processing history, metrics, user accounts
 - `data/chromadb/` – Vector index for AI Chat (Full image only)
 

@@ -73,7 +73,7 @@ class ManualService {
                 content: content
             }
             ],
-            ...(model !== 'o3-mini' && { temperature: 0.3 }),
+            ...(model !== 'o3-mini' && { temperature: config.aiTemperatureAnalysis }),
         });
     
         let jsonContent = extractChatMessageContent(response?.choices?.[0]?.message, 'ManualService/OpenAI');
@@ -90,7 +90,7 @@ class ManualService {
             throw new Error('Invalid JSON response from API');
         }
         
-        if (!Array.isArray(parsedResponse.tags) || typeof parsedResponse.correspondent !== 'string') {
+        if (!Array.isArray(parsedResponse.tags) || (typeof parsedResponse.correspondent !== 'string' && parsedResponse.correspondent !== null)) {
             throw new Error('Invalid response structure');
         }
         
@@ -121,7 +121,7 @@ class ManualService {
                 content: content
             }
             ],
-            temperature: 0.3,
+            temperature: config.aiTemperatureAnalysis,
         });
     
         let jsonContent = extractChatMessageContent(response?.choices?.[0]?.message, 'ManualService/Azure');
@@ -138,7 +138,7 @@ class ManualService {
             throw new Error('Invalid JSON response from API');
         }
         
-        if (!Array.isArray(parsedResponse.tags) || typeof parsedResponse.correspondent !== 'string') {
+        if (!Array.isArray(parsedResponse.tags) || (typeof parsedResponse.correspondent !== 'string' && parsedResponse.correspondent !== null)) {
             throw new Error('Invalid response structure');
         }
         
@@ -169,7 +169,7 @@ class ManualService {
                     content: content
                 }
                 ],
-                ...(model !== 'o3-mini' && { temperature: 0.3 }),
+                ...(model !== 'o3-mini' && { temperature: config.aiTemperatureAnalysis }),
             });
         
             let jsonContent = extractChatMessageContent(response?.choices?.[0]?.message, 'ManualService/Custom');
@@ -180,7 +180,7 @@ class ManualService {
             
             const parsedResponse = JSON.parse(jsonContent);
             
-            if (!Array.isArray(parsedResponse.tags) || typeof parsedResponse.correspondent !== 'string') {
+            if (!Array.isArray(parsedResponse.tags) || (typeof parsedResponse.correspondent !== 'string' && parsedResponse.correspondent !== null)) {
                 throw new Error('Invalid response structure');
             }
             
@@ -231,7 +231,7 @@ class ManualService {
             prompt: prompt,
             stream: false,
             options: {
-            temperature: 0.7,
+            temperature: config.aiTemperatureGeneration,
             top_p: 0.9,
             repeat_penalty: 1.1,
             num_ctx: numCtx,

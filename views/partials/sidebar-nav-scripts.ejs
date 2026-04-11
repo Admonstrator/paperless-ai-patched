@@ -39,14 +39,19 @@
         const themeIcon = document.getElementById('themeToggleIcon') || themeToggle?.querySelector('i');
 
         function applyTheme(theme) {
-            document.documentElement.setAttribute('data-theme', theme);
-            localStorage.setItem('theme', theme);
+            const resolvedTheme = typeof window.__paperlessAiApplyTheme === 'function'
+                ? window.__paperlessAiApplyTheme(theme)
+                : theme;
             if (themeIcon) {
-                themeIcon.className = theme === 'light' ? 'fas fa-moon' : 'fas fa-sun';
+                themeIcon.className = resolvedTheme === 'light' ? 'fas fa-moon' : 'fas fa-sun';
             }
         }
 
-        applyTheme(localStorage.getItem('theme') || 'light');
+        applyTheme(
+            typeof window.__paperlessAiGetTheme === 'function'
+                ? window.__paperlessAiGetTheme()
+                : 'light'
+        );
 
         if (themeToggle) {
             themeToggle.addEventListener('click', function () {

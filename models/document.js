@@ -1060,6 +1060,30 @@ async getCurrentProcessingStatus() {
     }
   },
 
+  async resetAllFailedDocuments() {
+    try {
+      const resetAll = db.transaction(() => {
+        const rows = db.prepare('SELECT document_id FROM failed_documents').all();
+        if (!rows.length) {
+          return 0;
+        }
+
+        const documentIds = rows.map((row) => row.document_id);
+        const deleteFailedResult = db.prepare('DELETE FROM failed_documents').run();
+
+        const placeholders = documentIds.map(() => '?').join(', ');
+        db.prepare(`DELETE FROM processing_status WHERE document_id IN (${placeholders})`).run(...documentIds);
+
+        return deleteFailedResult.changes;
+      });
+
+      return resetAll();
+    } catch (error) {
+      console.error('[ERROR] resetting all failed documents:', error);
+      return 0;
+    }
+  },
+
   async clearProcessingStatusByDocumentId(documentId) {
     try {
       const result = clearProcessingStatus.run(documentId);

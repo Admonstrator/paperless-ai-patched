@@ -2,11 +2,22 @@
 title: "Configuration"
 ---
 
-The initial installer now covers the main first-run configuration flow and writes values to `data/.env`.
+The initial installer now covers the main first-run configuration flow and writes values to `data/runtime-overrides.json` by default.
 
 For Docker automation (CI/CD, GitOps, immutable deployments), environment variables remain the preferred source of truth.
 
-The settings are saved in `data/.env` inside your mounted data directory.
+The settings are stored inside your mounted `data/` directory. In the default `runtime-first` mode this is `data/runtime-overrides.json`. Legacy `data/.env` files are migrated automatically to `data/.env.migrated` unless you explicitly start with `CONFIG_SOURCE_MODE=legacy`.
+
+---
+
+## Configuration source behavior
+
+Paperless-AI next supports two configuration modes:
+
+- `runtime-first` (default): settings saved from the installer or `/settings` are written to `data/runtime-overrides.json`
+- `legacy`: settings are read from and written to `data/.env`
+
+In both modes, environment variables injected directly by Docker or your orchestration platform remain the highest-priority source and are not overwritten by the settings UI.
 
 ---
 
@@ -19,7 +30,7 @@ The installer configures:
 - Metadata-driven processing rules (include/exclude tags, processed tag, scan behavior)
 - AI provider preset + connection test
 - Optional Mistral OCR fallback
-- Final `.env` preview and setup completion
+- Final configuration preview and setup completion
 
 ---
 
@@ -76,7 +87,7 @@ See [OCR Queue](/features/ocr-queue/) for details.
 
 ## Docker Environment Variables
 
-Most settings are stored in `data/.env`.
+Most settings saved from the UI are stored in `data/runtime-overrides.json` unless `CONFIG_SOURCE_MODE=legacy` is enabled.
 
 For Docker setups, you should pre-seed/manage configuration via environment variables using this reference:
 
@@ -85,15 +96,20 @@ For Docker setups, you should pre-seed/manage configuration via environment vari
 | Variable | Description |
 |---|---|
 | `PAPERLESS_API_URL` | Base URL of your Paperless-ngx instance (for example `http://paperless-ngx:8000`) |
+| `PAPERLESS_PUBLIC_URL` | Optional public/browser-facing Paperless URL used for document links when auto-discovery is wrong or unavailable |
 | `PAPERLESS_API_TOKEN` | API token used to access Paperless-ngx |
 | `PAPERLESS_USERNAME` | Optional Paperless username used in user-specific lookups |
 | `API_KEY` | Static API key for external integrations (`x-api-key` header) |
+| `PAPERLESS_AI_API_KEY` | Legacy alias for `API_KEY` |
 | `JWT_SECRET` | Secret used to sign and verify JWT login cookies |
 | `PAPERLESS_AI_PORT` | Port the Paperless-AI web app listens on |
 | `PAPERLESS_AI_INITIAL_SETUP` | Enables first-run setup mode (`yes`/`no`) |
 | `ALLOW_REMOTE_SETUP` | Allow setup wizard access from non-localhost addresses (`yes`/`no`, default `no`). Required when accessing setup from a remote browser (e.g. Docker bridge networking). Remove after setup is complete. |
+| `CONFIG_SOURCE_MODE` | Config persistence mode: `runtime-first` (default) or `legacy` |
 | `TRUST_PROXY` | Express proxy trust setting (controls `X-Forwarded-*` handling) |
 | `COOKIE_SECURE_MODE` | Controls whether auth/CSRF cookies are set with the `Secure` flag |
+| `LOGIN_RATE_LIMIT_MAX` | Max setup/login attempts per rate-limit window (default `10`) |
+| `EXPOSE_API_DOCS` | Enables authenticated Swagger/OpenAPI docs at `/api-docs` (`yes`/`no`) |
 
 ### AI provider selection & shared behavior
 
@@ -103,6 +119,8 @@ For Docker setups, you should pre-seed/manage configuration via environment vari
 | `SYSTEM_PROMPT` | Base system prompt used for document analysis instructions |
 | `TOKEN_LIMIT` | Max input token budget used for prompt/document content |
 | `RESPONSE_TOKENS` | Max output tokens requested from the AI model |
+| `AI_TEMPERATURE_ANALYSIS` | Temperature used for structured document analysis requests (range `0.0`-`2.0`, default `0.3`) |
+| `AI_TEMPERATURE_GENERATION` | Temperature used for free-text generation flows (range `0.0`-`2.0`, default `0.7`) |
 | `USE_EXISTING_DATA` | Include existing Paperless metadata in analysis (`yes`/`no`) |
 | `DISABLE_AUTOMATIC_PROCESSING` | Disables scheduled background processing (`yes`/`no`) |
 | `SCAN_INTERVAL` | Cron expression for document scan frequency |
@@ -116,6 +134,7 @@ For Docker setups, you should pre-seed/manage configuration via environment vari
 |---|---|
 | `PROCESS_PREDEFINED_DOCUMENTS` | Process only documents that match predefined tag rules (`yes`/`no`) |
 | `TAGS` | Comma-separated tags used when predefined processing is enabled |
+| `IGNORE_TAGS` | Comma-separated tags that should always be skipped |
 | `ADD_AI_PROCESSED_TAG` | Add a marker tag after processing (`yes`/`no`) |
 | `AI_PROCESSED_TAG_NAME` | Name of the marker tag (default commonly `ai-processed`) |
 | `USE_PROMPT_TAGS` | Restrict AI output tags to `PROMPT_TAGS` (`yes`/`no`) |
@@ -126,6 +145,19 @@ For Docker setups, you should pre-seed/manage configuration via environment vari
 | `ACTIVATE_TITLE` | Enable/disable title generation (`yes`/`no`) |
 | `ACTIVATE_CUSTOM_FIELDS` | Enable/disable AI population of custom fields (`yes`/`no`) |
 | `CUSTOM_FIELDS` | Custom field mapping/payload used for AI-assisted field filling |
+
+### External API enrichment
+
+| Variable | Description |
+|---|---|
+| `EXTERNAL_API_ENABLED` | Enables enrichment from an external HTTP API before AI analysis (`yes`/`no`) |
+| `EXTERNAL_API_URL` | Target URL to call |
+| `EXTERNAL_API_METHOD` | HTTP method used for the request (`GET`, `POST`, `PUT`) |
+| `EXTERNAL_API_HEADERS` | JSON object string with custom request headers |
+| `EXTERNAL_API_BODY` | JSON object string used as request body for `POST`/`PUT` |
+| `EXTERNAL_API_TIMEOUT` | Request timeout in milliseconds (default `5000`) |
+| `EXTERNAL_API_TRANSFORM` | Safe dot/bracket access path used to extract a subset of the response |
+| `EXTERNAL_API_ALLOW_PRIVATE_IPS` | Allow calls to private/internal IP ranges (`yes`/`no`, default `no`) |
 
 ### Custom / compatible AI provider
 
@@ -149,6 +181,9 @@ For Docker setups, you should pre-seed/manage configuration via environment vari
 | Variable | Description |
 |---|---|
 | `RAG_SERVICE_ENABLED` | Enables/disables the RAG chat feature |
+| `RAG_SERVICE_URL` | Base URL of the Python RAG service (default `http://localhost:8000`) |
+| `RAG_API_SECRET` | Shared bearer token between Node.js and the Python RAG service. Auto-generated in the bundled Full image if unset. |
+| `RAG_AI_STATUS_TTL_MS` | Cache TTL for AI/RAG status checks in milliseconds (default `300000`) |
 | `MISTRAL_OCR_ENABLED` | Enables OCR fallback queue for low-quality scans (`yes`/`no`) |
 | `MISTRAL_API_KEY` | API key for Mistral OCR |
 | `MISTRAL_OCR_MODEL` | Mistral OCR model (default: `mistral-ocr-latest`) |
@@ -163,6 +198,8 @@ These are useful mostly for scaling and hardening.
 | `GLOBAL_RATE_LIMIT_MAX` | `1000` | Max requests per 15-minute window per user |
 | `GLOBAL_RATE_LIMIT_WINDOW_MS` | `900000` | Rate limit window in milliseconds |
 | `MIN_CONTENT_LENGTH` | `10` | Minimum extracted content length before AI analysis is skipped |
+| `CONTENT_MAX_LENGTH` | unset | Optional hard truncation limit for document text sent to Ollama |
+| `OLLAMA_THINK` | `false` | Enables Ollama "thinking" mode only when explicitly set to `true` |
 
 ## Cookie and proxy flags (all supported values)
 

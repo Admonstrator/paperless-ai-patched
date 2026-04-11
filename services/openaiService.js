@@ -199,7 +199,7 @@ class OpenAIService {
             content: truncatedContent
           }
         ],
-        ...(model !== 'o3-mini' && { temperature: 0.3 }),
+        ...(model !== 'o3-mini' && { temperature: config.aiTemperatureAnalysis }),
       });
 
       const message = response?.choices?.[0]?.message;
@@ -257,7 +257,7 @@ class OpenAIService {
         console.warn('Failed to write AI response log:', logError.message);
       }
 
-      if (!parsedResponse || !Array.isArray(parsedResponse.tags) || typeof parsedResponse.correspondent !== 'string') {
+      if (!parsedResponse || !Array.isArray(parsedResponse.tags) || (typeof parsedResponse.correspondent !== 'string' && parsedResponse.correspondent !== null)) {
         throw new Error('AI could not determine assignable metadata: no tags or correspondent found');
       }
 
@@ -350,7 +350,7 @@ class OpenAIService {
             content: truncatedContent
           }
         ],
-        ...(model !== 'o3-mini' && { temperature: 0.3 }),
+        ...(model !== 'o3-mini' && { temperature: config.aiTemperatureAnalysis }),
       });
 
       // Handle response
@@ -404,7 +404,7 @@ class OpenAIService {
       }
 
       // Validate response structure
-      if (!parsedResponse || !Array.isArray(parsedResponse.tags) || typeof parsedResponse.correspondent !== 'string') {
+      if (!parsedResponse || !Array.isArray(parsedResponse.tags) || (typeof parsedResponse.correspondent !== 'string' && parsedResponse.correspondent !== null)) {
         throw new Error('AI could not determine assignable metadata: no tags or correspondent found');
       }
 
@@ -447,7 +447,7 @@ class OpenAIService {
             content: prompt
           }
         ],
-        temperature: 0.7
+        temperature: config.aiTemperatureGeneration
       });
 
       const generatedText = extractChatMessageContent(response?.choices?.[0]?.message, 'OpenAI');

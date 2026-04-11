@@ -34,6 +34,7 @@ const TESTS = {
   'chat-documents-service-search': 'test-chat-documents-service-search.js',
   'document-type-restriction': 'test-document-type-restriction.js',
   'effective-document-count-cache': 'test-effective-document-count-cache.js',
+  'failed-reset-all': 'test-failed-reset-all.js',
   'ignore-tags-filter': 'test-ignore-tags-filter.js',
   'injected-env-priority': 'test-injected-env-priority.js',
   'log-level-config': 'test-log-level-config.js',
@@ -53,7 +54,8 @@ const TESTS = {
   'updated-service': 'test-updated-service.js',
   'ssrf-url-validation': 'test-ssrf-url-validation.js',
   'external-api-ssrf-block': 'test-external-api-ssrf-block.js',
-  'ui-xss-hardening': 'test-ui-xss-hardening.js'
+  'ui-xss-hardening': 'test-ui-xss-hardening.js',
+  'history-xss-hardening': 'test-history-xss-hardening.js'
 };
 
 const AREAS = {
@@ -65,6 +67,7 @@ const AREAS = {
     'document-type-restriction',
     'ignore-tags-filter',
     'effective-document-count-cache',
+    'failed-reset-all',
     'injected-env-priority',
     'pr772-fix',
     'scan-stop-flow',
@@ -77,7 +80,8 @@ const AREAS = {
     'setup-auth-endpoint-protection',
     'ssrf-url-validation',
     'external-api-ssrf-block',
-    'ui-xss-hardening'
+    'ui-xss-hardening',
+    'history-xss-hardening'
   ]
 };
 

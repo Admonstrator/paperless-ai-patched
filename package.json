@@ -16,6 +16,7 @@
     "test:chat-documents-service-search": "node scripts/run-tests.js --test chat-documents-service-search",
     "test:document-type-restriction": "node scripts/run-tests.js --test document-type-restriction",
     "test:effective-document-count-cache": "node scripts/run-tests.js --test effective-document-count-cache",
+    "test:failed-reset-all": "node scripts/run-tests.js --test failed-reset-all",
     "test:ignore-tags-filter": "node scripts/run-tests.js --test ignore-tags-filter",
     "test:log-level-config": "node scripts/run-tests.js --test log-level-config",
     "test:log-level-logger": "node scripts/run-tests.js --test log-level-logger",

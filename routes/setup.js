@@ -8132,6 +8132,24 @@ router.post('/api/failed/reset/:documentId', isAuthenticated, async (req, res) =
   }
 });
 
+// API: Reset terminal failure state for all documents in failed queue
+router.post('/api/failed/reset-all', isAuthenticated, async (req, res) => {
+  try {
+    const count = await documentModel.resetAllFailedDocuments();
+
+    return res.json({
+      success: true,
+      count,
+      message: count > 0
+        ? `${count} failed document${count === 1 ? '' : 's'} reset. They can be scanned again.`
+        : 'No failed documents to reset.'
+    });
+  } catch (error) {
+    console.error('[ERROR] POST /api/failed/reset-all:', error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 /**
  * @swagger
  * /api/failed/reset/{documentId}:
@@ -8154,6 +8172,24 @@ router.post('/api/failed/reset/:documentId', isAuthenticated, async (req, res) =
  *         description: Reset operation result
  *       400:
  *         description: Invalid document ID
+ *       500:
+ *         description: Server error
+ */
+
+/**
+ * @swagger
+ * /api/failed/reset-all:
+ *   post:
+ *     summary: Reset all permanently failed documents
+ *     tags:
+ *       - OCR
+ *       - API
+ *     security:
+ *       - BearerAuth: []
+ *       - ApiKeyAuth: []
+ *     responses:
+ *       200:
+ *         description: Reset operation result
  *       500:
  *         description: Server error
  */

@@ -5566,6 +5566,31 @@
           }
         }
       }
+    },
+    "/api/failed/reset-all": {
+      "post": {
+        "summary": "Reset all permanently failed documents",
+        "tags": [
+          "OCR",
+          "API"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reset operation result"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
     }
   },
   "tags": [

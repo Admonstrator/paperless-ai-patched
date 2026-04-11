@@ -1754,8 +1754,8 @@ async getOrCreateDocumentType(name, options = {}) {
         console.log(`[DEBUG] Combined tags:`, combinedTags);
       }
 
-      if (currentDoc.correspondent && updates.correspondent) {
-        console.log('[DEBUG] Document already has a correspondent, keeping existing one:', currentDoc.correspondent);
+      if (updates.correspondent === null || updates.correspondent === undefined) {
+        // Keep existing correspondent when no new value is provided
         delete updates.correspondent;
       }
 

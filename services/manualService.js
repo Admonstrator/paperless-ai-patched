@@ -90,7 +90,7 @@ class ManualService {
             throw new Error('Invalid JSON response from API');
         }
         
-        if (!Array.isArray(parsedResponse.tags) || typeof parsedResponse.correspondent !== 'string') {
+        if (!Array.isArray(parsedResponse.tags) || (typeof parsedResponse.correspondent !== 'string' && parsedResponse.correspondent !== null)) {
             throw new Error('Invalid response structure');
         }
         
@@ -138,7 +138,7 @@ class ManualService {
             throw new Error('Invalid JSON response from API');
         }
         
-        if (!Array.isArray(parsedResponse.tags) || typeof parsedResponse.correspondent !== 'string') {
+        if (!Array.isArray(parsedResponse.tags) || (typeof parsedResponse.correspondent !== 'string' && parsedResponse.correspondent !== null)) {
             throw new Error('Invalid response structure');
         }
         
@@ -180,7 +180,7 @@ class ManualService {
             
             const parsedResponse = JSON.parse(jsonContent);
             
-            if (!Array.isArray(parsedResponse.tags) || typeof parsedResponse.correspondent !== 'string') {
+            if (!Array.isArray(parsedResponse.tags) || (typeof parsedResponse.correspondent !== 'string' && parsedResponse.correspondent !== null)) {
                 throw new Error('Invalid response structure');
             }
             

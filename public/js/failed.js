@@ -10,8 +10,10 @@
 
     const tableBody = document.getElementById('failedTableBody');
     const tableInfo = document.getElementById('failedTableInfo');
+    const resetAllBtn = document.getElementById('failedResetAllBtn');
     const prevBtn = document.getElementById('failedPrevPageBtn');
     const nextBtn = document.getElementById('failedNextPageBtn');
+    let resetAllInProgress = false;
 
     document.addEventListener('DOMContentLoaded', function () {
         loadQueue();
@@ -30,6 +32,12 @@
                 loadQueue();
             }
         });
+
+        if (resetAllBtn) {
+            resetAllBtn.addEventListener('click', function () {
+                resetAllFailedDocuments();
+            });
+        }
     });
 
     async function loadQueue() {
@@ -133,6 +141,34 @@
         }
     }
 
+    async function resetAllFailedDocuments() {
+        if (resetAllInProgress || totalRecords === 0) return;
+
+        const confirmed = window.confirm(`Reset all ${totalRecords} permanently failed document${totalRecords === 1 ? '' : 's'}?`);
+        if (!confirmed) return;
+
+        try {
+            resetAllInProgress = true;
+            if (resetAllBtn) resetAllBtn.disabled = true;
+
+            const resp = await fetch('/api/failed/reset-all', { method: 'POST' });
+            const data = await resp.json();
+
+            if (!resp.ok || !data.success) {
+                throw new Error(data.error || data.message || 'Reset all failed');
+            }
+
+            showToast(data.message || 'All failed documents reset successfully');
+            currentPage = 0;
+            await loadQueue();
+        } catch (error) {
+            showToast(error.message, 'error');
+        } finally {
+            resetAllInProgress = false;
+            updatePagination();
+        }
+    }
+
     function updatePagination() {
         const start = currentPage * pageSize + 1;
         const end = Math.min((currentPage + 1) * pageSize, totalRecords);
@@ -143,6 +179,7 @@
                 : 'No results';
         }
 
+        if (resetAllBtn) resetAllBtn.disabled = resetAllInProgress || totalRecords === 0;
         if (prevBtn) prevBtn.disabled = currentPage === 0;
         if (nextBtn) nextBtn.disabled = totalRecords === 0 || end >= totalRecords;
     }

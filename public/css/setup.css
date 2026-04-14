@@ -55,10 +55,13 @@ main {
     border: 1px solid color-mix(in srgb, var(--border-color) 78%, transparent);
     backdrop-filter: blur(6px);
     animation: setup-card-in 340ms ease-out;
+    transition: none;
 }
 
 .setup-card:hover {
     transform: none;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+                0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
 .setup-subtitle {

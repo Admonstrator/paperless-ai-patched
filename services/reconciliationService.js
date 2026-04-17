@@ -79,9 +79,15 @@ class ReconciliationService {
       console.debug('[RECONCILIATION] Starting reconciliation pass...');
 
       // --- Fetch valid document IDs from Paperless-ngx ---
+      // Use applyFilters: false so that IGNORE_TAGS / PROCESS_PREDEFINED_DOCUMENTS
+      // scan-scope settings do not affect the reconciliation reference set.
+      // Reconciliation must compare against the full Paperless-ngx document list,
+      // not the narrowed scan scope — otherwise documents excluded by IGNORE_TAGS
+      // would be wrongly treated as deleted and removed from history.
       let paperlessDocs;
       try {
-        paperlessDocs = await paperlessService.getAllDocuments();
+        console.debug('[RECONCILIATION] Fetching unfiltered document list (bypassing IGNORE_TAGS/TAGS scan filters)');
+        paperlessDocs = await paperlessService.getAllDocuments({ applyFilters: false });
       } catch (err) {
         console.error(`[RECONCILIATION] Failed to fetch documents from Paperless-ngx: ${err.message}`);
         return { skipped: true, removed: 0, durationMs: Date.now() - startMs };

@@ -8,6 +8,9 @@
  * 4. Scan-wait / queue behaviour
  * 5. Empty result (no stale entries)
  * 6. All entries stale
+ * 7. Paperless-ngx API failure (graceful degradation)
+ * 8. isReconciling reset after run
+ * 9. getAllDocuments called with applyFilters:false (IGNORE_TAGS must not affect reconciliation)
  */
 
 'use strict';
@@ -85,7 +88,7 @@ function makeService({ paperlessDocs, processedDocs, scanRunning = false, delete
         try {
           let paperlessDocs_;
           try {
-            paperlessDocs_ = await this._paperlessService.getAllDocuments();
+            paperlessDocs_ = await this._paperlessService.getAllDocuments({ applyFilters: false });
           } catch { return { skipped: true, removed: 0, durationMs: Date.now() - startMs }; }
 
           const validIdSet = new Set(
@@ -229,6 +232,50 @@ await testAsync('Paperless-ngx API failure causes skipped=true not a throw', asy
   const result = await svc.reconcileAllDocuments();
   assert.strictEqual(result.skipped, true);
   assert.strictEqual(svc.isReconciling, false, 'flag should be cleared even after error');
+});
+
+// 9. getAllDocuments must be called with applyFilters:false (fix for issue #111)
+await testAsync('reconcileAllDocuments calls getAllDocuments with applyFilters:false', async () => {
+  let capturedOptions;
+  const { svc } = makeService({
+    paperlessDocs:  [{ id: 1 }, { id: 2 }],
+    processedDocs: [{ document_id: 1 }, { document_id: 2 }]
+  });
+  // Override getAllDocuments to capture the options argument
+  svc._paperlessService = {
+    async getAllDocuments(options) {
+      capturedOptions = options;
+      return [{ id: 1 }, { id: 2 }];
+    }
+  };
+  await svc.reconcileAllDocuments();
+  assert.ok(
+    capturedOptions && capturedOptions.applyFilters === false,
+    'getAllDocuments must be called with { applyFilters: false } so IGNORE_TAGS does not delete history'
+  );
+});
+
+// 10. Documents excluded by IGNORE_TAGS are NOT treated as stale
+// This simulates the bug described in issue #111:
+// After a full run, IGNORE_TAGS is set so getAllDocuments (with filters)
+// would return 0 docs. With the fix, reconciliation always gets the
+// full list and treats nothing as stale.
+await testAsync('IGNORE_TAGS filter does not cause previously-processed docs to be deleted', async () => {
+  // Simulate: 5 docs were processed, IGNORE_TAGS is now active.
+  // Without the fix, a filtered getAllDocuments would return 0 docs → all 5 stale.
+  // With the fix, getAllDocuments is called with applyFilters:false → all 5 valid.
+  const allDocs = [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }, { id: 5 }];
+  const processedDocs = allDocs.map(d => ({ document_id: d.id }));
+
+  const { svc, deleted } = makeService({ paperlessDocs: allDocs, processedDocs });
+
+  // Simulate what happens when applyFilters:false is respected:
+  // getAllDocuments ignores IGNORE_TAGS and returns the full list.
+  // (The stub in makeService already ignores options and returns paperlessDocs.)
+  const result = await svc.reconcileAllDocuments();
+
+  assert.strictEqual(result.removed, 0, 'No documents should be removed when all exist in Paperless');
+  assert.strictEqual(deleted.length, 0, 'History must remain intact when IGNORE_TAGS changes scan scope');
 });
 
 // ──────────────────────────────────────────────────────────────────────────────

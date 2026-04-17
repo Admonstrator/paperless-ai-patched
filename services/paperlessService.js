@@ -980,12 +980,18 @@ class PaperlessService {
       return [];
     }
 
+    // When applyFilters is explicitly false (e.g. called by reconciliation),
+    // skip IGNORE_TAGS and PROCESS_PREDEFINED_DOCUMENTS/TAGS filters so that
+    // reconciliation always compares against the true Paperless-ngx document
+    // set rather than the currently-configured scan scope.
+    const applyFilters = options.applyFilters !== false;
+
     let documents = [];
     let page = 1;
     let hasMore = true;
-    const shouldFilterByTags = process.env.PROCESS_PREDEFINED_DOCUMENTS === 'yes';
-    const includeTagNames = this.parseTagList(process.env.TAGS);
-    const excludeTagNames = this.parseTagList(process.env.IGNORE_TAGS);
+    const shouldFilterByTags = applyFilters && process.env.PROCESS_PREDEFINED_DOCUMENTS === 'yes';
+    const includeTagNames = applyFilters ? this.parseTagList(process.env.TAGS) : [];
+    const excludeTagNames = applyFilters ? this.parseTagList(process.env.IGNORE_TAGS) : [];
     let includeTagIds = [];
     let excludeTagIds = [];
 

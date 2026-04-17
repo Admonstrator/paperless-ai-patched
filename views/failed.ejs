@@ -1,20 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" class="h-full" data-theme="light">
 <%- include('partials/shell/head-start', { pageTitle: 'Permanently Failed - Paperless-AI' }) %>
-    <style>
-        .reason-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            padding: 2px 10px;
-            border-radius: 9999px;
-            font-size: 0.72rem;
-            font-weight: 500;
-            background: #e5e7eb;
-            color: #374151;
-        }
-        [data-theme="dark"] .reason-badge { background: #374151; color: #e5e7eb; }
-    </style>
+    <link rel="stylesheet" href="/css/failed.css">
 <%- include('partials/shell/head-end') %>
 <%- include('partials/shell/body-open', {
     version: typeof version !== 'undefined' ? version : '',

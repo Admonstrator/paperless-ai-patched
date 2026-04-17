@@ -3,35 +3,7 @@
 <html lang="en" class="h-full" data-theme="light">
 <%- include('partials/shell/head-start', { pageTitle: 'Modified Documents - Paperless-AI' }) %>
     <link rel="stylesheet" href="/vendor/datatables/css/jquery.dataTables.min.css">
-    <style>
-        .dataTables_wrapper .dataTables_length, 
-        .dataTables_wrapper .dataTables_filter {
-            margin-bottom: 1rem;
-        }
-        .dataTables_wrapper .dataTables_info {
-            margin-top: 1rem;
-        }
-        .dataTables_wrapper .dataTables_paginate {
-            margin-top: 1rem;
-        }
-        .highlight-row {
-            background-color: rgba(59, 130, 246, 0.1);
-        }
-        .modal {
-            transition: opacity 0.3s ease-in-out;
-            opacity: 0;
-            pointer-events: none;
-        }
-
-        .modal.show {
-            opacity: 1;
-            pointer-events: auto;
-        }
-
-        .modal.hidden {
-            display: none;
-        }
-            </style>
+    <link rel="stylesheet" href="/css/history.css">
 <%- include('partials/shell/head-end') %>
 <%- include('partials/shell/body-open', {
     version: typeof version !== 'undefined' ? version : '',

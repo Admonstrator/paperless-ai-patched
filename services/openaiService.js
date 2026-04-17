@@ -95,7 +95,7 @@ class OpenAIService {
       try {
         customFieldsObj = JSON.parse(process.env.CUSTOM_FIELDS);
       } catch (error) {
-        console.error(`Failed to parse CUSTOM_FIELDS: ${error.message}`); console.debug(error);;
+        console.error(`Failed to parse CUSTOM_FIELDS: ${error.message}`); console.debug(error);
         customFieldsObj = { custom_fields: [] };
       }
 
@@ -226,7 +226,7 @@ class OpenAIService {
       try {
         parsedResponse = JSON.parse(jsonContent);
       } catch (error) {
-        console.error(`Failed to parse JSON response: ${error.message}`); console.debug(error);;
+        console.error(`Failed to parse JSON response: ${error.message}`); console.debug(error);
         // Check if the response indicates the content is too minimal or API can't process it
         if (jsonContent && (jsonContent.toLowerCase().includes("i'm sorry") ||
             jsonContent.toLowerCase().includes("i cannot") ||
@@ -379,7 +379,7 @@ class OpenAIService {
       try {
         parsedResponse = JSON.parse(jsonContent);
       } catch (error) {
-        console.error(`Failed to parse JSON response: ${error.message}`); console.debug(error);;
+        console.error(`Failed to parse JSON response: ${error.message}`); console.debug(error);
         // Check if the response indicates the content is too minimal or API can't process it
         if (jsonContent && (jsonContent.toLowerCase().includes("i'm sorry") ||
             jsonContent.toLowerCase().includes("i cannot") ||
@@ -457,7 +457,7 @@ class OpenAIService {
 
       return generatedText;
     } catch (error) {
-      console.error(`Error generating text with OpenAI: ${error.message}`); console.debug(error);;
+      console.error(`Error generating text with OpenAI: ${error.message}`); console.debug(error);
       throw error;
     }
   }
@@ -474,7 +474,7 @@ class OpenAIService {
       await this.client.models.list();
       return { status: 'ok', model: process.env.OPENAI_MODEL };
     } catch (error) {
-      console.error(`Error checking OpenAI status: ${error.message}`); console.debug(error);;
+      console.error(`Error checking OpenAI status: ${error.message}`); console.debug(error);
       return { status: 'error', error: error.message };
     }
   }

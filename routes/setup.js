@@ -4032,9 +4032,9 @@ router.get('/setup', async (req, res) => {
         savedConfig.PAPERLESS_API_URL = savedConfig.PAPERLESS_API_URL.replace(/\/api$/, '');
       }
 
-      savedConfig.TAGS = normalizeArray(savedConfig.TAGS);
-      savedConfig.IGNORE_TAGS = normalizeArray(savedConfig.IGNORE_TAGS);
-      savedConfig.PROMPT_TAGS = normalizeArray(savedConfig.PROMPT_TAGS);
+      if ('TAGS' in savedConfig) savedConfig.TAGS = normalizeArray(savedConfig.TAGS);
+      if ('IGNORE_TAGS' in savedConfig) savedConfig.IGNORE_TAGS = normalizeArray(savedConfig.IGNORE_TAGS);
+      if ('PROMPT_TAGS' in savedConfig) savedConfig.PROMPT_TAGS = normalizeArray(savedConfig.PROMPT_TAGS);
 
       config = { ...config, ...savedConfig };
     }
@@ -5589,9 +5589,9 @@ router.get('/settings', async (req, res) => {
       savedConfig.PAPERLESS_API_URL = savedConfig.PAPERLESS_API_URL.replace(/\/api$/, '');
     }
 
-    savedConfig.TAGS = normalizeArray(savedConfig.TAGS);
-    savedConfig.IGNORE_TAGS = normalizeArray(savedConfig.IGNORE_TAGS);
-    savedConfig.PROMPT_TAGS = normalizeArray(savedConfig.PROMPT_TAGS);
+    if ('TAGS' in savedConfig) savedConfig.TAGS = normalizeArray(savedConfig.TAGS);
+    if ('IGNORE_TAGS' in savedConfig) savedConfig.IGNORE_TAGS = normalizeArray(savedConfig.IGNORE_TAGS);
+    if ('PROMPT_TAGS' in savedConfig) savedConfig.PROMPT_TAGS = normalizeArray(savedConfig.PROMPT_TAGS);
 
     config = { ...config, ...savedConfig };
   }

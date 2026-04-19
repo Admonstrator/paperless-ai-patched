@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full" data-theme="light">
+<html lang="en" class="h-full<%= theme === 'dark' ? ' dark' : '' %>" data-theme="<%= theme || 'light' %>">
 <%- include('partials/shell/head-start', { pageTitle: 'Paperless-AI next Dashboard' }) %>
     <script src="/vendor/chart/chart.min.js"></script>
     <script src="/vendor/popper/popper.min.js"></script>

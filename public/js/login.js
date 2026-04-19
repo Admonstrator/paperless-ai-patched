@@ -9,10 +9,33 @@
     const backButton = form.querySelector('[data-back-button]');
     const submitButton = form.querySelector('[data-submit-button]');
     const mfaStepInput = document.getElementById('mfaStep');
+    const themeInput = document.getElementById('themePreference');
 
     const usernameInput = document.getElementById('username');
     const passwordInput = document.getElementById('password');
     const mfaTokenInput = document.getElementById('mfaToken');
+
+    function normalizeTheme(value) {
+        return value === 'dark' ? 'dark' : 'light';
+    }
+
+    function resolveThemePreference() {
+        if (typeof window.__paperlessAiGetTheme === 'function') {
+            return normalizeTheme(window.__paperlessAiGetTheme());
+        }
+
+        try {
+            return normalizeTheme(window.localStorage.getItem('theme'));
+        } catch (_error) {
+            return normalizeTheme(document.documentElement.getAttribute('data-theme'));
+        }
+    }
+
+    function syncThemePreference() {
+        if (themeInput) {
+            themeInput.value = resolveThemePreference();
+        }
+    }
 
     function isMfaActive() {
         return mfaStep && mfaStep.classList.contains('is-active');
@@ -67,6 +90,7 @@
     }
 
     form.addEventListener('submit', function () {
+        syncThemePreference();
         if (submitButton) {
             submitButton.classList.add('is-loading');
             submitButton.disabled = true;
@@ -84,5 +108,6 @@
         }
     });
 
+    syncThemePreference();
     setActiveStep(isMfaActive() ? 'mfa' : 'credentials');
 })();

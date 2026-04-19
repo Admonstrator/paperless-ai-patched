@@ -272,6 +272,9 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(cookieParser());
 
 app.use((req, res, next) => {
+  const themeCookie = req.cookies?.theme;
+  const resolvedTheme = themeCookie === 'dark' ? 'dark' : 'light';
+  res.locals.theme = resolvedTheme;
   res.locals.appVersion = config.PAPERLESS_AI_VERSION || 'unknown';
   res.locals.appCommitSha = process.env.PAPERLESS_AI_COMMIT_SHA || 'unknown';
   res.locals.appPaperlessNgxVersion = process.env.PAPERLESS_NGX_VERSION || 'unknown';

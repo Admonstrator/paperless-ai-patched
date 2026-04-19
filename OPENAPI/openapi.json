@@ -1094,6 +1094,11 @@
                     "type": "string",
                     "description": "One-time code entered in the MFA verification step",
                     "example": "123456"
+                  },
+                  "theme": {
+                    "type": "string",
+                    "description": "UI theme preference used to set a cookie for subsequent requests",
+                    "example": "dark"
                   }
                 }
               }

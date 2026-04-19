@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en" class="<%= theme === 'dark' ? 'dark' : '' %>" data-theme="<%= theme || 'light' %>">
 <head>
   <title>Paperless Assistant</title>
   <meta name="csrf-token" content="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">

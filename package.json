@@ -31,9 +31,6 @@
     "test:restriction-service": "node scripts/run-tests.js --test restriction-service",
     "test:updated-service": "node scripts/run-tests.js --test updated-service",
     "test:list": "node scripts/run-tests.js --list",
-    "docs:dev": "astro dev --host",
-    "docs:build": "astro build",
-    "docs:preview": "astro preview --host",
     "mfa:reset": "node scripts/mfa-reset.js"
   },
   "keywords": [
@@ -46,7 +43,6 @@
   "nodemonConfig": {
     "ignore": [
       "test/*",
-      "src/content/docs/*",
       "node_modules/*",
       ".git/*",
       "*.log",
@@ -97,14 +93,11 @@
     "tippy.js": "^6.3.7"
   },
   "devDependencies": {
-    "@astrojs/starlight": "^0.38.3",
     "@eslint/js": "^9.22.0",
-    "astro": "^6.1.5",
     "eslint": "^10.2.0",
     "eslint-config-prettier": "^10.1.1",
     "eslint-plugin-jsdoc": "^62.9.0",
     "globals": "^16.0.0",
-    "mermaid": "^11.14.0",
     "nodemon": "^3.1.9",
     "prettier": "^3.8.2"
   },

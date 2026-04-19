@@ -202,30 +202,26 @@ Upstream Status:
 
 ## Documentation Site
 
-This project uses **Astro + Starlight** for user-facing documentation, deployed to GitHub Pages via `.github/workflows/deploy-docs.yml`.
+The documentation has been moved to a separate repository:
+**https://github.com/admonstrator/paperless-ai-next-docs**
 
-### Structure
-- `src/content/docs/index.mdx` – Landing page (About + Features)
-- `src/content/docs/getting-started/` – Installation, First Setup, Configuration
-- `src/content/docs/features/` – Auto-tagging, AI Chat, Manual Tagging, OCR Queue, History
-- `src/content/docs/how-it-works.md` – Simple "How it works" overview
-- `src/content/docs/contributing.md` – Contribution guide
-- `src/content/docs/security.md` – Security policy and fixed vulnerabilities
-- `astro.config.mjs` – Starlight site config (sidebar, integrations, branding)
+It is built with Astro + Starlight and deployed to GitHub Pages at
+**https://paperless-ai-next.admon.me/**
 
 ### Fix Documentation Policy
 - Do not add new fix/changelog Markdown entries for routine fixes.
 - Use the commit message body as the single source of truth for fix documentation.
 
-### Local Preview
+### Local Preview (in the docs repo)
 ```bash
+cd ../paperless-ai-next-docs
 npm ci
-npm run docs:dev        # → http://localhost:4321
-npm run docs:build      # CI check
+npm run dev     # → http://localhost:4321
+npm run build   # CI check
 ```
 
 ### Single Source of Truth Rules
 - Commit message body = authoritative fix record
 - Root `README.md` = minimal (~80 lines): badges, Quick Start Docker Compose, link to Docs site
 
-> For comprehensive architecture details, API reference and configuration options see the live Docs site at `https://paperless-ai-next.admon.me/` or run `npm run docs:dev` locally.
+> For comprehensive architecture details, API reference and configuration options see the live Docs site at `https://paperless-ai-next.admon.me/` or clone `paperless-ai-next-docs` and run `npm run dev` locally.

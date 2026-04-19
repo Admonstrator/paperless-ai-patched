@@ -1,117 +1,9 @@
 <!-- views/ocr.ejs -->
 <!DOCTYPE html>
-<html lang="en" class="h-full" data-theme="light">
+<html lang="en" class="h-full<%= theme === 'dark' ? ' dark' : '' %>" data-theme="<%= theme || 'light' %>">
 <%- include('partials/shell/head-start', { pageTitle: 'OCR Queue - Paperless-AI' }) %>
     <link rel="stylesheet" href="/vendor/datatables/css/jquery.dataTables.min.css">
-    <style>
-        .status-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            padding: 2px 10px;
-            border-radius: 9999px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            white-space: nowrap;
-        }
-        .ocr-header-badges {
-            margin-right: 0.25rem;
-        }
-        .status-pending   { background: #fef3c7; color: #92400e; }
-        .status-processing{ background: #dbeafe; color: #1e40af; }
-        .status-done      { background: #d1fae5; color: #065f46; }
-        .status-failed    { background: #fee2e2; color: #991b1b; }
-        [data-theme="dark"] .status-pending   { background: #78350f; color: #fef3c7; }
-        [data-theme="dark"] .status-processing{ background: #1e3a5f; color: #bfdbfe; }
-        [data-theme="dark"] .status-done      { background: #064e3b; color: #a7f3d0; }
-        [data-theme="dark"] .status-failed    { background: #7f1d1d; color: #fecaca; }
-
-        .reason-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            padding: 2px 10px;
-            border-radius: 9999px;
-            font-size: 0.72rem;
-            font-weight: 500;
-            background: #e5e7eb;
-            color: #374151;
-        }
-        [data-theme="dark"] .reason-badge { background: #374151; color: #e5e7eb; }
-
-        #progressOverlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.5);
-            z-index: 9000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        #progressBox {
-            background: var(--card-bg);
-            border-radius: 12px;
-            padding: 2rem;
-            width: 560px;
-            max-width: 95vw;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-        }
-        #progressLog {
-            max-height: 260px;
-            overflow-y: auto;
-            font-family: monospace;
-            font-size: 0.8rem;
-            background: var(--input-bg, #f9fafb);
-            border: 1px solid var(--border-color, #e5e7eb);
-            border-radius: 6px;
-            padding: 0.75rem 1rem;
-        }
-        .log-line { margin-bottom: 4px; }
-        .log-download { color: #3b82f6; }
-        .log-ocr      { color: #8b5cf6; }
-        .log-writeback{ color: #f59e0b; }
-        .log-ai       { color: #10b981; }
-        .log-done     { color: #10b981; font-weight: bold; }
-        .log-error    { color: #ef4444; font-weight: bold; }
-        .log-progress, .log-start, .log-item_download,
-        .log-item_ocr, .log-item_writeback, .log-item_ai,
-        .log-item_done, .log-item_error { color: var(--text-color, #374151); }
-
-        .disabled-overlay {
-            text-align: center;
-            padding: 3rem 2rem;
-        }
-
-        .ocr-env-codeblock {
-            display: block;
-            width: min(100%, 34rem);
-            margin: 0 auto 1rem;
-            text-align: left;
-            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-            font-size: 0.82rem;
-            line-height: 1.45;
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-color);
-            border-radius: 0.75rem;
-            padding: 0.85rem 1rem;
-            overflow-x: auto;
-            white-space: pre;
-        }
-
-        @media (max-width: 640px) {
-            .disabled-overlay {
-                padding: 1.5rem 1rem;
-            }
-
-            .ocr-env-codeblock {
-                width: 100%;
-                font-size: 0.75rem;
-                line-height: 1.35;
-                padding: 0.7rem 0.75rem;
-            }
-        }
-
-    </style>
+    <link rel="stylesheet" href="/css/ocr.css">
 <%- include('partials/shell/head-end') %>
 <%- include('partials/shell/body-open', {
     version: typeof version !== 'undefined' ? version : '',
@@ -169,7 +61,7 @@ MISTRAL_OCR_MODEL=mistral-ocr-latest</pre>
                             <p id="manualDocSearchStatus" class="manual-search-status">Loading recent documents...</p>
                         </div>
                         <button id="addManualBtn"
-                                class="toolbar-btn toolbar-btn--primary"
+                                class="toolbar-btn toolbar-btn--primary toolbar-btn--sm"
                                 title="Add document manually to OCR queue">
                             <i class="fas fa-plus"></i> Add to Queue
                         </button>
@@ -177,7 +69,7 @@ MISTRAL_OCR_MODEL=mistral-ocr-latest</pre>
 
                     <div class="app-toolbar-controls">
                         <!-- Auto-analyze toggle -->
-                        <label class="flex items-center gap-2 cursor-pointer select-none text-sm">
+                        <label class="ocr-toolbar-toggle flex items-center gap-2 cursor-pointer select-none">
                             <div class="relative">
                                 <input type="checkbox" id="autoAnalyzeToggle" class="sr-only peer">
                                 <div class="w-10 h-5 bg-gray-300 peer-checked:bg-blue-500 rounded-full transition-colors"></div>
@@ -187,7 +79,7 @@ MISTRAL_OCR_MODEL=mistral-ocr-latest</pre>
                         </label>
 
                         <!-- Status filter -->
-                        <select id="statusFilter" class="app-toolbar-filter toolbar-input text-sm">
+                        <select id="statusFilter" class="app-toolbar-filter toolbar-input ocr-toolbar-filter">
                             <option value="">All statuses</option>
                             <option value="pending">Pending</option>
                             <option value="processing">Processing</option>
@@ -199,7 +91,7 @@ MISTRAL_OCR_MODEL=mistral-ocr-latest</pre>
                     <div class="app-toolbar-actions">
                         <!-- Process all button -->
                         <button id="processAllBtn"
-                                class="toolbar-btn toolbar-btn--success"
+                                class="toolbar-btn toolbar-btn--success toolbar-btn--sm"
                                 title="Process all pending items">
                             <i class="fas fa-play"></i> Process All Pending
                         </button>
@@ -252,7 +144,7 @@ MISTRAL_OCR_MODEL=mistral-ocr-latest</pre>
         <div id="progressBox">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="font-semibold text-lg" id="progressTitle">Processing…</h3>
-                <button id="progressCloseBtn" class="text-gray-400 hover:text-gray-600" style="display:none;">
+                <button id="progressCloseBtn" class="toolbar-btn toolbar-btn--ghost toolbar-btn--sm" style="display:none;" aria-label="Close progress overlay">
                     <i class="fas fa-times text-xl"></i>
                 </button>
             </div>
@@ -265,7 +157,7 @@ MISTRAL_OCR_MODEL=mistral-ocr-latest</pre>
             <div id="progressLog"></div>
 
             <div class="mt-4 flex justify-end">
-                <button id="progressDoneBtn" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors" style="display:none;">
+                <button id="progressDoneBtn" class="toolbar-btn toolbar-btn--primary" style="display:none;">
                     Close
                 </button>
             </div>

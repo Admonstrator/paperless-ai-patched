@@ -4,6 +4,8 @@
     <meta name="csrf-token" content="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
     <title><%= typeof pageTitle !== 'undefined' ? pageTitle : 'Paperless-AI next' %></title>
     <link rel="icon" type="image/webp" href="/favicon.webp">
+    <%- include('theme-init-head') %>
     <script src="/vendor/tailwind/tailwindcss-3.4.16.js"></script>
     <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
     <link rel="stylesheet" href="/css/dashboard.css">
+    <link rel="stylesheet" href="/css/darkmode.css">

@@ -1,37 +1,9 @@
 <!-- views/history.ejs -->
 <!DOCTYPE html>
-<html lang="en" class="h-full" data-theme="light">
+<html lang="en" class="h-full<%= theme === 'dark' ? ' dark' : '' %>" data-theme="<%= theme || 'light' %>">
 <%- include('partials/shell/head-start', { pageTitle: 'Modified Documents - Paperless-AI' }) %>
     <link rel="stylesheet" href="/vendor/datatables/css/jquery.dataTables.min.css">
-    <style>
-        .dataTables_wrapper .dataTables_length, 
-        .dataTables_wrapper .dataTables_filter {
-            margin-bottom: 1rem;
-        }
-        .dataTables_wrapper .dataTables_info {
-            margin-top: 1rem;
-        }
-        .dataTables_wrapper .dataTables_paginate {
-            margin-top: 1rem;
-        }
-        .highlight-row {
-            background-color: rgba(59, 130, 246, 0.1);
-        }
-        .modal {
-            transition: opacity 0.3s ease-in-out;
-            opacity: 0;
-            pointer-events: none;
-        }
-
-        .modal.show {
-            opacity: 1;
-            pointer-events: auto;
-        }
-
-        .modal.hidden {
-            display: none;
-        }
-            </style>
+    <link rel="stylesheet" href="/css/history.css">
 <%- include('partials/shell/head-end') %>
 <%- include('partials/shell/body-open', {
     version: typeof version !== 'undefined' ? version : '',
@@ -45,19 +17,19 @@
                         <h1 class="content-title">Modified Documents</h1>
                     </div>
                     <div class="content-header-actions toolbar-actions">
-                        <button id="selectAllDocsBtn" class="toolbar-btn toolbar-btn--success" title="Select all visible documents">
+                        <button id="selectAllDocsBtn" class="toolbar-btn toolbar-btn--success toolbar-btn--sm" title="Select all visible documents">
                             <i class="fas fa-check-square"></i> Select All
                         </button>
-                        <button id="deselectAllDocsBtn" class="toolbar-btn toolbar-btn--neutral" title="Deselect all visible documents">
+                        <button id="deselectAllDocsBtn" class="toolbar-btn toolbar-btn--neutral toolbar-btn--sm" title="Deselect all visible documents">
                             <i class="fas fa-square"></i> Deselect All
                         </button>
-                        <button id="forceReloadBtn" class="toolbar-btn toolbar-btn--primary" title="Force reload filters (bypass cache)">
+                        <button id="forceReloadBtn" class="toolbar-btn toolbar-btn--primary toolbar-btn--sm" title="Force reload filters (bypass cache)">
                             <i class="fas fa-sync-alt"></i> Force Reload
                         </button>
-                        <button id="resetSelectedBtn" class="toolbar-btn toolbar-btn--danger">
+                        <button id="resetSelectedBtn" class="toolbar-btn toolbar-btn--danger toolbar-btn--sm">
                             Reset Selected
                         </button>
-                        <button id="resetAllBtn" class="toolbar-btn toolbar-btn--danger">
+                        <button id="resetAllBtn" class="toolbar-btn toolbar-btn--danger toolbar-btn--sm">
                             Reset All
                         </button>
                         <span class="text-sm text-gray-500 italic ml-2">

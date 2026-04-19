@@ -72,6 +72,25 @@ function shouldUseSecureCookies(req) {
   return Boolean(req.secure || forwardedProto === 'https');
 }
 
+function normalizeThemePreference(value) {
+  return value === 'dark' ? 'dark' : 'light';
+}
+
+function resolveThemePreference(req) {
+  const rawTheme = req.body?.theme || req.cookies?.theme;
+  return normalizeThemePreference(rawTheme);
+}
+
+function setThemeCookie(res, req, theme) {
+  res.cookie('theme', normalizeThemePreference(theme), {
+    httpOnly: false,
+    secure: shouldUseSecureCookies(req),
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 365 * 24 * 60 * 60 * 1000
+  });
+}
+
 const SETTINGS_SECRET_FIELDS = [
   'PAPERLESS_API_TOKEN',
   'OPENAI_API_KEY',
@@ -765,6 +784,10 @@ router.get('/login', (req, res) => {
  *                 type: string
  *                 description: One-time code entered in the MFA verification step
  *                 example: "123456"
+ *               theme:
+ *                 type: string
+ *                 description: UI theme preference used to set a cookie for subsequent requests
+ *                 example: "dark"
  *     responses:
  *       302:
  *         description: Authentication successful and redirected to dashboard
@@ -786,6 +809,7 @@ router.get('/login', (req, res) => {
  */
 router.post('/login', loginLimiter, async (req, res) => {
   const { username, password, mfaStep, mfaToken } = req.body;
+  const themePreference = resolveThemePreference(req);
   const submittingMfaStep = mfaStep === '1' || Boolean(mfaToken);
 
   try {
@@ -856,6 +880,7 @@ router.post('/login', loginLimiter, async (req, res) => {
         path: '/',
         maxAge: 24 * 60 * 60 * 1000
       });
+      setThemeCookie(res, req, themePreference);
       res.clearCookie(MFA_CHALLENGE_COOKIE);
       return res.redirect('/dashboard');
     }
@@ -888,6 +913,7 @@ router.post('/login', loginLimiter, async (req, res) => {
           sameSite: 'lax',
           path: '/'
         });
+        setThemeCookie(res, req, themePreference);
 
         return renderLoginView(res, {
           mfaRequired: true,
@@ -910,6 +936,7 @@ router.post('/login', loginLimiter, async (req, res) => {
         path: '/',
         maxAge: 24 * 60 * 60 * 1000 
       });
+      setThemeCookie(res, req, themePreference);
 
       return res.redirect('/dashboard');
     }else{
@@ -4005,9 +4032,9 @@ router.get('/setup', async (req, res) => {
         savedConfig.PAPERLESS_API_URL = savedConfig.PAPERLESS_API_URL.replace(/\/api$/, '');
       }
 
-      savedConfig.TAGS = normalizeArray(savedConfig.TAGS);
-      savedConfig.IGNORE_TAGS = normalizeArray(savedConfig.IGNORE_TAGS);
-      savedConfig.PROMPT_TAGS = normalizeArray(savedConfig.PROMPT_TAGS);
+      if ('TAGS' in savedConfig) savedConfig.TAGS = normalizeArray(savedConfig.TAGS);
+      if ('IGNORE_TAGS' in savedConfig) savedConfig.IGNORE_TAGS = normalizeArray(savedConfig.IGNORE_TAGS);
+      if ('PROMPT_TAGS' in savedConfig) savedConfig.PROMPT_TAGS = normalizeArray(savedConfig.PROMPT_TAGS);
 
       config = { ...config, ...savedConfig };
     }
@@ -5562,9 +5589,9 @@ router.get('/settings', async (req, res) => {
       savedConfig.PAPERLESS_API_URL = savedConfig.PAPERLESS_API_URL.replace(/\/api$/, '');
     }
 
-    savedConfig.TAGS = normalizeArray(savedConfig.TAGS);
-    savedConfig.IGNORE_TAGS = normalizeArray(savedConfig.IGNORE_TAGS);
-    savedConfig.PROMPT_TAGS = normalizeArray(savedConfig.PROMPT_TAGS);
+    if ('TAGS' in savedConfig) savedConfig.TAGS = normalizeArray(savedConfig.TAGS);
+    if ('IGNORE_TAGS' in savedConfig) savedConfig.IGNORE_TAGS = normalizeArray(savedConfig.IGNORE_TAGS);
+    if ('PROMPT_TAGS' in savedConfig) savedConfig.PROMPT_TAGS = normalizeArray(savedConfig.PROMPT_TAGS);
 
     config = { ...config, ...savedConfig };
   }

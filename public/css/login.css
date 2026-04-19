@@ -58,10 +58,6 @@ main {
     animation: login-card-reveal 360ms ease-out;
 }
 
-.login-card:hover {
-    transform: none;
-}
-
 .login-kicker {
     display: inline-flex;
     align-items: center;

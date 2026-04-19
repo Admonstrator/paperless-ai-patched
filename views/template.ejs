@@ -1,13 +1,15 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full" data-theme="light">
+<html lang="en" class="h-full<%= theme === 'dark' ? ' dark' : '' %>" data-theme="<%= theme || 'light' %>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Paperless-AI next Dashboard</title>
     <link rel="icon" type="image/webp" href="/favicon.webp">
+    <%- include('partials/shell/theme-init-head') %>
     <script src="/vendor/tailwind/tailwindcss-3.4.16.js"></script>
     <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
     <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="/css/darkmode.css">
     <script src="/vendor/chart/chart.min.js"></script>
 </head>
 <body class="h-full">

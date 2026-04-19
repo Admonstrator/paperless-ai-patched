@@ -80,6 +80,10 @@
     --manual-pill-id-text: #1e293b;
     --manual-pill-date-bg: #dcfce7;
     --manual-pill-date-text: #166534;
+    --material-card-shadow-rest: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+        0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --material-card-shadow-hover: 0 8px 14px -10px rgba(15, 23, 42, 0.28),
+        0 6px 12px -10px rgba(15, 23, 42, 0.2);
 }
 
 :root[data-theme="dark"] {
@@ -106,6 +110,10 @@
     --manual-pill-id-text: #e2e8f0;
     --manual-pill-date-bg: #14532d;
     --manual-pill-date-text: #bbf7d0;
+    --material-card-shadow-rest: 0 4px 6px -1px rgba(0, 0, 0, 0.26),
+        0 2px 4px -1px rgba(0, 0, 0, 0.22);
+    --material-card-shadow-hover: 0 10px 16px -12px rgba(0, 0, 0, 0.52),
+        0 8px 14px -12px rgba(0, 0, 0, 0.4);
 }
 
 .manual-search-wrapper {
@@ -759,8 +767,7 @@
 
 /* Add hover states for cards in dark mode */
 [data-theme="dark"] .material-card:hover {
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3),
-                0 4px 6px -2px rgba(0, 0, 0, 0.15);
+    box-shadow: var(--material-card-shadow-hover);
 }
 
 /* Ensure text remains visible in dark mode */
@@ -1103,16 +1110,15 @@ body {
     background: var(--card-bg);
     border-radius: 12px;
     padding: 1.5rem;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
-                0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    box-shadow: var(--material-card-shadow-rest);
     border: 1px solid var(--border-color);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition: box-shadow 0.2s ease;
+    transform: translateZ(0);
 }
 
 .material-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
-                0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    box-shadow: var(--material-card-shadow-hover);
+    transform: none;
 }
 
 .card-title {

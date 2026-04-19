@@ -1,14 +1,16 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full" data-theme="light">
+<html lang="en" class="h-full<%= theme === 'dark' ? ' dark' : '' %>" data-theme="<%= theme || 'light' %>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
     <title>Initial Setup - Paperless-AI next</title>
     <link rel="icon" type="image/webp" href="/favicon.webp">
+    <%- include('partials/shell/theme-init-head') %>
     <script src="/vendor/tailwind/tailwindcss-3.4.16.js"></script>
     <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
     <link rel="stylesheet" href="/css/dashboard.css">
+    <link rel="stylesheet" href="/css/darkmode.css">
     <link rel="stylesheet" href="/css/setup.css">
     <script src="/vendor/sweetalert2/sweetalert2.all.min.js"></script>
 </head>

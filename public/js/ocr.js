@@ -147,20 +147,20 @@
             const addedDate = item.added_at ? new Date(item.added_at).toLocaleString() : '–';
 
             const processBtn = (item.status === 'pending' || item.status === 'failed')
-                ? `<button class="px-3 py-1 bg-blue-500 text-white rounded-lg text-xs hover:bg-blue-600 transition-colors process-btn" data-id="${item.document_id}" title="Send to Mistral OCR"><i class="fas fa-play"></i> Process</button>`
+                ? `<button class="toolbar-btn toolbar-btn--primary toolbar-btn--sm process-btn" data-id="${item.document_id}" title="Send to Mistral OCR"><i class="fas fa-play"></i> Process</button>`
                 : '';
 
             const hasOcrText = !!(item.ocr_text && String(item.ocr_text).trim());
             const analyzeBtn = (item.status === 'done' && hasOcrText)
-                ? `<button class="px-3 py-1 bg-violet-500 text-white rounded-lg text-xs hover:bg-violet-600 transition-colors analyze-btn" data-id="${item.document_id}" title="Start AI analysis using existing OCR text"><i class="fas fa-robot"></i> Analyze with AI now</button>`
+                ? `<button class="toolbar-btn toolbar-btn--warning toolbar-btn--sm analyze-btn" data-id="${item.document_id}" title="Start AI analysis using existing OCR text"><i class="fas fa-robot"></i> Analyze with AI now</button>`
                 : '';
 
             const infoBtn = hasOcrText
-                ? `<button class="px-3 py-1 bg-gray-100 text-gray-700 rounded-lg text-xs hover:bg-gray-200 transition-colors info-btn" data-id="${item.document_id}" title="Show OCR output"><i class="fas fa-circle-info"></i></button>`
+                ? `<button class="toolbar-btn toolbar-btn--ghost toolbar-btn--sm info-btn" data-id="${item.document_id}" title="Show OCR output" aria-label="Show OCR output"><i class="fas fa-circle-info"></i></button>`
                 : '';
 
             const removeBtn = item.status !== 'processing'
-                ? `<button class="px-3 py-1 bg-red-100 text-red-600 rounded-lg text-xs hover:bg-red-200 transition-colors remove-btn" data-id="${item.document_id}" title="Remove from queue"><i class="fas fa-trash"></i></button>`
+                ? `<button class="toolbar-btn toolbar-btn--danger toolbar-btn--sm remove-btn" data-id="${item.document_id}" title="Remove from queue" aria-label="Remove from queue"><i class="fas fa-trash"></i></button>`
                 : '';
 
             return `<tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border-b border-gray-100 dark:border-gray-700">
@@ -170,7 +170,7 @@
                 <td class="py-3 px-4">${statusHtml}</td>
                 <td class="py-3 px-4 text-sm text-gray-500 whitespace-nowrap">${addedDate}</td>
                 <td class="py-3 px-4">
-                    <div class="flex gap-2">
+                    <div class="flex flex-wrap items-center gap-2">
                         ${processBtn}
                         ${analyzeBtn}
                         ${infoBtn}

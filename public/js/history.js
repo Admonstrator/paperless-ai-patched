@@ -235,7 +235,7 @@ class HistoryManager {
                 {   // AI Info button column (replaces raw tag badges)
                     data: 'document_id',
                     render: (data) => {
-                        return `<button onclick="window.historyManager.openInfoModal(${data})" class="px-3 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors" title="Show AI analysis details">
+                        return `<button onclick="window.historyManager.openInfoModal(${data})" class="toolbar-btn toolbar-btn--warning toolbar-btn--sm" title="Show AI analysis details">
                             <i class="fa-solid fa-circle-info"></i>
                             <span class="hidden sm:inline ml-1">Details</span>
                         </button>`;
@@ -250,12 +250,12 @@ class HistoryManager {
                 {
                     data: null,
                     render: (data) => `
-                        <div class="flex space-x-2">
-                            <button type="button" class="history-view-btn px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors" data-link="${this._escapeHTML(String(data.link ?? ''))}">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button type="button" class="history-view-btn toolbar-btn toolbar-btn--primary toolbar-btn--sm" data-link="${this._escapeHTML(String(data.link ?? ''))}">
                                 <i class="fa-solid fa-eye"></i>
                                 <span class="hidden sm:inline ml-1">View</span>
                             </button>
-                            <button type="button" class="history-chat-btn px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors" data-docid="${this._escapeHTML(String(data.document_id ?? ''))}">
+                            <button type="button" class="history-chat-btn toolbar-btn toolbar-btn--neutral toolbar-btn--sm" data-docid="${this._escapeHTML(String(data.document_id ?? ''))}">
                                 <i class="fa-solid fa-comment"></i>
                                 <span class="hidden sm:inline ml-1">Chat</span>
                             </button>

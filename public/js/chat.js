@@ -15,7 +15,9 @@ marked.setOptions({
 
 // Load saved theme on page load
 document.addEventListener('DOMContentLoaded', () => {
-    const savedTheme = localStorage.getItem('theme') || 'light';
+    const savedTheme = typeof window.__paperlessAiGetTheme === 'function'
+        ? window.__paperlessAiGetTheme()
+        : 'light';
     setTheme(savedTheme);
     setupTextareaAutoResize();
 });
@@ -166,21 +168,20 @@ function escapeHtml(unsafe) {
 }
 
 function toggleTheme() {
-    const currentTheme = document.body.getAttribute('data-theme');
+    const currentTheme = document.documentElement.getAttribute('data-theme');
     const newTheme = currentTheme === 'light' ? 'dark' : 'light';
     setTheme(newTheme);
 }
 
 function setTheme(theme) {
-    const body = document.body;
+    const resolvedTheme = typeof window.__paperlessAiApplyTheme === 'function'
+        ? window.__paperlessAiApplyTheme(theme)
+        : theme;
     const lightIcon = document.getElementById('lightIcon');
     const darkIcon = document.getElementById('darkIcon');
-    
-    body.setAttribute('data-theme', theme);
-    localStorage.setItem('theme', theme);
-    
+
     if (lightIcon && darkIcon) {
-        if (theme === 'dark') {
+        if (resolvedTheme === 'dark') {
             lightIcon.classList.add('hidden');
             darkIcon.classList.remove('hidden');
         } else {

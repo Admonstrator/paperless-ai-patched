@@ -1,14 +1,16 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full" data-theme="light">
+<html lang="en" class="h-full<%= theme === 'dark' ? ' dark' : '' %>" data-theme="<%= theme || 'light' %>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
     <title>Login - Paperless-AI next</title>
     <link rel="icon" type="image/webp" href="/favicon.webp">
+    <%- include('partials/shell/theme-init-head') %>
     <script src="/vendor/tailwind/tailwindcss-3.4.16.js"></script>
     <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
     <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="/css/darkmode.css">
     <link rel="stylesheet" href="/css/login.css">
 </head>
 <body class="h-full bg-secondary login-page">
@@ -66,6 +68,7 @@
                     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                 <% } %>
                 <input type="hidden" name="mfaStep" id="mfaStep" value="<%= isMfaStep ? '1' : '0' %>">
+                <input type="hidden" name="theme" id="themePreference" value="<%= theme || 'light' %>">
 
                 <div class="login-step <%= isMfaStep ? '' : 'is-active' %>" data-step="credentials" aria-hidden="<%= isMfaStep ? 'true' : 'false' %>">
                     <div>

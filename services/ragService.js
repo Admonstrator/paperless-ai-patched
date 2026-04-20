@@ -14,7 +14,7 @@ class RagService {
     this.aiStatusTtlMs = Number(process.env.RAG_AI_STATUS_TTL_MS || 300000);
   }
 
-  async _getClient() {
+  _getClient() {
     return axios.create({ timeout: DEFAULT_TIMEOUT });
   }
 

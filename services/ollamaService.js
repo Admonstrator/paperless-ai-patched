@@ -165,12 +165,14 @@ class OllamaService {
             await this._logPromptAndResponse(prompt, parsedResponse);
 
             // Return results in consistent format
+            const promptTokens = response.prompt_eval_count || 0;
+            const completionTokens = response.eval_count || 0;
             return {
                 document: parsedResponse,
                 metrics: {
-                    promptTokens: 0,  // Ollama doesn't provide token metrics
-                    completionTokens: 0,
-                    totalTokens: 0
+                    promptTokens,
+                    completionTokens,
+                    totalTokens: promptTokens + completionTokens
                 },
                 truncated: false
             };
@@ -218,12 +220,14 @@ class OllamaService {
             }
 
             // Return results in consistent format
+            const promptTokens = response.prompt_eval_count || 0;
+            const completionTokens = response.eval_count || 0;
             return {
                 document: parsedResponse,
                 metrics: {
-                    promptTokens: 0,
-                    completionTokens: 0,
-                    totalTokens: 0
+                    promptTokens,
+                    completionTokens,
+                    totalTokens: promptTokens + completionTokens
                 },
                 truncated: false
             };

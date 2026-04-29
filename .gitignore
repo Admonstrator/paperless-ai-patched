@@ -31,18 +31,6 @@ dist/
 # Local development files
 .local/
 *.local.*
-/chromadb
-/chromadb/*
-rag_config.conf
-indexed.conf
-main.py.bak
-indexing_complete.flag
-__pycache__/
-main.pyy*
-rag.ejs.old
-surya_env/
-ocr_server.py
-surya_models.py
 .vscode/
 # AI context files (auto-generated)
 COPILOT.md

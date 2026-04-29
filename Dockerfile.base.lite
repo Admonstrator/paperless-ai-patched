@@ -1,4 +1,4 @@
-# Lite base image without RAG Python dependencies
+# Lite base image
 FROM node:24-slim
 
 WORKDIR /app

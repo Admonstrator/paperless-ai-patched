@@ -11,7 +11,6 @@ const AIServiceFactory = require('../services/aiServiceFactory');
 const configFile = require('../config/config.js');
 const ChatService = require('../services/chatService.js');
 const documentsService = require('../services/documentsService.js');
-const RAGService = require('../services/ragService.js');
 const fs = require('fs').promises;
 const path = require('path');
 const crypto = require('crypto');
@@ -29,29 +28,13 @@ const config = require('../config/config.js');
 require('dotenv').config({ path: '../data/.env' });
 
 function isChatEnabled() {
-  const ragEnabled = process.env.RAG_SERVICE_ENABLED === 'true';
-  return ragEnabled;
+  return true;
 }
 
 function getCookieSecureMode() {
   return typeof config.getCookieSecureMode === 'function'
     ? config.getCookieSecureMode()
     : String(process.env.COOKIE_SECURE_MODE || 'auto').trim().toLowerCase();
-}
-
-async function triggerPythonRestartAfterConfigSave(reason) {
-  const ragEnabled = String(process.env.RAG_SERVICE_ENABLED || '').trim().toLowerCase() === 'true';
-  if (!ragEnabled) {
-    return { requested: false, reason: 'rag_disabled' };
-  }
-
-  try {
-    const result = await RAGService.restartPythonService({ reason, delaySeconds: 0.75 });
-    return { requested: true, result };
-  } catch (error) {
-    console.warn('[WARN] Failed to request Python RAG restart after config save:', error.message || error);
-    return { requested: false, reason: 'request_failed', error: error.message || String(error) };
-  }
 }
 
 function shouldUseSecureCookies(req) {
@@ -1091,7 +1074,6 @@ router.get('/playground', protectApiRoute, async (req, res) => {
   try {
     res.render('playground', {
       version: configFile.PAPERLESS_AI_VERSION || ' ',
-      ragEnabled: process.env.RAG_SERVICE_ENABLED === 'true',
       chatEnabled: isChatEnabled()
     });
   } catch (error) {
@@ -1318,7 +1300,7 @@ router.get('/chat', async (req, res) => {
       }
 
       const version = configFile.PAPERLESS_AI_VERSION || ' ';
-      res.render('chat', { documents, open, version, ragEnabled: process.env.RAG_SERVICE_ENABLED === 'true', chatEnabled: isChatEnabled() });
+      res.render('chat', { documents, open, version, chatEnabled: isChatEnabled() });
   } catch (error) {
     console.error('[ERRO] loading documents:', error);
     res.status(500).send('Error loading documents');
@@ -1776,7 +1758,6 @@ router.get('/history', async (req, res) => {
     // This allows the page to render immediately
     res.render('history', {
       version: configFile.PAPERLESS_AI_VERSION,
-      ragEnabled: process.env.RAG_SERVICE_ENABLED === 'true',
       chatEnabled: isChatEnabled(),
       filters: {
         allTags: [],  // Will be loaded by JavaScript via /api/history/load-progress
@@ -2750,50 +2731,6 @@ router.post('/api/settings/reset-local-overrides', isAuthenticated, cacheClearLi
     res.status(500).json({
       success: false,
       error: 'Failed to reset local runtime overrides'
-    });
-  }
-});
-
-/**
- * @swagger
- * /api/settings/rag-force-model-redownload:
- *   post:
- *     summary: Force RAG model re-download
- *     description: Triggers re-download of RAG models in the background.
- *     tags:
- *       - Settings
- *       - RAG
- *     security:
- *       - BearerAuth: []
- *       - ApiKeyAuth: []
- *     responses:
- *       200:
- *         description: Re-download trigger accepted
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 message:
- *                   type: string
- *       500:
- *         description: Server error
- */
-
-router.post('/api/settings/rag-force-model-redownload', isAuthenticated, cacheClearLimiter, async (req, res) => {
-  try {
-    const result = await RAGService.redownloadModels();
-    res.json({
-      success: true,
-      message: result?.message || 'Model re-download has been started in the background.'
-    });
-  } catch (error) {
-    console.error('[ERROR] triggering RAG model re-download:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to trigger model re-download'
     });
   }
 });
@@ -4553,8 +4490,6 @@ router.post('/api/setup/complete', express.json(), async (req, res) => {
       setupMfaChallenges.delete(mfaChallengeId);
     }
 
-    await triggerPythonRestartAfterConfigSave('setup_complete');
-
     const envPreview = toEnvPreviewLines(finalConfig);
 
     // Enforce a fresh login after setup completion.
@@ -4742,7 +4677,6 @@ router.get('/manual', async (req, res) => {
     error: null,
     success: null,
     version,
-    ragEnabled: process.env.RAG_SERVICE_ENABLED === 'true',
     chatEnabled: isChatEnabled(),
     paperlessUrl: process.env.PAPERLESS_API_URL,
     paperlessToken: process.env.PAPERLESS_API_TOKEN,
@@ -5241,7 +5175,6 @@ router.get('/dashboard', async (req, res) => {
     }, 
     version,
     paperlessUrl,
-    ragEnabled: process.env.RAG_SERVICE_ENABLED === 'true',
     chatEnabled: isChatEnabled()
   });
 });
@@ -5542,8 +5475,6 @@ router.get('/settings', async (req, res) => {
     ACTIVATE_CUSTOM_FIELDS: process.env.ACTIVATE_CUSTOM_FIELDS || 'yes',
     CUSTOM_FIELDS: process.env.CUSTOM_FIELDS || '{"custom_fields":[]}',
     DISABLE_AUTOMATIC_PROCESSING: process.env.DISABLE_AUTOMATIC_PROCESSING || 'no',
-    RAG_SERVICE_ENABLED: process.env.RAG_SERVICE_ENABLED || 'true',
-    RAG_SERVICE_URL: process.env.RAG_SERVICE_URL || 'http://localhost:8000',
     MISTRAL_OCR_ENABLED: process.env.MISTRAL_OCR_ENABLED || 'no',
     MISTRAL_API_KEY: process.env.MISTRAL_API_KEY || '',
     MISTRAL_OCR_MODEL: process.env.MISTRAL_OCR_MODEL || 'mistral-ocr-latest',
@@ -5617,7 +5548,6 @@ router.get('/settings', async (req, res) => {
 
   res.render('settings', { 
     version,
-    ragEnabled: process.env.RAG_SERVICE_ENABLED === 'true',
     chatEnabled: isChatEnabled(),
     config,
     configuredSecrets,
@@ -6806,8 +6736,6 @@ router.post('/settings', express.json(), async (req, res) => {
       mistralOcrEnabled,
       mistralApiKey,
       mistralOcrModel,
-      ragServiceEnabled,
-      ragServiceUrl,
       globalRateLimitWindowMs,
       globalRateLimitMax,
       trustProxy,
@@ -6877,8 +6805,6 @@ router.post('/settings', express.json(), async (req, res) => {
       EXTERNAL_API_TRANSFORM: process.env.EXTERNAL_API_TRANSFORM || '',
       EXTERNAL_API_ALLOW_PRIVATE_IPS: process.env.EXTERNAL_API_ALLOW_PRIVATE_IPS || 'no',
       TAG_CACHE_TTL_SECONDS: process.env.TAG_CACHE_TTL_SECONDS || '300',
-      RAG_SERVICE_ENABLED: process.env.RAG_SERVICE_ENABLED || 'true',
-      RAG_SERVICE_URL: process.env.RAG_SERVICE_URL || 'http://localhost:8000',
       MISTRAL_OCR_ENABLED: process.env.MISTRAL_OCR_ENABLED || 'no',
       MISTRAL_API_KEY: process.env.MISTRAL_API_KEY || '',
       MISTRAL_OCR_MODEL: process.env.MISTRAL_OCR_MODEL || 'mistral-ocr-latest',
@@ -7114,8 +7040,6 @@ router.post('/settings', express.json(), async (req, res) => {
       if (mistralOcrEnabled) updatedConfig.MISTRAL_OCR_ENABLED = mistralOcrEnabled;
       if (hasMistralApiKeyInput) updatedConfig.MISTRAL_API_KEY = effectiveMistralApiKey;
       if (mistralOcrModel) updatedConfig.MISTRAL_OCR_MODEL = mistralOcrModel;
-      if (ragServiceEnabled) updatedConfig.RAG_SERVICE_ENABLED = ragServiceEnabled;
-      if (ragServiceUrl) updatedConfig.RAG_SERVICE_URL = ragServiceUrl;
       if (globalRateLimitWindowMs) updatedConfig.GLOBAL_RATE_LIMIT_WINDOW_MS = globalRateLimitWindowMs;
       if (globalRateLimitMax) updatedConfig.GLOBAL_RATE_LIMIT_MAX = globalRateLimitMax;
       if (typeof trustProxy === 'string') updatedConfig.TRUST_PROXY = trustProxy.trim();
@@ -7174,8 +7098,6 @@ router.post('/settings', express.json(), async (req, res) => {
     } catch (error) {
       console.log('[ERROR] Error creating custom fields:', error);
     }
-
-    await triggerPythonRestartAfterConfigSave('settings_save');
 
     res.json({ 
       success: true,
@@ -7290,39 +7212,6 @@ router.get('/api/processing-status', isAuthenticated, async (req, res) => {
   }
 });
 
-router.get('/api/rag-test', async (req, res) => {
-  RAGService.initialize();
-  try { 
-    if(await RAGService.sendDocumentsToRAGService()){
-      res.status(200).json({ success: true });
-    }else{
-      res.status(500).json({ success: false });
-    }    
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch processing status' });
-  }
-}
-);
-
-/**
- * @swagger
- * /api/rag-test:
- *   get:
- *     summary: Trigger RAG diagnostic run
- *     description: Initializes RAG and attempts to send documents to the RAG service.
- *     tags:
- *       - RAG
- *       - API
- *     security:
- *       - BearerAuth: []
- *       - ApiKeyAuth: []
- *     responses:
- *       200:
- *         description: RAG diagnostic completed successfully
- *       500:
- *         description: RAG diagnostic failed
- */
-
 router.get('/dashboard/doc/:id', async (req, res) => {
   const docId = req.params.id;
   if (!docId) {
@@ -7376,7 +7265,6 @@ router.get('/ocr', protectApiRoute, async (req, res) => {
   try {
     return res.render('ocr', {
       version: configFile.PAPERLESS_AI_VERSION || ' ',
-      ragEnabled: process.env.RAG_SERVICE_ENABLED === 'true',
       chatEnabled: isChatEnabled(),
       ocrEnabled: configFile.mistralOcr?.enabled === 'yes'
     });
@@ -7413,7 +7301,6 @@ router.get('/failed', protectApiRoute, async (req, res) => {
   try {
     return res.render('failed', {
       version: configFile.PAPERLESS_AI_VERSION || ' ',
-      ragEnabled: process.env.RAG_SERVICE_ENABLED === 'true',
       chatEnabled: isChatEnabled()
     });
   } catch (error) {
@@ -7469,7 +7356,6 @@ router.get('/about', protectApiRoute, async (req, res) => {
       platform: `${process.platform} (${process.arch})`,
       nodeEnv: process.env.NODE_ENV || 'production',
       aiProvider: configFile.aiProvider || process.env.AI_PROVIDER || 'openai',
-      ragEnabled: process.env.RAG_SERVICE_ENABLED === 'true',
       chatEnabled: isChatEnabled(),
       ocrEnabled: configFile.mistralOcr?.enabled === 'yes',
       serverTimeUtc: new Date().toISOString(),
@@ -7502,7 +7388,6 @@ router.get('/about', protectApiRoute, async (req, res) => {
 
     return res.render('about', {
       version: configFile.PAPERLESS_AI_VERSION || ' ',
-      ragEnabled: process.env.RAG_SERVICE_ENABLED === 'true',
       chatEnabled: isChatEnabled(),
       supportInfo
     });
@@ -7510,7 +7395,6 @@ router.get('/about', protectApiRoute, async (req, res) => {
     console.error('[ERROR] About page:', error);
     return res.status(500).render('about', {
       version: configFile.PAPERLESS_AI_VERSION || ' ',
-      ragEnabled: process.env.RAG_SERVICE_ENABLED === 'true',
       chatEnabled: isChatEnabled(),
       supportInfo: {
         appVersion: configFile.PAPERLESS_AI_VERSION || 'unknown',
@@ -7520,7 +7404,6 @@ router.get('/about', protectApiRoute, async (req, res) => {
         platform: `${process.platform} (${process.arch})`,
         nodeEnv: process.env.NODE_ENV || 'production',
         aiProvider: configFile.aiProvider || process.env.AI_PROVIDER || 'openai',
-        ragEnabled: process.env.RAG_SERVICE_ENABLED === 'true',
         chatEnabled: isChatEnabled(),
         ocrEnabled: configFile.mistralOcr?.enabled === 'yes',
         serverTimeUtc: new Date().toISOString(),

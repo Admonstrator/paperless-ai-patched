@@ -5,10 +5,9 @@ Community fork of [clusterzx/paperless-ai](https://github.com/clusterzx/paperles
 
 ## Architecture
 
-### Dual Runtime System
+### Runtime System
 - **Node.js (Express)**: Main API server, document processing, UI (`server.js`)
-- **Python (FastAPI)**: Optional RAG service for semantic search (`main.py`)
-- **Startup**: `start-services.sh` launches both with PM2 + uvicorn
+- **Startup**: `start-services.sh` launches Node.js with PM2
 - **Database**: better-sqlite3 with WAL mode (`models/document.js`)
 
 ### Service Layer Pattern
@@ -52,13 +51,6 @@ All config loads from `data/.env` via `config/config.js`. Key patterns:
 
 **Key Files**: `server.js` lines 150-400, `services/paperlessService.js`
 
-### RAG Service Integration
-- Python service runs on port 8000 (configurable via `RAG_SERVICE_URL`)
-- Node.js proxies requests through `services/ragService.js`
-- Embeddings: sentence-transformers with ChromaDB vector store
-- Hybrid search: BM25 (keyword) + semantic embeddings, weighted 30/70
-- **Important**: RAG endpoints check `RAG_SERVICE_ENABLED` before proxying
-
 ### Authentication & Security
 - JWT stored in cookies (`jwt` cookie name)
 - API key support via `x-api-key` header
@@ -80,10 +72,6 @@ Tag caching with 5-minute TTL reduces Paperless-ngx API calls by ~95%.
 ```bash
 # Local development (auto-reload)
 npm run test  # Uses nodemon
-
-# Python RAG service
-source venv/bin/activate
-python main.py --host 127.0.0.1 --port 8000
 
 # Production (Docker uses this)
 pm2 start ecosystem.config.js
@@ -139,8 +127,7 @@ res.flush();
 ### Common Issues
 1. **Infinite retry loops**: Check `retryTracker` Map, max 3 attempts (PR-772)
 2. **Slow history page**: Verify SQL pagination is used, not `getHistoryDocuments()` (PERF-001)
-3. **RAG not working**: Check `RAG_SERVICE_ENABLED=true` and Python service is running
-4. **Dark mode images**: Add `class="no-invert"` to images that shouldn't be inverted
+3. **Dark mode images**: Add `class="no-invert"` to images that shouldn't be inverted
 
 ## Fix Workflow
 

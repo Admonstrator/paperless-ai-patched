@@ -844,58 +844,6 @@ function initializeFormHandlers() {
         });
     }
 
-    const forceModelRedownloadBtn = document.getElementById('forceModelRedownloadBtn');
-    if (forceModelRedownloadBtn) {
-        forceModelRedownloadBtn.addEventListener('click', async () => {
-            const confirmResult = await Swal.fire({
-                icon: 'warning',
-                title: 'Force model re-download?',
-                text: 'This clears the local model cache and re-downloads RAG models. Existing requests may be delayed while models are reinitialized.',
-                showCancelButton: true,
-                confirmButtonColor: '#d97706',
-                cancelButtonColor: '#3085d6',
-                confirmButtonText: 'Yes, re-download models'
-            });
-
-            if (!confirmResult.isConfirmed) {
-                return;
-            }
-
-            const originalHtml = forceModelRedownloadBtn.innerHTML;
-            try {
-                forceModelRedownloadBtn.disabled = true;
-                forceModelRedownloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Starting...';
-
-                const response = await fetch('/api/settings/rag-force-model-redownload', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                });
-
-                const result = await response.json();
-                if (!result.success) {
-                    throw new Error(result.error || 'Failed to start model re-download');
-                }
-
-                await Swal.fire({
-                    icon: 'success',
-                    title: 'Model re-download started',
-                    text: result.message || 'RAG model refresh is running in the background. You can monitor progress in the RAG page status panel.'
-                });
-            } catch (error) {
-                await Swal.fire({
-                    icon: 'error',
-                    title: 'Action failed',
-                    text: error.message
-                });
-            } finally {
-                forceModelRedownloadBtn.disabled = false;
-                forceModelRedownloadBtn.innerHTML = originalHtml;
-            }
-        });
-    }
-
     // Force Reconcile Button Handler
     const forceReconcileBtn = document.getElementById('forceReconcileBtn');
     if (forceReconcileBtn) {
@@ -1539,8 +1487,6 @@ function initializeRuntimeOverridePills() {
         { selector: '#mistralApiKey', envKey: 'MISTRAL_API_KEY' },
         { selector: '#mistralOcrModel', envKey: 'MISTRAL_OCR_MODEL' },
         { selector: '#tagCacheTTL', envKey: 'TAG_CACHE_TTL_SECONDS' },
-        { selector: '#ragServiceEnabled', envKey: 'RAG_SERVICE_ENABLED' },
-        { selector: '#ragServiceUrl', envKey: 'RAG_SERVICE_URL' },
         { selector: '#globalRateLimitWindowMs', envKey: 'GLOBAL_RATE_LIMIT_WINDOW_MS' },
         { selector: '#globalRateLimitMax', envKey: 'GLOBAL_RATE_LIMIT_MAX' },
         { selector: '#trustProxy', envKey: 'TRUST_PROXY' },

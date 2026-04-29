@@ -17,11 +17,9 @@ function run() {
   console.log('\n=== UI XSS Hardening Checks ===');
 
   const chatPath = path.join(process.cwd(), 'public', 'js', 'chat.js');
-  const ragPath = path.join(process.cwd(), 'views', 'partials', 'scripts', 'rag-scripts.ejs');
   const settingsPath = path.join(process.cwd(), 'views', 'settings.ejs');
 
   const chatContent = fs.readFileSync(chatPath, 'utf8');
-  const ragContent = fs.readFileSync(ragPath, 'utf8');
   const settingsContent = fs.readFileSync(settingsPath, 'utf8');
 
   assertIncludes(
@@ -33,22 +31,6 @@ function run() {
     chatContent,
     'const safeMessageContent = escapeHtml(String(messageContent ?? \'\'));',
     'Chat non-stream path must escape assistant message before marked.parse()'
-  );
-
-  assertIncludes(
-    ragContent,
-    'const safeMessage = escapeHtml(message);',
-    'RAG assistant answer must be escaped before HTML formatting'
-  );
-  assertIncludes(
-    ragContent,
-    'const safeLabel = escapeHtml(label);',
-    'RAG status badge label must be escaped'
-  );
-  assertIncludes(
-    ragContent,
-    'const safeValue = escapeHtml(value);',
-    'RAG status badge value must be escaped'
   );
 
   assertNotIncludes(

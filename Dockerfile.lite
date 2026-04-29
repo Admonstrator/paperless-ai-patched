@@ -33,10 +33,9 @@ EXPOSE ${PAPERLESS_AI_PORT:-3000}
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:${PAPERLESS_AI_PORT:-3000}/health || exit 1
 
-# Set production environment and disable RAG
+# Set production environment
 ENV NODE_ENV=production \
     LOG_LEVEL=info \
-    RAG_SERVICE_ENABLED=false \
     PAPERLESS_AI_COMMIT_SHA=${PAPERLESS_AI_COMMIT_SHA}
 
 LABEL org.opencontainers.image.revision=${PAPERLESS_AI_COMMIT_SHA}

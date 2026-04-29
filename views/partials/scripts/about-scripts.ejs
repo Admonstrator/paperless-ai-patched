@@ -65,7 +65,6 @@
 			browser: browserInfo,
 			config_notes: redactSecrets([
 				`AI_PROVIDER=${supportInfo.aiProvider || 'unknown'}`,
-				`RAG_SERVICE_ENABLED=${supportInfo.ragEnabled ? 'true' : 'false'}`,
 				`MISTRAL_OCR_ENABLED=${supportInfo.ocrEnabled ? 'yes' : 'no'}`,
 				`PAPERLESS_API_URL=${supportInfo.paperlessApiUrl || 'unknown'}`,
 				`OLLAMA_API_URL=${supportInfo.ollamaApiUrl || 'unknown'}`,
@@ -117,7 +116,6 @@
 				`Platform: ${supportInfo.platform || 'unknown'}`,
 				`Environment: ${supportInfo.nodeEnv || 'unknown'}`,
 				`AI Provider: ${supportInfo.aiProvider || 'unknown'}`,
-				`RAG Enabled: ${supportInfo.ragEnabled ? 'yes' : 'no'}`,
 				`Chat Enabled: ${supportInfo.chatEnabled ? 'yes' : 'no'}`,
 				`Mistral OCR Enabled: ${supportInfo.ocrEnabled ? 'yes' : 'no'}`,
 				`Paperless API URL: ${redactSecrets(supportInfo.paperlessApiUrl || 'unknown')}`,

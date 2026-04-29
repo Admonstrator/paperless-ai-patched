@@ -113,35 +113,18 @@ volumes:
   data:
 ```
 
-**Full version** – AI tagging + RAG semantic search (~1.5–2 GB):
-
-```yaml
-services:
-  paperless-ai-next:
-    image: admonstrator/paperless-ai-next:latest-full
-    container_name: paperless-ai-next
-    restart: unless-stopped
-    ports:
-      - "3000:3000"
-    volumes:
-      - data:/app/data
-
-volumes:
-  data:
-```
-
 Then open [http://localhost:3000](http://localhost:3000) to complete setup.
 
 ### Container Images
 
-| Image Tag                                    | Size        | RAG |
-| -------------------------------------------- | ----------- | --- |
-| `admonstrator/paperless-ai-next:latest-lite` | ~500–700 MB | ❌   |
-| `admonstrator/paperless-ai-next:latest-full` | ~1.5–2 GB   | ✅   |
+| Image Tag                                    | Size        |
+| -------------------------------------------- | ----------- |
+| `admonstrator/paperless-ai-next:latest`      | ~500–700 MB |
+| `admonstrator/paperless-ai-next:latest-lite` | ~500–700 MB |
 
 **Docker Hub:** [admonstrator/paperless-ai-next](https://hub.docker.com/r/admonstrator/paperless-ai-next)
 
-Versioned release tags use the format `vYYYY.MM.##` (example: `v2026.03.01`, plus `-lite`/`-full` variants).
+Versioned release tags use the format `vYYYY.MM.##` (example: `v2026.03.01`).
 
 ---
 

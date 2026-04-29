@@ -284,7 +284,6 @@
                 browser: browserInfo,
                 config_notes: redactSecrets([
                     `AI_PROVIDER=<%= appAiProvider || "unknown" %>`,
-                    `RAG_SERVICE_ENABLED=<%= appRagEnabled ? "true" : "false" %>`,
                     `MISTRAL_OCR_ENABLED=<%= appOcrEnabled ? "yes" : "no" %>`,
                     `PAPERLESS_API_URL=<%= appPaperlessApiUrl || "unknown" %>`,
                     `OLLAMA_API_URL=<%= appOllamaApiUrl || "unknown" %>`,

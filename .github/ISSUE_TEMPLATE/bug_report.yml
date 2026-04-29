@@ -132,7 +132,6 @@ body:
     description: Share relevant settings only (no secrets).
     placeholder: |
       AI_PROVIDER=openai
-      RAG_SERVICE_ENABLED=true
       MISTRAL_OCR_ENABLED=no
 
 - type: checkboxes

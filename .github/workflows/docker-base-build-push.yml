@@ -17,12 +17,7 @@ on:
         default: true
         type: boolean
       build_lite_base:
-        description: 'Build/push lite base image'
-        required: false
-        default: true
-        type: boolean
-      build_full_base:
-        description: 'Build/push full base image'
+        description: 'Build/push base image'
         required: false
         default: true
         type: boolean
@@ -70,50 +65,10 @@ jobs:
           cache-to: type=registry,ref=${{ env.DOCKERHUB_REPO }}:buildcache-base-lite,mode=min
         timeout-minutes: 60
 
-  build-base-full:
-    name: Build and Push Full Base Image
-    runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'schedule' || inputs.build_full_base }}
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v4
-        with:
-          username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_TOKEN }}
-
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v6
-        with:
-          images: ${{ env.DOCKERHUB_REPO }}
-          tags: |
-            type=raw,value=latest-base-full,enable=${{ inputs.also_tag_latest || github.event_name == 'schedule' }}
-
-      - name: Build and Push Full Base Docker image
-        id: push
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          file: ./Dockerfile.base.full
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          platforms: ${{ inputs.build_arm64 && 'linux/amd64,linux/arm64' || 'linux/amd64' }}
-          cache-from: type=registry,ref=${{ env.DOCKERHUB_REPO }}:buildcache-base-full
-          cache-to: type=registry,ref=${{ env.DOCKERHUB_REPO }}:buildcache-base-full,mode=min
-        timeout-minutes: 120
-
   summary:
     name: Base Build Summary
     runs-on: ubuntu-latest
-    needs: [build-base-lite, build-base-full]
+    needs: [build-base-lite]
     if: always()
 
     steps:
@@ -127,4 +82,3 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "#### Base tags" >> $GITHUB_STEP_SUMMARY
           echo "- \`${{ env.DOCKERHUB_REPO }}:latest-base-lite\`" >> $GITHUB_STEP_SUMMARY
-          echo "- \`${{ env.DOCKERHUB_REPO }}:latest-base-full\`" >> $GITHUB_STEP_SUMMARY

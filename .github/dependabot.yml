@@ -54,48 +54,6 @@ updates:
     update-types:
     - "version-update:semver-major"
 
-- package-ecosystem: "pip"
-  directory: "/"
-  target-branch: "main"
-  schedule:
-    interval: "weekly"
-    day: "monday"
-    time: "05:10"
-    timezone: "Europe/Berlin"
-  open-pull-requests-limit: 5
-  labels:
-  - "dependencies"
-  - "python"
-  groups:
-    ai-rag-stack:
-      patterns:
-      - "torch"
-      - "sentence-transformers"
-      - "chromadb"
-      - "rank-bm25"
-      - "nltk"
-    api-core:
-      patterns:
-      - "fastapi"
-      - "uvicorn"
-      - "pydantic"
-      - "python-multipart"
-      - "requests"
-      - "urllib3"
-    python-misc:
-      patterns:
-      - "*"
-  ignore:
-  - dependency-name: "torch"
-    update-types:
-    - "version-update:semver-major"
-  - dependency-name: "chromadb"
-    update-types:
-    - "version-update:semver-major"
-  - dependency-name: "sentence-transformers"
-    update-types:
-    - "version-update:semver-major"
-
 - package-ecosystem: "docker"
   directory: "/"
   target-branch: "main"

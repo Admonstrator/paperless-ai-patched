@@ -327,33 +327,6 @@
  *           items:
  *             $ref: '#/components/schemas/HistoryItem'
  *             
- *     ChatMessage:
- *       type: object
- *       required:
- *         - documentId
- *         - message
- *       properties:
- *         documentId:
- *           type: integer
- *           description: ID of the document the chat is about
- *           example: 123
- *         message:
- *           type: string
- *           description: User's message to the AI
- *           example: What is the invoice amount?
- *           
- *     ChatInitResponse:
- *       type: object
- *       properties:
- *         success:
- *           type: boolean
- *           description: Whether initialization was successful
- *           example: true
- *         message:
- *           type: string
- *           description: Status message
- *           example: Chat initialized for document 123
- *           
  *     APIKeyResponse:
  *       type: object
  *       properties:

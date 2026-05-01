@@ -205,10 +205,6 @@ const retryTracker = new Map();
 // Configurable minimum content length (default: 10 characters)
 const MIN_CONTENT_LENGTH = parseInt(process.env.MIN_CONTENT_LENGTH || '10', 10);
 
-function isChatEnabled() {
-  return true;
-}
-
 
 const corsOptions = {
   origin: true,
@@ -386,7 +382,7 @@ app.use((req, res, next) => {
   });
 });
 
-app.use(['/api', '/chat', '/manual'], apiGlobalLimiter);
+app.use(['/api', '/manual'], apiGlobalLimiter);
 
 const isApiDocsEnabled = config.exposeApiDocs === 'yes';
 let swaggerSpec = null;

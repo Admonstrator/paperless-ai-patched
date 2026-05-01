@@ -16,9 +16,9 @@ COPY --chown=node:node public ./public/
 COPY --chown=node:node OPENAPI ./OPENAPI/
 COPY --chown=node:node schemas.js swagger.js ./
 COPY --chown=node:node scripts ./scripts/
-COPY docker-entrypoint.sh ./
+COPY docker-entrypoint.sh start-services.sh ./
 
-RUN chmod +x docker-entrypoint.sh
+RUN chmod +x docker-entrypoint.sh start-services.sh
 
 # Configure persistent data volume
 VOLUME ["/app/data"]

@@ -203,7 +203,7 @@ jobs:
       - name: Resolve Lite base digest
         id: base
         run: |
-          BASE_IMAGE="${{ env.DOCKERHUB_REPO }}:latest-base-lite"
+          BASE_IMAGE="${{ env.DOCKERHUB_REPO }}:latest-base"
           BASE_DIGEST=$(docker buildx imagetools inspect "$BASE_IMAGE" 2>/dev/null | awk '/^Digest:/ { print $2; exit }' || true)
           BASE_DIGEST=$(printf '%s' "$BASE_DIGEST" | tr -d '\r\n')
           if [ -z "$BASE_DIGEST" ]; then
@@ -217,9 +217,9 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
-          file: ./Dockerfile.lite
+          file: ./Dockerfile
           build-args: |
-            BASE_IMAGE=${{ env.DOCKERHUB_REPO }}:latest-base-lite
+            BASE_IMAGE=${{ env.DOCKERHUB_REPO }}:latest-base
             PAPERLESS_AI_COMMIT_SHA=${{ needs.generate-version.outputs.commit_sha }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}

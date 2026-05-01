@@ -49,14 +49,14 @@ jobs:
         with:
           images: ${{ env.DOCKERHUB_REPO }}
           tags: |
-            type=raw,value=latest-base-lite,enable=${{ inputs.also_tag_latest || github.event_name == 'schedule' }}
+            type=raw,value=latest-base,enable=${{ inputs.also_tag_latest || github.event_name == 'schedule' }}
 
       - name: Build and Push Lite Base Docker image
         id: push
         uses: docker/build-push-action@v7
         with:
           context: .
-          file: ./Dockerfile.base.lite
+          file: ./Dockerfile.base
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -81,4 +81,4 @@ jobs:
           echo "**Docker Hub Repository:** \`${{ env.DOCKERHUB_REPO }}\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "#### Base tags" >> $GITHUB_STEP_SUMMARY
-          echo "- \`${{ env.DOCKERHUB_REPO }}:latest-base-lite\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ env.DOCKERHUB_REPO }}:latest-base\`" >> $GITHUB_STEP_SUMMARY

@@ -8,7 +8,7 @@ DOCKER_BIN="${DOCKER_BIN:-docker}"
 IMAGE_REPO="${IMAGE_REPO:-${LOCAL_NAMESPACE:-docker.io/library/paperless-ai-next}}"
 FORCE_REBUILD="${FORCE_REBUILD:-false}"
 
-BASE_LITE_IMAGE="${BASE_LITE_IMAGE:-${IMAGE_REPO}:latest-base-lite}"
+BASE_IMAGE="${BASE_IMAGE:-${IMAGE_REPO}:latest-base}"
 APP_IMAGE="${APP_IMAGE:-${IMAGE_REPO}:latest}"
 
 if command -v git >/dev/null 2>&1; then
@@ -40,7 +40,7 @@ print_header() {
   echo "=============================================="
   echo " paperless-ai-next image builder"
   echo "=============================================="
-  echo " Base : ${BASE_LITE_IMAGE}"
+  echo " Base : ${BASE_IMAGE}"
   echo " App  : ${APP_IMAGE}"
   echo " Commit   : ${COMMIT_SHA}"
   echo " Cache    : $([[ "$FORCE_REBUILD" == "true" ]] && echo "force rebuild (--no-cache --pull)" || echo "normal build")"
@@ -60,13 +60,30 @@ ensure_docker() {
 }
 
 build_base() {
-  echo "\n[1/1] Building base image: ${BASE_LITE_IMAGE}"
+  echo -e "\n[1/1] Building base image: ${BASE_IMAGE}"
   "$DOCKER_BIN" build \
     "${BUILD_FLAGS[@]+"${BUILD_FLAGS[@]}"}" \
-    -f Dockerfile.base.lite \
-    -t "${BASE_LITE_IMAGE}" \
+    -f Dockerfile.base \
+    -t "${BASE_IMAGE}" \
     .
-  echo "Done: ${BASE_LITE_IMAGE}"
+  echo "Done: ${BASE_IMAGE}"
+}
+
+build_app() {
+  echo -e "\n[1/1] Building app image: ${APP_IMAGE}"
+  "$DOCKER_BIN" build \
+    "${BUILD_FLAGS[@]+"${BUILD_FLAGS[@]}"}" \
+    --build-arg BASE_IMAGE="${BASE_IMAGE}" \
+    --build-arg PAPERLESS_AI_COMMIT_SHA="${COMMIT_SHA}" \
+    -f Dockerfile \
+    -t "${APP_IMAGE}" \
+    .
+  
+  # Add aliases for backward compatibility
+  "$DOCKER_BIN" tag "${APP_IMAGE}" "${IMAGE_REPO}:latest-lite"
+  "$DOCKER_BIN" tag "${APP_IMAGE}" "${IMAGE_REPO}:latest-full"
+  
+  echo "Done: ${APP_IMAGE} (Aliased to latest-lite and latest-full)"
 }
 
 show_compose_usage() {
@@ -150,7 +167,7 @@ Optional overrides:
   FORCE_REBUILD=true ./build.sh all
   IMAGE_REPO=docker.io/library/myrepo ./build.sh all
   LOCAL_NAMESPACE=myrepo ./build.sh all
-  BASE_LITE_IMAGE=my/base:lite APP_IMAGE=my/app:latest ./build.sh all
+  BASE_IMAGE=my/base:latest APP_IMAGE=my/app:latest ./build.sh all
 EOF
       exit 1
       ;;

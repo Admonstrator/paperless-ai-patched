@@ -45,9 +45,9 @@ jobs:
       - name: Validate base/app build dependencies
         run: |
           if [ "${{ inputs.build_lite_app }}" = "true" ] && [ "${{ inputs.build_lite_base }}" != "true" ]; then
-            echo "App requested without base rebuild. Checking existing nightly-base-lite tag..."
-            if ! docker buildx imagetools inspect "${{ env.DOCKERHUB_REPO }}:nightly-base-lite" >/dev/null 2>&1; then
-              echo "Invalid inputs: build_lite_app=true needs either build_lite_base=true or existing image ${{ env.DOCKERHUB_REPO }}:nightly-base-lite"
+            echo "App requested without base rebuild. Checking existing nightly-base tag..."
+            if ! docker buildx imagetools inspect "${{ env.DOCKERHUB_REPO }}:nightly-base" >/dev/null 2>&1; then
+              echo "Invalid inputs: build_lite_app=true needs either build_lite_base=true or existing image ${{ env.DOCKERHUB_REPO }}:nightly-base"
               exit 1
             fi
           fi
@@ -75,9 +75,9 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
-          file: ./Dockerfile.base.lite
+          file: ./Dockerfile.base
           push: true
-          tags: ${{ env.DOCKERHUB_REPO }}:nightly-base-lite
+          tags: ${{ env.DOCKERHUB_REPO }}:nightly-base
           platforms: ${{ inputs.build_arm64 && 'linux/amd64,linux/arm64' || 'linux/amd64' }}
           cache-from: type=registry,ref=${{ env.DOCKERHUB_REPO }}:buildcache-base-nightly
           cache-to: type=registry,ref=${{ env.DOCKERHUB_REPO }}:buildcache-base-nightly,mode=min
@@ -110,9 +110,9 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
-          file: ./Dockerfile.lite
+          file: ./Dockerfile
           build-args: |
-            BASE_IMAGE=${{ env.DOCKERHUB_REPO }}:nightly-base-lite
+            BASE_IMAGE=${{ env.DOCKERHUB_REPO }}:nightly-base
             PAPERLESS_AI_COMMIT_SHA=${{ github.sha }}
           push: true
           tags: ${{ env.DOCKERHUB_REPO }}:nightly
